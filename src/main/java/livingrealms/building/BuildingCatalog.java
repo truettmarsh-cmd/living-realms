@@ -127,6 +127,7 @@ public final class BuildingCatalog {
     }
 
     static void addProcedural(Map<String, BuildingType> out) {
+        proc(out, "capital_castle", "Capital Castle", Category.BARRACKS, 6, "royal_charter", 1);
         proc(out, "town_hall", "Town Hall", Category.CIVIC, 1, null, 1);
         proc(out, "cottage", "Cottage", Category.HOUSING, 1, null, -1);
         proc(out, "builders_yard", "Builder's Yard", Category.CONSTRUCTION, 1, null, -1);

@@ -22,6 +22,7 @@ public final class Procedural {
 
     static {
         KINDS.put("town_hall", 6);
+        KINDS.put("capital_castle", 1);
         KINDS.put("cottage", 3);
         KINDS.put("builders_yard", 3);
         KINDS.put("storehouse", 3);
@@ -55,6 +56,7 @@ public final class Procedural {
         B b = new B(p);
         switch (kind) {
             case "town_hall" -> townHall(b, level);
+            case "capital_castle" -> CapitalCastleBlueprint.make(b);
             case "cottage" -> cottage(b, level);
             case "builders_yard" -> buildersYard(b, level);
             case "storehouse" -> storehouse(b, level);

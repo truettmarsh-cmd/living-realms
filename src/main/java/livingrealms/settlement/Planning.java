@@ -30,6 +30,10 @@ public final class Planning {
     /** Plans a building with its bounding box corner at origin (before sinking). Returns an error or null. */
     @Nullable
     public static String plan(ServerLevel level, Settlement s, BuildingType t, BlockPos origin, Rotation rot, boolean ai) {
+        if (t.id.equals(CapitalCastles.ID)) {
+            String site = CapitalCastles.site(level, s, t, origin, rot);
+            if (site != null) return site;
+        }
         String why = s.cannotBuild(t);
         if (why != null) return why;
         String key = t.blueprintKey(1, s.style);
@@ -68,7 +72,7 @@ public final class Planning {
         for (Plot o : s.plots) {
             if (o == self || o.state == Plot.State.DEMOLISHING || o.typeId.equals("road")) continue;
             BoundingBox ob = o.box();
-            if (box.minX() <= ob.maxX() && box.maxX() >= ob.minX() && box.minZ() <= ob.maxZ() && box.maxZ() >= ob.minZ()) {
+            if (CapitalCastles.overlaps(p, o)) {
                 BuildingType ot = BuildingCatalog.get(o.typeId);
                 return "Overlaps " + (o.typeId.equals("road") ? "a road" : ot == null ? "a building" : ot.name);
             }
@@ -145,6 +149,7 @@ public final class Planning {
         for (Plot o : s.plots) {
             if (o.typeId.equals("road")) continue;
             BoundingBox b = o.box();
+            if (o.typeId.equals(CapitalCastles.ID) && CapitalCastles.inCourtyard(o, new BoundingBox(x, 0, z, x, 0, z))) continue;
             if (x >= b.minX() && x <= b.maxX() && z >= b.minZ() && z <= b.maxZ()) return true;
         }
         return false;

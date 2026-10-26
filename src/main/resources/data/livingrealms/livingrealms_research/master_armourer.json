@@ -1,0 +1,15 @@
+{
+  "name": "Master Armourer",
+  "branch": "Smithing",
+  "cost": 1600,
+  "requires": [
+    "dragonsteel_forging"
+  ],
+  "x": 8,
+  "y": 7,
+  "description": "Commission rare and loot-only equipment at high material costs.",
+  "items": {
+    "minecraft:netherite_ingot": 4
+  },
+  "icon": "minecraft:anvil"
+}

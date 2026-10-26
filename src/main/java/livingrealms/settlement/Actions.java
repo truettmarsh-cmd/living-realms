@@ -4,6 +4,9 @@ import livingrealms.building.BuildingCatalog;
 import livingrealms.building.BuildingType;
 import livingrealms.building.Category;
 import livingrealms.military.Kit;
+import livingrealms.military.RecruitsBridge;
+import livingrealms.military.SoldierSkills;
+import livingrealms.military.SoldierProgression;
 import livingrealms.military.Stance;
 import livingrealms.military.UnitType;
 import livingrealms.research.ResearchTree;
@@ -64,7 +67,9 @@ public final class Actions {
             case "alarm" -> { s.manualAlarm = d.getBoolean("on"); if (!s.manualAlarm) s.alarmUntil = Math.min(s.alarmUntil, level.getGameTime() + 20); Simulation.watch(level, s); yield null; }
             case "withdraw" -> withdraw(player, s, d);
             case "deposit" -> deposit(player, s, d.getString("item"));
-            case "dismiss" -> { UUID id = d.getUUID("soldier"); s.soldiers.removeIf(so -> so.entity.equals(id)); yield null; }
+            case "royalGuard" -> royalGuard(player, level, s, d);
+            case "learnSoldierSkill" -> learnSoldierSkill(player, s, d);
+            case "dismiss" -> dismissSoldier(player, level, s, d);
             default -> "Unknown action";
         };
         if (err != null) tell(player, err);
@@ -150,6 +155,7 @@ public final class Actions {
         if (d.getString("piece").equals("SET")) {
             for (Piece p : Piece.ARMOR) if (pattern.pieces().containsKey(p)) pieces.add(p);
         } else pieces.add(Piece.valueOf(d.getString("piece")));
+        if (pieces.isEmpty()) return "This pattern has no armour set";
         Map<String, Integer> total = new LinkedHashMap<>();
         for (Piece p : pieces) {
             var r = pattern.pieces().get(p);
@@ -205,7 +211,8 @@ public final class Actions {
         int qty = Math.max(1, Math.min(10, d.getInt("qty")));
         if (!s.has(u.research)) return "Research " + ResearchTree.get(u.research).name() + " first";
         if (s.standing(Category.BARRACKS) == 0) return "Build a Barracks first";
-        if (u == UnitType.HORSEMAN && !s.d.hasStables) return "Horsemen need Stables";
+        if ((u == UnitType.HORSEMAN || u == UnitType.DRAGON_RIDER) && !s.d.hasStables) return u.label + " training needs Stables";
+        if (u == UnitType.DRAGON_RIDER && !livingrealms.military.DragonRiders.installed()) return "Dragon Riders require Ice and Fire";
         int trained = 0;
         String err = null;
         for (int i = 0; i < qty; i++) {
@@ -298,6 +305,67 @@ public final class Actions {
         return n == 0 ? "No soldiers nearby to equip" : null;
     }
 
+    // Individual recruit commands never accept client-supplied XP, ranks, costs, or owners.
+    @Nullable
+    static Settlement.Soldier soldier(Settlement s, CompoundTag d) {
+        if (!d.hasUUID("soldier")) return null;
+        UUID id = d.getUUID("soldier");
+        for (Settlement.Soldier so : s.soldiers) if (so.entity.equals(id)) return so;
+        return null;
+    }
+
+    @Nullable
+    static String royalGuard(ServerPlayer player, ServerLevel level, Settlement s, CompoundTag d) {
+        if (!player.getUUID().equals(s.owner)) return "Only this town's owner can appoint personal Royal Guards";
+        Settlement.Soldier so = soldier(s, d);
+        if (so == null) return "No such recruit";
+        Entity e = SoldierProgression.findEntity(player.server, so.entity);
+        if (e == null || !e.isAlive() || !s.owner.equals(RecruitsBridge.owner(e))) return "Your recruit must be loaded and still belong to you";
+        boolean appoint = d.getBoolean("on");
+        if (appoint == so.royalGuard) return null;
+        if (appoint) {
+            if (!s.has("command")) return "Research Command first";
+            if (SoldierSkills.earnedPoints(so.skillXp) < 2) return "Royal Guards need recruit rank 2 (100 combat XP)";
+            if (!s.stock.has(Items.EMERALD, 32)) return "Royal Guard promotion costs 32 emeralds from town stock";
+            s.stock.take(Items.EMERALD, 32);
+        }
+        so.royalGuard = appoint;
+        if (!appoint && e.level() != level) RecruitsBridge.holdAt(e, e.blockPosition());
+        else Simulation.applyStance((ServerLevel) e.level(), s, e, so, s.soldiers.indexOf(so));
+        s.log(so.name + (appoint ? " joined your Royal Guard" : " returned to the town garrison"));
+        return null;
+    }
+
+    @Nullable
+    static String learnSoldierSkill(ServerPlayer player, Settlement s, CompoundTag d) {
+        if (!player.getUUID().equals(s.owner)) return "Only this town's owner can train its recruits";
+        Settlement.Soldier so = soldier(s, d);
+        SoldierSkills skill = SoldierSkills.byId(d.getString("skill"));
+        if (so == null || skill == null) return "Unknown recruit or skill";
+        if (so.skills.contains(skill)) return "This recruit already learned that skill";
+        if (!skill.unlocked(so.skills)) return "Learn " + skill.prerequisite.label + " first";
+        if (SoldierSkills.earnedPoints(so.skillXp) < skill.requiredRank) return "This skill needs recruit rank " + skill.requiredRank;
+        if (SoldierSkills.availablePoints(so.skillXp, so.skills) < 1) return "Earn a skill point by defeating hostile creatures";
+        Entity e = SoldierProgression.findEntity(player.server, so.entity);
+        if (e == null || !e.isAlive() || !s.owner.equals(RecruitsBridge.owner(e))) return "Your recruit must be loaded and still belong to you";
+        so.skills.add(skill);
+        if (e instanceof net.minecraft.world.entity.LivingEntity le) SoldierProgression.applySkills(le, so);
+        s.log(so.name + " learned " + skill.label);
+        return null;
+    }
+
+    @Nullable
+    static String dismissSoldier(ServerPlayer player, ServerLevel level, Settlement s, CompoundTag d) {
+        Settlement.Soldier so = soldier(s, d);
+        if (so == null) return "No such recruit";
+        Entity e = SoldierProgression.findEntity(player.server, so.entity);
+        if (e == null || !e.isAlive()) return "The recruit must be loaded before dismissal";
+        if (e instanceof net.minecraft.world.entity.LivingEntity le) SoldierProgression.clearSkills(le);
+        if (so.royalGuard) RecruitsBridge.holdAt(e, e.blockPosition());
+        s.soldiers.remove(so);
+        return null;
+    }
+
     // ------------------------------------------------------------------ stockpile
 
     @Nullable
@@ -319,7 +387,7 @@ public final class Actions {
         int moved = 0;
         for (int i = 9; i < 36; i++) {
             ItemStack st = inv.getItem(i);
-            if (st.isEmpty() || st.hasTag()) continue;
+            if (!livingrealms.settlement.Stockpile.canStore(st)) continue;
             if (!item.isEmpty() && !BuiltInRegistries.ITEM.getKey(st.getItem()).toString().equals(item)) continue;
             int fit = s.stock.add(st.getItem(), st.getCount());
             st.shrink(fit);

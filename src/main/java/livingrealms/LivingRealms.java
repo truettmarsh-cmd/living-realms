@@ -21,6 +21,13 @@ public class LivingRealms {
     public static final Logger LOG = LogUtils.getLogger();
 
     public LivingRealms() {
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.OnDatapackSyncEvent e) -> {
+            if (e.getPlayer() == null) {
+                Smithing.discover(e.getPlayerList().getServer());
+                Net.sendCatalogToAll(e.getPlayerList().getServer());
+            }
+        });
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStartedEvent e) -> Smithing.discover(e.getServer()));
         var modBus = FMLJavaModLoadingContext.get().getModEventBus();
         Registry.register(modBus);
         modBus.addListener((FMLCommonSetupEvent e) -> e.enqueueWork(Net::register));

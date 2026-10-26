@@ -1,0 +1,16 @@
+{
+  "name": "Dragonsteel Forging",
+  "branch": "Smithing",
+  "cost": 1200,
+  "requires": [
+    "mythic_smithing",
+    "netherite_forging"
+  ],
+  "x": 7,
+  "y": 7,
+  "description": "Work fire, ice and lightning dragonsteel. Supply real dragonsteel from a dragonforge.",
+  "items": {
+    "minecraft:netherite_ingot": 2
+  },
+  "icon": "minecraft:anvil"
+}

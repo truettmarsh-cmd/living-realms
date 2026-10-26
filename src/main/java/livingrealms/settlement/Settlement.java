@@ -4,6 +4,10 @@ import livingrealms.building.BuildingCatalog;
 import livingrealms.building.BuildingType;
 import livingrealms.building.Category;
 import livingrealms.military.Kit;
+import livingrealms.military.RecruitOrigin;
+import livingrealms.military.SoldierSkills;
+import livingrealms.military.WeaponProficiency;
+import livingrealms.military.LegendaryPerk;
 import livingrealms.military.Stance;
 import livingrealms.military.UnitType;
 import livingrealms.research.ResearchTree;
@@ -22,6 +26,7 @@ import java.util.*;
 public final class Settlement {
     public UUID id = UUID.randomUUID();
     public String name = "";
+    public String castleStatus = "";
     public ResourceKey<Level> dim = Level.OVERWORLD;
     public BlockPos center = BlockPos.ZERO;
     @Nullable public UUID owner;
@@ -74,6 +79,16 @@ public final class Settlement {
         public int level, kills;
         public String gear = "";
         public boolean seen;
+        public boolean royalGuard;
+        public int skillXp;
+        public RecruitOrigin origin = RecruitOrigin.HUMAN;
+        public final Set<SoldierSkills> skills = EnumSet.noneOf(SoldierSkills.class);
+        public WeaponProficiency preferredWeapon;
+        public final Map<WeaponProficiency, Integer> weaponXp = new EnumMap<>(WeaponProficiency.class);
+        public final Set<LegendaryPerk> legendary = EnumSet.noneOf(LegendaryPerk.class);
+        public int legendaryLevelChecked;
+        public final Map<LegendaryPerk, Long> legendaryCooldowns = new EnumMap<>(LegendaryPerk.class);
+        public long battleRhythmUntil;
 
         public CompoundTag save() {
             CompoundTag t = new CompoundTag();
@@ -87,6 +102,24 @@ public final class Settlement {
             t.putInt("kills", kills);
             t.putString("gear", gear);
             t.putBoolean("seen", seen);
+            t.putBoolean("royalGuard", royalGuard);
+            t.putInt("skillXp", skillXp);
+            t.putString("origin", origin.name());
+            ListTag learned = new ListTag();
+            skills.forEach(skill -> learned.add(StringTag.valueOf(skill.name())));
+            t.put("skills", learned);
+            t.putString("preferredWeapon", preferredWeapon == null ? "" : preferredWeapon.name());
+            CompoundTag practice = new CompoundTag();
+            weaponXp.forEach((weapon, xp) -> practice.putInt(weapon.name(), xp));
+            t.put("weaponXp", practice);
+            ListTag legends = new ListTag();
+            legendary.forEach(perk -> legends.add(StringTag.valueOf(perk.name())));
+            t.put("legendary", legends);
+            t.putInt("legendaryLevelChecked", legendaryLevelChecked);
+            CompoundTag cooldowns = new CompoundTag();
+            legendaryCooldowns.forEach((perk, ready) -> cooldowns.putLong(perk.name(), ready));
+            t.put("legendaryCooldowns", cooldowns);
+            t.putLong("battleRhythmUntil", battleRhythmUntil);
             return t;
         }
 
@@ -102,6 +135,25 @@ public final class Settlement {
             s.kills = t.getInt("kills");
             s.gear = t.getString("gear");
             s.seen = t.getBoolean("seen");
+            s.royalGuard = t.getBoolean("royalGuard");
+            s.origin = RecruitOrigin.byId(t.getString("origin"));
+            s.skillXp = Math.max(0, Math.min(SoldierSkills.MAX_POINTS * SoldierSkills.XP_PER_POINT, t.getInt("skillXp")));
+            for (Tag value : t.getList("skills", Tag.TAG_STRING)) {
+                SoldierSkills skill = SoldierSkills.byId(value.getAsString());
+                if (skill != null) s.skills.add(skill);
+            }
+            s.preferredWeapon = WeaponProficiency.byId(t.getString("preferredWeapon"));
+            CompoundTag practice = t.getCompound("weaponXp");
+            for (WeaponProficiency weapon : WeaponProficiency.values())
+                if (practice.contains(weapon.name())) s.weaponXp.put(weapon, Math.max(0, Math.min(WeaponProficiency.MAX_XP, practice.getInt(weapon.name()))));
+            for (Tag entry : t.getList("legendary", Tag.TAG_STRING)) {
+                LegendaryPerk perk = LegendaryPerk.byId(entry.getAsString());
+                if (perk != null && s.legendary.size() < LegendaryPerk.MAX_PERKS) s.legendary.add(perk);
+            }
+            s.legendaryLevelChecked = Math.max(0, Math.min(100, t.getInt("legendaryLevelChecked")));
+            CompoundTag cooldowns = t.getCompound("legendaryCooldowns");
+            for (LegendaryPerk perk : LegendaryPerk.values()) s.legendaryCooldowns.put(perk, Math.max(0, cooldowns.getLong(perk.name())));
+            s.battleRhythmUntil = Math.max(0, t.getLong("battleRhythmUntil"));
             return s;
         }
     }
@@ -265,6 +317,7 @@ public final class Settlement {
         CompoundTag t = new CompoundTag();
         t.putUUID("id", id);
         t.putString("name", name);
+        t.putString("castleStatus", castleStatus);
         t.putString("dim", dim.location().toString());
         t.put("center", NbtUtils.writeBlockPos(center));
         if (owner != null) t.putUUID("owner", owner);
@@ -321,6 +374,7 @@ public final class Settlement {
         Settlement s = new Settlement();
         s.id = t.getUUID("id");
         s.name = t.getString("name");
+        s.castleStatus = t.getString("castleStatus");
         s.dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(t.getString("dim")));
         s.center = NbtUtils.readBlockPos(t.getCompound("center"));
         if (t.hasUUID("owner")) s.owner = t.getUUID("owner");

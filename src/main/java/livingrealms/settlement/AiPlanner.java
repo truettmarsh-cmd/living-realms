@@ -73,7 +73,7 @@ public final class AiPlanner {
         String fam = Procedural.styleFamily(s.style);
         for (BuildingType t : BuildingCatalog.types().values()) {
             if (t.category != c || s.cannotBuild(t) != null) continue;
-            if (t.id.equals("livingrealms:town_hall") || t.category == Category.WALL) continue;
+            if (t.id.equals(CapitalCastles.ID) || t.id.equals("livingrealms:town_hall") || t.category == Category.WALL) continue;
             if (t.procedural()) proc.add(t);
             else if (t.style.equals(s.style)) own.add(t);
             else if (Procedural.styleFamily(t.style).equals(fam) && t.style.startsWith("minecraft:")) family.add(t);
@@ -101,6 +101,7 @@ public final class AiPlanner {
             Arrays.sort(hs);
             int y = hs[2];
             if (!level.getBlockState(new BlockPos(x + w / 2, y, z + d / 2)).getFluidState().isEmpty()) continue;
+            if (CapitalCastles.reserved(s, x - 2, z - 2, x + w + 1, z + d + 1)) continue;
             if (overlaps(s, x - 2, z - 2, x + w + 1, z + d + 1)) continue;
             if (!open(level, x, y, z, w, d)) continue;
             return new BlockPos(x, y, z);

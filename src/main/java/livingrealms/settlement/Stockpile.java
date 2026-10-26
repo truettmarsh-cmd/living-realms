@@ -24,6 +24,11 @@ public final class Stockpile {
     private int total;
     public int capacity = 2000;
 
+    /** Only stacks which reconstruct losslessly from the item id belong in the shared stockpile. */
+    public static boolean canStore(ItemStack stack) {
+        return !stack.isEmpty() && ItemStack.isSameItemSameTags(stack, new ItemStack(stack.getItem()));
+    }
+
     public int count(Item item) { return items.getInt(item); }
 
     public int total() { return total; }

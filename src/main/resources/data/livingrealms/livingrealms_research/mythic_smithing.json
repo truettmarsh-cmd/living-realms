@@ -1,0 +1,16 @@
+{
+  "name": "Mythic Smithing",
+  "branch": "Smithing",
+  "cost": 650,
+  "requires": [
+    "plate_armour",
+    "diamond_smithing"
+  ],
+  "x": 6,
+  "y": 7,
+  "description": "Forge Ice and Fire armour and weapons using their original materials.",
+  "items": {
+    "minecraft:diamond": 8
+  },
+  "icon": "minecraft:anvil"
+}

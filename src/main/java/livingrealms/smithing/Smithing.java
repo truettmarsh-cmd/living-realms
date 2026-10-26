@@ -33,6 +33,13 @@ public final class Smithing extends SimpleJsonResourceReloadListener {
     public record Pattern(String id, String name, String research, int order, int color, Map<Piece, Recipe> pieces) {}
 
     private static volatile Map<String, Pattern> patterns = Map.of();
+    private static Map<String, Pattern> configured = Map.of();
+
+    public static void discover(net.minecraft.server.MinecraftServer server) {
+        Map<String, Pattern> combined = new LinkedHashMap<>(configured);
+        EquipmentDiscovery.add(server, combined);
+        patterns = combined;
+    }
 
     private Smithing() { super(new Gson(), "livingrealms_smithing"); }
 
@@ -69,6 +76,7 @@ public final class Smithing extends SimpleJsonResourceReloadListener {
         Map<String, Pattern> out = new LinkedHashMap<>();
         list.forEach(p -> out.put(p.id, p));
         patterns = out;
+        configured = new LinkedHashMap<>(out);
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) Net.sendCatalogToAll(server);
     }

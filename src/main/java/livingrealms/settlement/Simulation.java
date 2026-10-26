@@ -190,6 +190,7 @@ public final class Simulation {
         if (s.isAi()) {
             AiPlanner.think(level, s);
         }
+        CapitalCastles.tick(level, s);
         if (loaded) {
             settlers(level, s, d);
             garrison(level, s, true);
@@ -418,6 +419,7 @@ public final class Simulation {
             so.entity = e.getUUID();
             so.type = t.type;
             so.name = name;
+            livingrealms.military.RecruitOrigins.sync(so, e);
             s.soldiers.add(so);
             s.log(name + " has finished training");
             applyStance(level, s, e, so, 0);
@@ -467,6 +469,7 @@ public final class Simulation {
         so.entity = e.getUUID();
         so.type = u;
         so.name = e.getName().getString();
+        livingrealms.military.RecruitOrigins.sync(so, e);
         s.soldiers.add(so);
         applyStance(level, s, e, so, s.soldiers.size() - 1);
     }
@@ -497,7 +500,7 @@ public final class Simulation {
                 }
             }
         }
-        if (u == UnitType.BOWMAN || u == UnitType.CROSSBOWMAN) {
+        if (u == UnitType.BOWMAN || u == UnitType.CROSSBOWMAN || u == UnitType.DRAGON_RIDER) {
             int have = RecruitsBridge.countInPack(e, Items.ARROW);
             int want = 64 - have;
             int take = s.stock.takeUpTo(Items.ARROW, Math.max(0, want));
@@ -510,8 +513,9 @@ public final class Simulation {
 
     static void swapFromStock(Settlement s, Entity e, EquipmentSlot slot, Item want) {
         ItemStack cur = RecruitsBridge.getSlot(e, slot);
+        if (!cur.isEmpty() && !Stockpile.canStore(cur)) return; // preserve personalised or worn gear
         if (cur.is(want) || !s.stock.take(want, 1)) return;
-        if (!cur.isEmpty() && !cur.hasTag()) s.stock.force(cur.getItem(), cur.getCount());
+        if (Stockpile.canStore(cur)) s.stock.force(cur.getItem(), cur.getCount());
         RecruitsBridge.setSlot(e, slot, new ItemStack(want));
     }
 
@@ -529,7 +533,7 @@ public final class Simulation {
         int i = 0;
         boolean fed = !s.starving;
         for (Settlement.Soldier so : s.soldiers) {
-            Entity e = level.getEntity(so.entity);
+            Entity e = SoldierProgression.findEntity(level.getServer(), so.entity);
             if (!(e instanceof LivingEntity le) || !e.isAlive()) { so.seen = false; i++; continue; }
             so.seen = true;
             so.health = le.getHealth();
@@ -539,13 +543,13 @@ public final class Simulation {
             so.morale = RecruitsBridge.morale(e);
             so.gear = gearSummary(le);
             if (slow) {
-                if (fed && s.contains(e.blockPosition())) {
+                if (fed && e.level() == level && s.contains(e.blockPosition())) {
                     RecruitsBridge.supply(e);
                     if (le.getHealth() < le.getMaxHealth()) le.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 100, 0, true, false));
                 } else if (!fed) {
                     le.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, Config.SIM_INTERVAL.get() + 20, 0, true, true));
                 }
-                if (s.stance == Stance.PATROL || s.alarmUntil > level.getGameTime()) applyStance(level, s, e, so, i);
+                if (e.level() == level && (s.stance == Stance.PATROL || s.alarmUntil > level.getGameTime())) applyStance(level, s, e, so, i);
             }
             i++;
         }
@@ -559,6 +563,7 @@ public final class Simulation {
 
     /** Sends one soldier to its post for the current stance (or to the threat during an alarm). */
     public static void applyStance(ServerLevel level, Settlement s, Entity e, Settlement.Soldier so, int index) {
+        if (SoldierProgression.escort(s, so, e)) return;
         if (s.alarmUntil > level.getGameTime() && s.stance != Stance.FOLLOW && s.stance != Stance.FREE) {
             Mob threat = nearestThreat(level, s, e.blockPosition());
             RecruitsBridge.aggressive(e);

@@ -16,6 +16,7 @@ public final class View {
         CompoundTag t = new CompoundTag();
         t.putUUID("id", s.id);
         t.putString("name", s.name);
+        t.putString("castleStatus", s.castleStatus);
         t.putString("owner", s.isAi() ? "" : s.ownerName);
         t.putBoolean("mine", p.getUUID().equals(s.owner) || p.hasPermissions(2));
         t.putBoolean("ai", s.isAi());

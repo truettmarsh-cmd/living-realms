@@ -1,0 +1,17 @@
+{
+  "name": "Dragon Riders",
+  "branch": "Military",
+  "cost": 900,
+  "requires": [
+    "cavalry",
+    "veterans"
+  ],
+  "x": 4,
+  "y": 11,
+  "description": "Train dragon-mounted bowmen. Requires Ice and Fire, Stables, and your unoccupied stage 3+ tamed dragon near the barracks.",
+  "items": {
+    "minecraft:saddle": 1,
+    "minecraft:diamond": 8
+  },
+  "icon": "minecraft:dragon_breath"
+}

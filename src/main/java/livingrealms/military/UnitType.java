@@ -13,7 +13,8 @@ public enum UnitType {
     SHIELDBEARER("Shieldbearer", "Holds the line with sword and shield.", "drill", 5, 0.16f, Items.SHIELD, Piece.SWORD, Piece.SHIELD),
     BOWMAN("Bowman", "Looses arrows from behind the line.", "archery", 5, 0.16f, Items.BOW, Piece.BOW),
     CROSSBOWMAN("Crossbowman", "Slow to reload, hits hard.", "crossbows", 7, 0.2f, Items.CROSSBOW, Piece.CROSSBOW),
-    HORSEMAN("Horseman", "Mounted knight from the stables.", "cavalry", 10, 0.25f, Items.SADDLE, Piece.SWORD);
+    HORSEMAN("Horseman", "Mounted knight from the stables.", "cavalry", 10, 0.25f, Items.SADDLE, Piece.SWORD),
+    DRAGON_RIDER("Dragon Rider", "Bowman riding your adult tamed dragon near the barracks.", "dragon_riders", 40, 0.6f, Items.DRAGON_BREATH, Piece.BOW);
 
     public final String label, description, research;
     public final int emeralds;

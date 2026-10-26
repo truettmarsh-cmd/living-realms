@@ -14,6 +14,9 @@ public final class Config {
     public static final ForgeConfigSpec.IntValue MAX_TEMPLATE_FOOTPRINT;
     public static final ForgeConfigSpec.BooleanValue AI_GARRISONS;
 
+    public static final ForgeConfigSpec.BooleanValue ORIGIN_NATIVE_SPAWNS;
+    public static final ForgeConfigSpec.IntValue ORIGIN_HUMAN, ORIGIN_DWARF, ORIGIN_ELF, ORIGIN_GIANT;
+
     static {
         var b = new ForgeConfigSpec.Builder();
         b.push("simulation");
@@ -39,6 +42,14 @@ public final class Config {
                 .defineInRange("maxVisibleTownsfolk", 8, 0, 40);
         MAX_TEMPLATE_FOOTPRINT = b.comment("Largest width/depth of a structure template that is picked up as a building.")
                 .defineInRange("maxTemplateFootprint", 32, 8, 64);
+        b.pop();
+        b.push("recruitOrigins");
+        b.comment("Relative weights for newly trained recruits only. Existing recruits are never rerolled; all zero means human.");
+        ORIGIN_NATIVE_SPAWNS = b.comment("Assign origins to genuinely new native Villager Recruits spawns too; never to entities loaded from disk.").define("nativeSpawns", true);
+        ORIGIN_HUMAN = b.defineInRange("humanWeight", 80, 0, 10000);
+        ORIGIN_DWARF = b.defineInRange("dwarfWeight", 8, 0, 10000);
+        ORIGIN_ELF = b.defineInRange("elfWeight", 9, 0, 10000);
+        ORIGIN_GIANT = b.defineInRange("giantWeight", 3, 0, 10000);
         b.pop();
         SPEC = b.build();
     }

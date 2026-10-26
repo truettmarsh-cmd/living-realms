@@ -29,7 +29,7 @@ public final class RecruitsBridge {
         return switch (u) {
             case FOOTMAN -> ModEntityTypes.RECRUIT.get();
             case SHIELDBEARER -> ModEntityTypes.RECRUIT_SHIELDMAN.get();
-            case BOWMAN -> ModEntityTypes.BOWMAN.get();
+            case BOWMAN, DRAGON_RIDER -> ModEntityTypes.BOWMAN.get();
             case CROSSBOWMAN -> ModEntityTypes.CROSSBOWMAN.get();
             case HORSEMAN -> ModEntityTypes.HORSEMAN.get();
         };
@@ -38,6 +38,8 @@ public final class RecruitsBridge {
     /** Spawns a soldier with no armour, its default gear replaced by the town's. Owner null = an AI town's guard. */
     @Nullable
     public static Entity spawn(ServerLevel level, UnitType unit, BlockPos pos, @Nullable UUID owner, String name) {
+        Entity dragon = unit == UnitType.DRAGON_RIDER ? DragonRiders.available(level, pos, owner) : null;
+        if (unit == UnitType.DRAGON_RIDER && dragon == null) return null;
         AbstractRecruitEntity r = type(unit).create(level);
         if (r == null) return null;
         r.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, level.random.nextFloat() * 360f, 0);
@@ -52,6 +54,8 @@ public final class RecruitsBridge {
         r.setAggroState(AGGRESSIVE);
         r.setHoldPos(Vec3.atBottomCenterOf(pos));
         r.setFollowState(HOLD_POS);
+        RecruitOrigins.born(r);
+        r.setHealth(r.getMaxHealth());
         level.addFreshEntity(r);
         if (unit == UnitType.HORSEMAN) {
             Horse horse = EntityType.HORSE.create(level);
@@ -64,6 +68,7 @@ public final class RecruitsBridge {
                 r.startRiding(horse, true);
             }
         }
+        if (dragon != null && !DragonRiders.mount(r, dragon)) { r.discard(); return null; }
         return r;
     }
 

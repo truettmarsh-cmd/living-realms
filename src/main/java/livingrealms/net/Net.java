@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  * plots, blueprints. Client to server: open, close, action, blueprint request.
  */
 public final class Net {
-    private static final String VERSION = "1";
+    private static final String VERSION = "2";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(LivingRealms.id("main"), () -> VERSION, VERSION::equals, VERSION::equals);
     /** player -> settlement whose manager they have open */
     private static final Map<UUID, UUID> WATCHING = new HashMap<>();

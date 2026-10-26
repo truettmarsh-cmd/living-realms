@@ -28,7 +28,7 @@ public class DeliveryChestBlockEntity extends BaseContainerBlockEntity {
         if (s == null || s.isAi()) return;
         boolean moved = false;
         for (ItemStack st : be.items) {
-            if (st.isEmpty() || st.hasTag()) continue;
+            if (!livingrealms.settlement.Stockpile.canStore(st)) continue;
             int fit = s.stock.add(st.getItem(), st.getCount());
             if (fit > 0) { st.shrink(fit); moved = true; }
         }
