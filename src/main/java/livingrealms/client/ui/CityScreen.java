@@ -292,7 +292,22 @@ public class CityScreen extends Screen {
     void overview() {
         String style = BuildingCatalog.pretty(new ResourceLocation(v().getString("style").isEmpty() ? "minecraft:plains" : v().getString("style")).getPath());
         header(v().getString("name"), Tier.of(v().getInt("tier")).label + " · " + style + (v().getBoolean("ai") ? " · independent" : " · held by " + v().getString("owner")));
-        int y = cy + 30, tw = (cw - 9) / 4;
+        int warY = cy + 30;
+        ui.text((v().getBoolean("capital") ? "KINGDOM CAPITAL" : "Kingdom city") + " · " + v().getInt("kingdomCities") + " cities", cx, warY, GOLD);
+        if (ui.over(cx, warY, cw - 112, 13)) ui.tip("Each kingdom has one capital, even before Capital rank.",
+                "Capture a capital to take all its cities. Other victories take only the attacked city.");
+        if (v().getBoolean("ruler")) ui.button("capital", cx + cw - 108, warY - 2, 108, 16, "Make capital", Style.PRIMARY,
+                v().getBoolean("canMoveCapital"), () -> act("capital"));
+        else ui.button("raid", cx + cw - 108, warY - 2, 108, 16, "Raid this city", Style.PRIMARY,
+                v().getBoolean("canRaid"), () -> act("raid"));
+        if (ui.over(cx + cw - 108, warY - 2, 108, 16)) ui.tip(v().getBoolean("ruler")
+                ? "Move the seat of your kingdom here. Old capital returns to City rank if needed."
+                : "Dispatch half the nearest eligible city's soldiers (2–12); at least 3 must be at home.",
+                v().getBoolean("ruler") ? "Unavailable during raids or within a day of moving it."
+                : "Defeat local defenders, then hold the center for 60 seconds. Both cities and armies must stay loaded.");
+        String raid = v().getString("raidStatus");
+        ui.text(ui.clip(raid.isEmpty() ? "Capital loss transfers the kingdom; other losses transfer one city." : raid, cw), cx, warY + 18, raid.isEmpty() ? MUTED : ORANGE);
+        int y = cy + 66, tw = (cw - 9) / 4;
         int pop = v().getInt("pop"), housing = v().getInt("housing");
         tile(cx, y, tw, "People", pop + " / " + housing, (float) Math.max(0, v().getDouble("growth")), BLUE,
                 pop >= housing ? "Build houses to grow" : v().getBoolean("starving") ? "Starving" : "Growing", Items.PLAYER_HEAD);

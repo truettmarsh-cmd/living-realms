@@ -16,6 +16,8 @@ import java.util.*;
 /** All settlements of the world, saved with the overworld. */
 public final class SettlementManager extends SavedData {
     private final Map<UUID, Settlement> byId = new LinkedHashMap<>();
+    public final List<Raids.Raid> raids = new ArrayList<>();
+    public long nextRaidCheck;
 
     public static SettlementManager get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(SettlementManager::load, SettlementManager::new, "livingrealms_settlements");
@@ -28,11 +30,13 @@ public final class SettlementManager extends SavedData {
 
     public void add(Settlement s) {
         byId.put(s.id, s);
+        Kingdoms.normalize(this);
         setDirty();
     }
 
     public void remove(Settlement s) {
         byId.remove(s.id);
+        Kingdoms.normalize(this);
         setDirty();
     }
 
@@ -77,6 +81,10 @@ public final class SettlementManager extends SavedData {
         ListTag l = new ListTag();
         byId.values().forEach(s -> l.add(s.save()));
         tag.put("settlements", l);
+        ListTag battles = new ListTag();
+        raids.forEach(r -> battles.add(r.save()));
+        tag.put("raids", battles);
+        tag.putLong("nextRaidCheck", nextRaidCheck);
         return tag;
     }
 
@@ -86,6 +94,9 @@ public final class SettlementManager extends SavedData {
             Settlement s = Settlement.load((CompoundTag) t);
             m.byId.put(s.id, s);
         }
+        for (Tag t : tag.getList("raids", Tag.TAG_COMPOUND)) m.raids.add(Raids.Raid.load((CompoundTag) t));
+        Kingdoms.normalize(m);
+        m.nextRaidCheck = tag.getLong("nextRaidCheck");
         return m;
     }
 

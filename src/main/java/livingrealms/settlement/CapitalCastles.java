@@ -11,7 +11,7 @@ public final class CapitalCastles {
     public static final String ID = "livingrealms:capital_castle";
 
     public static void tick(ServerLevel level, Settlement s) {
-        if (s.tier != Tier.CAPITAL || !level.hasChunkAt(s.center)) return;
+        if (!s.capital || s.tier != Tier.CAPITAL || !level.hasChunkAt(s.center)) return;
         for (Plot p : s.plots) if (p.typeId.equals(ID)) {
             s.castleStatus = p.state == Plot.State.BUILT ? "Capital Castle complete" :
                     "Capital Castle: " + p.state.name().toLowerCase(java.util.Locale.ROOT) + " · " + (int)(100*p.progress()) + "%";

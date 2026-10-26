@@ -409,7 +409,7 @@ public final class Simulation {
         if (t.progress >= 1 && level.hasChunkAt(s.center)) {
             BlockPos at = musterPoint(level, s, 0);
             String name = soldierName(level, t.type);
-            Entity e = RecruitsBridge.spawn(level, t.type, at, s.owner, name);
+            Entity e = RecruitsBridge.spawn(level, t.type, at, s.kingdomId(), name);
             if (e == null) return;
             s.training.remove(0);
             for (ItemStack g : t.gear) equipStack(s, e, g);
@@ -453,7 +453,7 @@ public final class Simulation {
         if (s.soldiers.size() >= AI_GUARDS[s.tier.ordinal()] || s.wealth < 20) return;
         UnitType u = s.soldiers.size() % 3 == 2 ? UnitType.BOWMAN : s.tier.number() >= 3 && s.soldiers.size() % 4 == 1 ? UnitType.SHIELDBEARER : UnitType.FOOTMAN;
         BlockPos at = musterPoint(level, s, s.soldiers.size());
-        Entity e = RecruitsBridge.spawn(level, u, at, null, s.name + " " + u.label);
+        Entity e = RecruitsBridge.spawn(level, u, at, s.kingdomId(), s.name + " " + u.label);
         if (e == null) return;
         s.wealth -= 20;
         // AI guards get plain gear matching the town's rank
@@ -563,6 +563,7 @@ public final class Simulation {
 
     /** Sends one soldier to its post for the current stance (or to the threat during an alarm). */
     public static void applyStance(ServerLevel level, Settlement s, Entity e, Settlement.Soldier so, int index) {
+        if (Raids.deployed(SettlementManager.get(level.getServer()), so.entity)) return;
         if (SoldierProgression.escort(s, so, e)) return;
         if (s.alarmUntil > level.getGameTime() && s.stance != Stance.FOLLOW && s.stance != Stance.FREE) {
             Mob threat = nearestThreat(level, s, e.blockPosition());

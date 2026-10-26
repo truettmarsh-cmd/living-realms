@@ -132,6 +132,26 @@ public final class RecruitsBridge {
 
     public static boolean isFollowing(Entity e) { return e instanceof AbstractRecruitEntity r && r.getFollowState() == FOLLOW; }
 
+    /** An NPC kingdom uses a stable synthetic owner UUID, keeping its soldiers allied. */
+    public static void allegiance(Entity e, UUID owner) {
+        if (!(e instanceof AbstractRecruitEntity r) || owner.equals(r.getOwnerUUID())) return;
+        r.setOwnerUUID(Optional.of(owner));
+        r.setIsOwned(true);
+        clearRaidTarget(r);
+    }
+
+    public static void raidOrder(Entity e, BlockPos center, @Nullable net.minecraft.world.entity.LivingEntity enemy) {
+        if (!(e instanceof AbstractRecruitEntity r)) return;
+        aggressive(r);
+        holdAt(r, enemy == null ? center : enemy.blockPosition());
+        r.setTarget(enemy);
+        if (enemy == null) r.getNavigation().moveTo(center.getX() + .5, center.getY(), center.getZ() + .5, 1.0);
+    }
+
+    public static void clearRaidTarget(Entity e) {
+        if (e instanceof AbstractRecruitEntity r) { r.setTarget(null); r.setLastHurtByMob(null); }
+    }
+
     public static int level(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getXpLevel() : 0; }
 
     public static int kills(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getKills() : 0; }

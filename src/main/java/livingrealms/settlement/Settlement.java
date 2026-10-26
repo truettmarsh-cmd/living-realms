@@ -31,6 +31,12 @@ public final class Settlement {
     public BlockPos center = BlockPos.ZERO;
     @Nullable public UUID owner;
     public String ownerName = "";
+    /** Independent NPC kingdoms have distinct identities; player kingdoms use their owner's UUID. */
+    public UUID kingdom = id;
+    public boolean capital;
+    public long raidCooldown;
+    public long capitalMovedAt;
+    public String raidStatus = "";
     public String style = "minecraft:plains";
     public Tier tier = Tier.CAMP;
     public final Stockpile stock = new Stockpile();
@@ -200,6 +206,8 @@ public final class Settlement {
 
     public boolean isAi() { return owner == null; }
 
+    public UUID kingdomId() { return owner == null ? kingdom : owner; }
+
     public boolean has(String researchId) { return researchId == null || researchId.isEmpty() || research.contains(researchId); }
 
     public void log(String msg) {
@@ -248,6 +256,7 @@ public final class Settlement {
     /** Why a building can't be planned here, or null. */
     @Nullable
     public String cannotBuild(BuildingType t) {
+        if (t.id.equals(CapitalCastles.ID) && !capital) return "Only the kingdom capital can build the Capital Castle";
         if (t.minTier > tier.number()) return "Needs " + Tier.of(t.minTier).label;
         if (!has(t.research)) {
             var n = ResearchTree.get(t.research);
@@ -281,6 +290,7 @@ public final class Settlement {
         List<String> out = new ArrayList<>();
         Tier n = tier.next();
         if (n == null) return out;
+        if (n == Tier.CAPITAL && !capital) out.add("Only the kingdom capital can claim Capital rank");
         if (population < n.population) out.add(population + "/" + n.population + " people");
         if (d.buildings < n.buildings) out.add(d.buildings + "/" + n.buildings + " buildings");
         if (n.research != null && !research.contains(n.research)) {
@@ -322,6 +332,11 @@ public final class Settlement {
         t.put("center", NbtUtils.writeBlockPos(center));
         if (owner != null) t.putUUID("owner", owner);
         t.putString("ownerName", ownerName);
+        t.putUUID("kingdom", kingdomId());
+        t.putBoolean("capital", capital);
+        t.putLong("raidCooldown", raidCooldown);
+        t.putLong("capitalMovedAt", capitalMovedAt);
+        t.putString("raidStatus", raidStatus);
         t.putString("style", style);
         t.putInt("tier", tier.number());
         t.put("stock", stock.save());
@@ -379,6 +394,11 @@ public final class Settlement {
         s.center = NbtUtils.readBlockPos(t.getCompound("center"));
         if (t.hasUUID("owner")) s.owner = t.getUUID("owner");
         s.ownerName = t.getString("ownerName");
+        s.kingdom = t.hasUUID("kingdom") ? t.getUUID("kingdom") : s.owner == null ? s.id : s.owner;
+        s.capital = t.getBoolean("capital");
+        s.raidCooldown = t.getLong("raidCooldown");
+        s.capitalMovedAt = t.getLong("capitalMovedAt");
+        s.raidStatus = t.getString("raidStatus");
         s.style = t.getString("style");
         s.tier = Tier.of(t.getInt("tier"));
         s.stock.load(t.getList("stock", Tag.TAG_COMPOUND));

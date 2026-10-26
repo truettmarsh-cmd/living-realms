@@ -53,6 +53,7 @@ public final class ServerEvents {
                 if (tick % 100 == 0) Simulation.garrison(level, s, false);
             }
         }
+        if (tick % 20 == 0) Raids.tick(server, m);
         if (tick % Config.SIM_INTERVAL.get() == 0) {
             for (Settlement s : m.all()) {
                 try {
@@ -123,5 +124,12 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent e) {
         if (e.getEntity() instanceof ServerPlayer sp) Net.sendCatalog(sp);
+    }
+
+    @SubscribeEvent
+    public static void onEntityLoad(net.minecraftforge.event.entity.EntityJoinLevelEvent e) {
+        if (!(e.getLevel() instanceof ServerLevel level)) return;
+        var record = livingrealms.military.SoldierProgression.record(level.getServer(), e.getEntity());
+        if (record != null) livingrealms.military.RecruitsBridge.allegiance(e.getEntity(), record.settlement().kingdomId());
     }
 }

@@ -17,6 +17,14 @@ public final class View {
         t.putUUID("id", s.id);
         t.putString("name", s.name);
         t.putString("castleStatus", s.castleStatus);
+        SettlementManager manager = SettlementManager.get(p.server);
+        t.putBoolean("capital", s.capital);
+        t.putBoolean("ruler", p.getUUID().equals(s.owner));
+        t.putInt("kingdomCities", Kingdoms.cities(manager, s).size());
+        t.putString("raidStatus", s.raidStatus);
+        t.putBoolean("canRaid", Raids.playerSource(p.server, manager, p.getUUID(), s) != null);
+        t.putBoolean("canMoveCapital", p.getUUID().equals(s.owner) && !s.capital && !Raids.engaged(manager, s)
+                && Kingdoms.cities(manager, s).stream().noneMatch(c -> c.capitalMovedAt > p.server.overworld().getGameTime()));
         t.putString("owner", s.isAi() ? "" : s.ownerName);
         t.putBoolean("mine", p.getUUID().equals(s.owner) || p.hasPermissions(2));
         t.putBoolean("ai", s.isAi());

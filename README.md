@@ -21,6 +21,22 @@ Living Realms is an original mod. It does not include or modify code from Recrui
 - **Legendary veteran perks.** Starting at native Villager Recruits level 8, each newly reached level has a 12% chance of one of 12 legendary perks. A second slot opens at level 14; at most two unique perks. Rolls, results and cooldowns are saved, so reopening the screen or reloading does not reroll. These are modest, contextual effects such as preferred-weapon damage, long-range shots, spear-and-shield combat, brief post-kill damage, limited recovery, protection near the owner, fire protection, knockback resistance, scouting or faster practice. No invulnerability or resurrection.
 - **Living AI villages.** Naturally generated villages become AI settlements. They plan, build and grow by themselves, even while nobody is nearby, catching up when their chunks load again.
 
+## Kingdoms, capitals and conquest
+
+All cities owned by the same player form one kingdom. Independent NPC towns start as separate kingdoms and can expand through conquest. Each kingdom has exactly one designated capital, starting with its first town; this designation is separate from the town's development rank. Only that settlement can reach Capital rank or commission a Capital Castle. City Manager → Overview shows the capital and kingdom city count. **Make capital** moves the designation, with a one-Minecraft-day cooldown and no moves during a raid. A former Capital-rank settlement returns to City rank, retaining its buildings, stockpile and research.
+
+Open a rival city's City Manager and choose **Raid this city**. The server selects your nearest eligible town and sends half its available foot soldiers (2–12), leaving the rest at home. The source needs at least three living, unmounted soldiers in its territory; personal Royal Guards and mounted units stay out of the expedition. Both cities must be in the same dimension and within 1,024 blocks by default. Soldiers travel physically: the cities and armies must remain loaded. Unloaded soldiers pause the raid rather than count as dead. No chunks are force-loaded.
+
+Defeat the local defending recruits and any defending ruler present in Survival, then keep at least one attacker within 12 blocks of the city center, uncontested, for 60 seconds. Contested occupation resets the timer. Killing the expedition defeats the raid; an expedition that cannot capture the city within ten active minutes retreats.
+
+- **Ordinary city victory:** transfers only that city.
+- **Capital victory:** transfers every city of the defeated kingdom, including cities in other dimensions. The winner retains its own capital; the captured capital becomes an ordinary city.
+- Ownership, stockpiles, buildings and research transfer together. Surviving town soldiers change allegiance, including when they next load. Personal guard status is cleared; captured riders dismount rather than transferring ownership of a player's dragon or horse.
+
+NPC kingdoms periodically choose nearby eligible rivals, including online players, and send real existing garrison soldiers. A warning announces the attack and whether the capital—and therefore the whole kingdom—is at stake. Newly discovered NPC kingdoms wait one Minecraft day before initiating raids. Kingdoms handle one raid at a time and recover for a day afterward. Raid state and occupation progress survive saving and restarting.
+
+Server config `warfare.npcRaids` enables NPC attacks (default true); `raidRange` and `raidCooldown` control range and recovery. City Manager displays the current battle or pause status. Existing worlds migrate automatically: one existing capital is retained per kingdom, or the oldest town becomes the seat when none was designated. Extra Capital-rank towns retain their buildings and become cities.
+
 ## Requirements
 
 - Minecraft 1.20.1, Forge 47+
@@ -61,6 +77,10 @@ Research adds Mythic Smithing, Dragonsteel Forging and Master Armourer. Commissi
 
 Use JDK 17 and Gradle 8.8. `-Pintegrations` loads the optional local jars named in `build.gradle` from `libs/`; none are redistributed. `runServer -PmilitaryTest` runs assertions in a separate `run-military-test/` server directory and writes `military-test-result.txt` there. Add `-Pintegrations` to exercise Epic Knights, its Addon, Antique Legacy and Ice and Fire together. The test server needs its own EULA file and localhost-only `server.properties`; it never touches the normal `run/` world. The assertion result file, not merely Gradle's exit code, determines whether the tests passed.
 
+Run `sh tools/warfare-test.sh --offline` for the isolated kingdom and conquest suite. Set `GRADLE_BIN` to a Gradle 8.8 executable if the local wrapper uses another version, and `WARFARE_EULA_FILE` to an existing accepted server EULA file if needed. The script prints its temporary instance directory and checks the assertion report before returning success.
+
+Version 0.3.0 verification: the packaged jar passed 41 warfare assertions on Forge 47.4.23 with Recruits 1.15.2. The existing development integration suite passed 1,202 military, progression, castle, smithing and dragon assertions with Epic Knights, its Addon, Antique Legacy and Ice and Fire.
+
 ### Progression balance
 
 Normal conditional damage bonuses share a +15% budget, favourite/mastery damage a +15% budget, and legendary bonuses a +10% budget (maximum +40% combined). This reserves useful headroom for legendary perks. All Living Realms percentage damage reductions share a 25% cap; native armour and Recruits attributes still apply normally. Second Wind heals only 2 HP with a 30-second cooldown, Battle Rhythm lasts 8 seconds with a 30-second cooldown, and Iron Will reduces a hit while already below 40% health with a 90-second cooldown. Legendary perks never prevent void or administrative kill damage.
@@ -79,6 +99,6 @@ Development caveat: Pehkui's `ScreenHandlerMixin` fails in newer Forge developme
 
 Capital-ranked settlements with Royal Charter automatically commission an original 41 × 41 courtyard castle at the village center. Villager builders use the existing paid construction system, pausing for missing materials. Four towers, a great hall, guard rooms and open gates surround an untouched 25 × 25 courtyard, preserving the charter and central buildings. Autonomous villages reserve the future perimeter. Existing towns report obstructing plots, blocks or uneven terrain in the Capital overview and town log; nothing is automatically demolished.
 
-The layout is inspired by a published Bodiam Castle floor plan; see [blueprint source and placement details](docs/capital-castle.md). Capital rank is the trigger because Living Realms does not yet have a separate empire capital-election system. The integration test exercises paid completion, blocked sites, duplicate prevention, courtyard preservation and persistence.
+The layout is inspired by a published Bodiam Castle floor plan; see [blueprint source and placement details](docs/capital-castle.md). The designated kingdom capital must also reach Capital rank to trigger construction. Other cities cannot commission a new Capital Castle. The integration test exercises paid completion, blocked sites, duplicate prevention, courtyard preservation and persistence.
 
-Verification: the production jar passed 1,214 assertions with Epic Knights 10.15, Epic Knights Addon 2.6, Antique Legacy 1.13, Ice and Fire 2.1.13 and Pehkui 3.8.2 (1,141 smithing patterns), and 99 assertions with Recruits alone. Client checks verified promotion, following, mounted dragon escort and the skill/weapon/legendary/origin screens. Screenshots use staged demonstration progression. `runClient -PcastleUiTest` captures the completed castle in a new isolated world.
+Version 0.2.0 verification: the production jar passed 1,214 assertions with Epic Knights 10.15, Epic Knights Addon 2.6, Antique Legacy 1.13, Ice and Fire 2.1.13 and Pehkui 3.8.2 (1,141 smithing patterns), and 99 assertions with Recruits alone. Client checks verified promotion, following, mounted dragon escort and the skill/weapon/legendary/origin screens. Screenshots use staged demonstration progression. `runClient -PcastleUiTest` captures the completed castle in a new isolated world.

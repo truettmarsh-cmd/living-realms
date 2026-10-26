@@ -19,7 +19,7 @@ public final class CapitalCastleSelfTest {
         check(bp.sx == 41 && bp.sz == 41 && bp.beds == 4, "Castle dimensions and guard quarters"); n++;
         for (int i=0;i<bp.size();i++) check(!(bp.lx(i)>=8 && bp.lx(i)<=32 && bp.lz(i)>=8 && bp.lz(i)<=32), "No courtyard clearing"); n++;
         check(CapitalCastles.plan(level,s) != null && s.plots.isEmpty(), "Capital rank gate"); n++;
-        s.tier=Tier.CAPITAL;
+        s.tier=Tier.CAPITAL; s.capital=true;
         check(CapitalCastles.plan(level,s) != null && s.plots.isEmpty(), "Royal charter gate"); n++;
         s.research.add("royal_charter");
         for (int x=492;x<=532;x++) for (int z=492;z<=532;z++) {

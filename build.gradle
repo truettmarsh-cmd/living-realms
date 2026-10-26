@@ -30,6 +30,10 @@ minecraft {
         }
         server {
             args '--nogui'
+            if (project.hasProperty('warfareTest')) {
+                workingDirectory project.file(project.property('warfareTestDir'))
+                property 'livingrealms.warfareTest', 'true'
+            }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')
                 property 'livingrealms.militaryTest', 'true'

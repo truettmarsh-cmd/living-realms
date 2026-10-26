@@ -75,6 +75,7 @@ public final class SoldierProgression {
                 if (so.seen) { so.seen = false; s.dirty = true; }
                 continue;
             }
+            RecruitsBridge.allegiance(e, s.kingdomId());
             WeaponProficiency.initialise(so);
             int previous = so.legendaryLevelChecked;
             for (LegendaryPerk perk : LegendaryPerk.levelUp(so, RecruitsBridge.level(e), le.getRandom()))

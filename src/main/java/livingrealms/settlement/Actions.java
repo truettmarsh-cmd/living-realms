@@ -37,6 +37,11 @@ public final class Actions {
         SettlementManager m = SettlementManager.get(player.server);
         Settlement s = m.get(settlementId);
         if (s == null) return;
+        if (action.equals("raid")) {
+            String error = Raids.playerStart(player, m, s);
+            if (error != null) tell(player, error);
+            return;
+        }
         boolean owner = player.getUUID().equals(s.owner) || player.hasPermissions(2);
         if (!owner) {
             tell(player, "This is " + (s.isAi() ? "an independent town" : s.ownerName + "'s town") + ". You can look, not command.");
@@ -55,6 +60,7 @@ public final class Actions {
             case "research" -> research(s, d.getString("id"));
             case "cancelResearch" -> { s.researchBank += s.researchProgress; s.researchProgress = 0; s.activeResearch = ""; yield null; }
             case "tier" -> advance(s);
+            case "capital" -> player.getUUID().equals(s.owner) ? Kingdoms.designate(player.server, m, s) : "Only the ruler may move the capital";
             case "tax" -> tax(s, d.getInt("level"));
             case "order" -> order(s, d);
             case "cancelOrder" -> cancelOrder(s, d.getInt("id"));
