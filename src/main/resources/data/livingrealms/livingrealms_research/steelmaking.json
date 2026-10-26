@@ -1,0 +1,15 @@
+{
+ "name": "Steelmaking",
+ "branch": "Smithing",
+ "cost": 250,
+ "requires": [
+  "iron_working"
+ ],
+ "icon": "minecraft:iron_block",
+ "x": 3,
+ "y": 6,
+ "description": "Smiths turn iron and coal into steel (Epic Knights).",
+ "items": {
+  "minecraft:coal": 16
+ }
+}

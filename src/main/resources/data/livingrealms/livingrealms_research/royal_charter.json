@@ -1,0 +1,16 @@
+{
+ "name": "Royal Charter",
+ "branch": "Construction",
+ "cost": 800,
+ "requires": [
+  "urban_planning"
+ ],
+ "icon": "minecraft:golden_helmet",
+ "x": 5,
+ "y": 3,
+ "description": "Needed to become a Capital.",
+ "items": {
+  "minecraft:gold_ingot": 16,
+  "minecraft:book": 4
+ }
+}

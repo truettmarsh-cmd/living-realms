@@ -1,0 +1,12 @@
+{
+ "name": "Trade",
+ "branch": "Economy",
+ "cost": 100,
+ "requires": [
+  "forestry"
+ ],
+ "icon": "minecraft:emerald_block",
+ "x": 1,
+ "y": 1,
+ "description": "Unlocks the Market Square; merchants earn emeralds."
+}

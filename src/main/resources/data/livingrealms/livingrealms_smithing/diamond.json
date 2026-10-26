@@ -1,0 +1,46 @@
+{
+ "name": "Diamond",
+ "order": 50,
+ "color": "#5CE0D8",
+ "research": "diamond_smithing",
+ "pieces": {
+  "helmet": {
+   "item": "minecraft:diamond_helmet",
+   "cost": {
+    "minecraft:diamond": 5
+   }
+  },
+  "chestplate": {
+   "item": "minecraft:diamond_chestplate",
+   "cost": {
+    "minecraft:diamond": 8
+   }
+  },
+  "leggings": {
+   "item": "minecraft:diamond_leggings",
+   "cost": {
+    "minecraft:diamond": 7
+   }
+  },
+  "boots": {
+   "item": "minecraft:diamond_boots",
+   "cost": {
+    "minecraft:diamond": 4
+   }
+  },
+  "sword": {
+   "item": "minecraft:diamond_sword",
+   "cost": {
+    "minecraft:diamond": 2,
+    "minecraft:stick": 1
+   }
+  },
+  "axe": {
+   "item": "minecraft:diamond_axe",
+   "cost": {
+    "minecraft:diamond": 3,
+    "minecraft:stick": 2
+   }
+  }
+ }
+}

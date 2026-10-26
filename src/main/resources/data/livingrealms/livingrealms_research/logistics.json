@@ -1,0 +1,10 @@
+{
+ "name": "Logistics",
+ "branch": "Military",
+ "cost": 150,
+ "requires": [],
+ "icon": "minecraft:bread",
+ "x": 0,
+ "y": 11,
+ "description": "Soldiers eat less and train half again as fast."
+}

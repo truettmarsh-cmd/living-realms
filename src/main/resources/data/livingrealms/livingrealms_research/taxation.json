@@ -1,0 +1,15 @@
+{
+ "name": "Taxation",
+ "branch": "Economy",
+ "cost": 90,
+ "requires": [
+  "granaries"
+ ],
+ "icon": "minecraft:emerald",
+ "x": 2,
+ "y": 0,
+ "description": "Allows high taxes.",
+ "items": {
+  "minecraft:paper": 8
+ }
+}

@@ -1,0 +1,32 @@
+{
+ "name": "Leather",
+ "order": 10,
+ "color": "#8B5A2B",
+ "research": "leatherworking",
+ "pieces": {
+  "helmet": {
+   "item": "minecraft:leather_helmet",
+   "cost": {
+    "minecraft:leather": 5
+   }
+  },
+  "chestplate": {
+   "item": "minecraft:leather_chestplate",
+   "cost": {
+    "minecraft:leather": 8
+   }
+  },
+  "leggings": {
+   "item": "minecraft:leather_leggings",
+   "cost": {
+    "minecraft:leather": 7
+   }
+  },
+  "boots": {
+   "item": "minecraft:leather_boots",
+   "cost": {
+    "minecraft:leather": 4
+   }
+  }
+ }
+}

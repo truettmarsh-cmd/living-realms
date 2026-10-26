@@ -1,0 +1,16 @@
+{
+ "name": "Banking",
+ "branch": "Economy",
+ "cost": 300,
+ "requires": [
+  "trade",
+  "taxation"
+ ],
+ "icon": "minecraft:gold_block",
+ "x": 3,
+ "y": 1,
+ "description": "Merchants earn half again as much.",
+ "items": {
+  "minecraft:gold_ingot": 8
+ }
+}

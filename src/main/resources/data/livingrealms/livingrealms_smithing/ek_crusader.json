@@ -1,0 +1,34 @@
+{
+ "name": "Crusader",
+ "order": 43,
+ "color": "#E8E0D0",
+ "research": "plate_armour",
+ "requires_mod": "magistuarmory",
+ "pieces": {
+  "helmet": {
+   "item": "magistuarmory:greathelm",
+   "cost": {
+    "magistuarmory:steel_ingot": 6
+   }
+  },
+  "chestplate": {
+   "item": "magistuarmory:crusader_chestplate",
+   "cost": {
+    "magistuarmory:steel_ingot": 9,
+    "minecraft:white_wool": 2
+   }
+  },
+  "leggings": {
+   "item": "magistuarmory:crusader_leggings",
+   "cost": {
+    "magistuarmory:steel_ingot": 7
+   }
+  },
+  "boots": {
+   "item": "magistuarmory:crusader_boots",
+   "cost": {
+    "magistuarmory:steel_ingot": 4
+   }
+  }
+ }
+}

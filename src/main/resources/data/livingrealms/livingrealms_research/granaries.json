@@ -1,0 +1,12 @@
+{
+ "name": "Granaries",
+ "branch": "Economy",
+ "cost": 80,
+ "requires": [
+  "agriculture"
+ ],
+ "icon": "minecraft:barrel",
+ "x": 1,
+ "y": 0,
+ "description": "The stockpile holds half again as much."
+}

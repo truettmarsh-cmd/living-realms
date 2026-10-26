@@ -1,0 +1,13 @@
+{
+ "name": "Scholarship",
+ "branch": "Scholarship",
+ "cost": 50,
+ "requires": [],
+ "icon": "minecraft:bookshelf",
+ "x": 0,
+ "y": 5,
+ "description": "Unlocks the Library and its scholars.",
+ "items": {
+  "minecraft:book": 1
+ }
+}

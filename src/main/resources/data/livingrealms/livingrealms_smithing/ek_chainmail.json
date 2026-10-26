@@ -1,0 +1,33 @@
+{
+ "name": "Steel Chainmail",
+ "order": 40,
+ "color": "#9AA6B4",
+ "research": "steelmaking",
+ "requires_mod": "magistuarmory",
+ "pieces": {
+  "helmet": {
+   "item": "magistuarmory:chainmail_helmet",
+   "cost": {
+    "magistuarmory:steel_ingot": 3
+   }
+  },
+  "chestplate": {
+   "item": "magistuarmory:chainmail_chestplate",
+   "cost": {
+    "magistuarmory:steel_ingot": 5
+   }
+  },
+  "leggings": {
+   "item": "magistuarmory:chainmail_leggings",
+   "cost": {
+    "magistuarmory:steel_ingot": 4
+   }
+  },
+  "boots": {
+   "item": "magistuarmory:chainmail_boots",
+   "cost": {
+    "magistuarmory:steel_ingot": 2
+   }
+  }
+ }
+}

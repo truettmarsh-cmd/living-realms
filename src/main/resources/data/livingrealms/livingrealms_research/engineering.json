@@ -1,0 +1,15 @@
+{
+ "name": "Engineering",
+ "branch": "Construction",
+ "cost": 280,
+ "requires": [
+  "architecture"
+ ],
+ "icon": "minecraft:piston",
+ "x": 3,
+ "y": 3,
+ "description": "Builders work 40% faster.",
+ "items": {
+  "minecraft:redstone": 8
+ }
+}

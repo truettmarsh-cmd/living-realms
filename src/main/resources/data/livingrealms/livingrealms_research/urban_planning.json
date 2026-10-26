@@ -1,0 +1,15 @@
+{
+ "name": "Urban Planning",
+ "branch": "Construction",
+ "cost": 450,
+ "requires": [
+  "engineering"
+ ],
+ "icon": "minecraft:filled_map",
+ "x": 4,
+ "y": 3,
+ "description": "Needed to become a City.",
+ "items": {
+  "minecraft:paper": 16
+ }
+}

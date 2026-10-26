@@ -1,0 +1,12 @@
+{
+ "name": "Goldsmithing",
+ "branch": "Smithing",
+ "cost": 100,
+ "requires": [
+  "iron_working"
+ ],
+ "icon": "minecraft:golden_chestplate",
+ "x": 4,
+ "y": 7,
+ "description": "Gilded ceremonial armour."
+}

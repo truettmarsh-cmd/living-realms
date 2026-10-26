@@ -1,0 +1,34 @@
+{
+ "name": "Maximilian Plate",
+ "order": 48,
+ "color": "#E0E4F0",
+ "research": "gothic_plate",
+ "requires_mod": "magistuarmory",
+ "pieces": {
+  "helmet": {
+   "item": "magistuarmory:maximilian_helmet",
+   "cost": {
+    "magistuarmory:steel_ingot": 8
+   }
+  },
+  "chestplate": {
+   "item": "magistuarmory:maximilian_chestplate",
+   "cost": {
+    "magistuarmory:steel_ingot": 13,
+    "minecraft:gold_ingot": 1
+   }
+  },
+  "leggings": {
+   "item": "magistuarmory:maximilian_leggings",
+   "cost": {
+    "magistuarmory:steel_ingot": 10
+   }
+  },
+  "boots": {
+   "item": "magistuarmory:maximilian_boots",
+   "cost": {
+    "magistuarmory:steel_ingot": 6
+   }
+  }
+ }
+}

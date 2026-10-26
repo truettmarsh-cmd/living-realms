@@ -1,0 +1,15 @@
+{
+ "name": "Architecture",
+ "branch": "Construction",
+ "cost": 160,
+ "requires": [
+  "masonry"
+ ],
+ "icon": "minecraft:bricks",
+ "x": 2,
+ "y": 3,
+ "description": "Needed to become a Town. Unlocks the Chapel.",
+ "items": {
+  "minecraft:book": 2
+ }
+}

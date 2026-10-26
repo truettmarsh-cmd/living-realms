@@ -1,0 +1,12 @@
+{
+ "name": "Masonry",
+ "branch": "Construction",
+ "cost": 60,
+ "requires": [
+  "carpentry"
+ ],
+ "icon": "minecraft:stone_bricks",
+ "x": 1,
+ "y": 3,
+ "description": "Needed to become a Village. Unlocks Watchtowers."
+}

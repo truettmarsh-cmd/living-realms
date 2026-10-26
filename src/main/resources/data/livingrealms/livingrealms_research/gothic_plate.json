@@ -1,0 +1,12 @@
+{
+ "name": "Fluted Plate",
+ "branch": "Smithing",
+ "cost": 600,
+ "requires": [
+  "plate_armour"
+ ],
+ "icon": "minecraft:diamond_chestplate",
+ "x": 5,
+ "y": 6,
+ "description": "Gothic and Maximilian plate (Epic Knights)."
+}

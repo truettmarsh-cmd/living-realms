@@ -1,0 +1,39 @@
+{
+ "name": "Gold",
+ "order": 35,
+ "color": "#F0C840",
+ "research": "goldsmithing",
+ "pieces": {
+  "helmet": {
+   "item": "minecraft:golden_helmet",
+   "cost": {
+    "minecraft:gold_ingot": 5
+   }
+  },
+  "chestplate": {
+   "item": "minecraft:golden_chestplate",
+   "cost": {
+    "minecraft:gold_ingot": 8
+   }
+  },
+  "leggings": {
+   "item": "minecraft:golden_leggings",
+   "cost": {
+    "minecraft:gold_ingot": 7
+   }
+  },
+  "boots": {
+   "item": "minecraft:golden_boots",
+   "cost": {
+    "minecraft:gold_ingot": 4
+   }
+  },
+  "sword": {
+   "item": "minecraft:golden_sword",
+   "cost": {
+    "minecraft:gold_ingot": 2,
+    "minecraft:stick": 1
+   }
+  }
+ }
+}

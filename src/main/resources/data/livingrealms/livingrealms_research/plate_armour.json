@@ -1,0 +1,12 @@
+{
+ "name": "Plate Armour",
+ "branch": "Smithing",
+ "cost": 400,
+ "requires": [
+  "steelmaking"
+ ],
+ "icon": "minecraft:netherite_chestplate",
+ "x": 4,
+ "y": 6,
+ "description": "Knight's and crusader plate (Epic Knights)."
+}

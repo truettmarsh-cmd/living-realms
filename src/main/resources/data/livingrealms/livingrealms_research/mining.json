@@ -1,0 +1,10 @@
+{
+ "name": "Mining",
+ "branch": "Economy",
+ "cost": 60,
+ "requires": [],
+ "icon": "minecraft:iron_pickaxe",
+ "x": 0,
+ "y": 2,
+ "description": "Unlocks the Mine: stone, coal, iron and copper."
+}

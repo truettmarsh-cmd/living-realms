@@ -1,0 +1,9 @@
+build/
+.gradle/
+run/
+run-data/
+*.iml
+.idea/
+libs/
+run-tour.log
+tools/.venv/

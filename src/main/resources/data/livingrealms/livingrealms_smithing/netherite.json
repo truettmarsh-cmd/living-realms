@@ -1,0 +1,50 @@
+{
+ "name": "Netherite",
+ "order": 60,
+ "color": "#4A3A3A",
+ "research": "netherite_forging",
+ "pieces": {
+  "helmet": {
+   "item": "minecraft:netherite_helmet",
+   "cost": {
+    "minecraft:diamond_helmet": 1,
+    "minecraft:netherite_ingot": 1
+   }
+  },
+  "chestplate": {
+   "item": "minecraft:netherite_chestplate",
+   "cost": {
+    "minecraft:diamond_chestplate": 1,
+    "minecraft:netherite_ingot": 1
+   }
+  },
+  "leggings": {
+   "item": "minecraft:netherite_leggings",
+   "cost": {
+    "minecraft:diamond_leggings": 1,
+    "minecraft:netherite_ingot": 1
+   }
+  },
+  "boots": {
+   "item": "minecraft:netherite_boots",
+   "cost": {
+    "minecraft:diamond_boots": 1,
+    "minecraft:netherite_ingot": 1
+   }
+  },
+  "sword": {
+   "item": "minecraft:netherite_sword",
+   "cost": {
+    "minecraft:diamond_sword": 1,
+    "minecraft:netherite_ingot": 1
+   }
+  },
+  "axe": {
+   "item": "minecraft:netherite_axe",
+   "cost": {
+    "minecraft:diamond_axe": 1,
+    "minecraft:netherite_ingot": 1
+   }
+  }
+ }
+}

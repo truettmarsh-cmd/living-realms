@@ -1,0 +1,12 @@
+{
+ "name": "Command",
+ "branch": "Military",
+ "cost": 250,
+ "requires": [
+  "drill"
+ ],
+ "icon": "minecraft:white_banner",
+ "x": 1,
+ "y": 9,
+ "description": "Room for half again as many soldiers."
+}

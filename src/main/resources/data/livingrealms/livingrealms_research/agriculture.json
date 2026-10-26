@@ -1,0 +1,10 @@
+{
+ "name": "Crop Rotation",
+ "branch": "Economy",
+ "cost": 40,
+ "requires": [],
+ "icon": "minecraft:wheat",
+ "x": 0,
+ "y": 0,
+ "description": "Farms yield a quarter more."
+}

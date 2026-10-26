@@ -1,0 +1,13 @@
+{
+ "name": "Crossbows",
+ "branch": "Military",
+ "cost": 160,
+ "requires": [
+  "archery",
+  "iron_working"
+ ],
+ "icon": "minecraft:crossbow",
+ "x": 1,
+ "y": 10,
+ "description": "Train Crossbowmen."
+}

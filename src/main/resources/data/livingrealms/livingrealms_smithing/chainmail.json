@@ -1,0 +1,32 @@
+{
+ "name": "Chainmail",
+ "order": 25,
+ "color": "#B0B8C0",
+ "research": "chainmail",
+ "pieces": {
+  "helmet": {
+   "item": "minecraft:chainmail_helmet",
+   "cost": {
+    "minecraft:iron_ingot": 3
+   }
+  },
+  "chestplate": {
+   "item": "minecraft:chainmail_chestplate",
+   "cost": {
+    "minecraft:iron_ingot": 5
+   }
+  },
+  "leggings": {
+   "item": "minecraft:chainmail_leggings",
+   "cost": {
+    "minecraft:iron_ingot": 4
+   }
+  },
+  "boots": {
+   "item": "minecraft:chainmail_boots",
+   "cost": {
+    "minecraft:iron_ingot": 2
+   }
+  }
+ }
+}

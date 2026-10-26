@@ -1,0 +1,12 @@
+{
+ "name": "Shieldcraft",
+ "branch": "Smithing",
+ "cost": 60,
+ "requires": [
+  "iron_working"
+ ],
+ "icon": "minecraft:shield",
+ "x": 3,
+ "y": 7,
+ "description": "Shields for the line."
+}

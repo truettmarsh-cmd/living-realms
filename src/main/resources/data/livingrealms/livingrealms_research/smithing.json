@@ -1,0 +1,12 @@
+{
+ "name": "Smithing",
+ "branch": "Smithing",
+ "cost": 40,
+ "requires": [
+  "leatherworking"
+ ],
+ "icon": "minecraft:anvil",
+ "x": 1,
+ "y": 6,
+ "description": "Unlocks the Smithy: smelting, stone weapons and orders."
+}

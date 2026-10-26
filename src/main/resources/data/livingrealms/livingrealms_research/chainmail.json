@@ -1,0 +1,12 @@
+{
+ "name": "Chainmail",
+ "branch": "Smithing",
+ "cost": 80,
+ "requires": [
+  "smithing"
+ ],
+ "icon": "minecraft:chainmail_chestplate",
+ "x": 2,
+ "y": 7,
+ "description": "Chainmail armour."
+}

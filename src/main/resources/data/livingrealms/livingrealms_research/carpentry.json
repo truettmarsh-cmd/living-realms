@@ -1,0 +1,10 @@
+{
+ "name": "Carpentry",
+ "branch": "Construction",
+ "cost": 30,
+ "requires": [],
+ "icon": "minecraft:crafting_table",
+ "x": 0,
+ "y": 3,
+ "description": "Builders work a quarter faster."
+}

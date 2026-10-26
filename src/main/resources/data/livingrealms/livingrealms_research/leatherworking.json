@@ -1,0 +1,10 @@
+{
+ "name": "Leatherworking",
+ "branch": "Smithing",
+ "cost": 20,
+ "requires": [],
+ "icon": "minecraft:leather_chestplate",
+ "x": 0,
+ "y": 6,
+ "description": "Smiths can make leather armour."
+}

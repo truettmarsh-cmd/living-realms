@@ -1,0 +1,33 @@
+{
+ "name": "Fletching",
+ "order": 20,
+ "color": "#C8A060",
+ "research": "archery",
+ "pieces": {
+  "bow": {
+   "item": "minecraft:bow",
+   "cost": {
+    "minecraft:stick": 3,
+    "minecraft:string": 3
+   }
+  },
+  "crossbow": {
+   "item": "minecraft:crossbow",
+   "research": "crossbows",
+   "cost": {
+    "minecraft:stick": 3,
+    "minecraft:string": 2,
+    "minecraft:iron_ingot": 2
+   }
+  },
+  "arrows": {
+   "item": "minecraft:arrow",
+   "count": 16,
+   "cost": {
+    "minecraft:flint": 4,
+    "minecraft:stick": 4,
+    "minecraft:feather": 4
+   }
+  }
+ }
+}

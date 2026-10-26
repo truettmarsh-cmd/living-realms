@@ -1,0 +1,54 @@
+{
+ "name": "Iron",
+ "order": 30,
+ "color": "#D8D8D8",
+ "research": "iron_working",
+ "pieces": {
+  "helmet": {
+   "item": "minecraft:iron_helmet",
+   "cost": {
+    "minecraft:iron_ingot": 5
+   }
+  },
+  "chestplate": {
+   "item": "minecraft:iron_chestplate",
+   "cost": {
+    "minecraft:iron_ingot": 8
+   }
+  },
+  "leggings": {
+   "item": "minecraft:iron_leggings",
+   "cost": {
+    "minecraft:iron_ingot": 7
+   }
+  },
+  "boots": {
+   "item": "minecraft:iron_boots",
+   "cost": {
+    "minecraft:iron_ingot": 4
+   }
+  },
+  "sword": {
+   "item": "minecraft:iron_sword",
+   "cost": {
+    "minecraft:iron_ingot": 2,
+    "minecraft:stick": 1
+   }
+  },
+  "axe": {
+   "item": "minecraft:iron_axe",
+   "cost": {
+    "minecraft:iron_ingot": 3,
+    "minecraft:stick": 2
+   }
+  },
+  "shield": {
+   "item": "minecraft:shield",
+   "research": "shieldcraft",
+   "cost": {
+    "#minecraft:planks": 6,
+    "minecraft:iron_ingot": 1
+   }
+  }
+ }
+}

@@ -1,0 +1,15 @@
+{
+ "name": "Iron Working",
+ "branch": "Smithing",
+ "cost": 120,
+ "requires": [
+  "smithing"
+ ],
+ "icon": "minecraft:iron_chestplate",
+ "x": 2,
+ "y": 6,
+ "description": "Iron armour and weapons.",
+ "items": {
+  "minecraft:iron_ingot": 4
+ }
+}

@@ -1,0 +1,10 @@
+{
+ "name": "Drill",
+ "branch": "Military",
+ "cost": 60,
+ "requires": [],
+ "icon": "minecraft:iron_sword",
+ "x": 0,
+ "y": 9,
+ "description": "Train Shieldbearers."
+}

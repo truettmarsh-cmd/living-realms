@@ -1,0 +1,33 @@
+{
+ "name": "Knight's Plate",
+ "order": 42,
+ "color": "#C0C8D8",
+ "research": "plate_armour",
+ "requires_mod": "magistuarmory",
+ "pieces": {
+  "helmet": {
+   "item": "magistuarmory:armet",
+   "cost": {
+    "magistuarmory:steel_ingot": 6
+   }
+  },
+  "chestplate": {
+   "item": "magistuarmory:knight_chestplate",
+   "cost": {
+    "magistuarmory:steel_ingot": 10
+   }
+  },
+  "leggings": {
+   "item": "magistuarmory:knight_leggings",
+   "cost": {
+    "magistuarmory:steel_ingot": 8
+   }
+  },
+  "boots": {
+   "item": "magistuarmory:knight_boots",
+   "cost": {
+    "magistuarmory:steel_ingot": 5
+   }
+  }
+ }
+}

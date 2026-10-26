@@ -1,0 +1,12 @@
+{
+ "name": "Fortifications",
+ "branch": "Construction",
+ "cost": 120,
+ "requires": [
+  "masonry"
+ ],
+ "icon": "minecraft:stone_brick_wall",
+ "x": 2,
+ "y": 4,
+ "description": "Unlocks wall sections and gatehouses."
+}

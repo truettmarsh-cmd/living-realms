@@ -1,0 +1,15 @@
+{
+ "name": "Netherite Forging",
+ "branch": "Smithing",
+ "cost": 900,
+ "requires": [
+  "diamond_smithing"
+ ],
+ "icon": "minecraft:netherite_ingot",
+ "x": 5,
+ "y": 8,
+ "description": "Netherite upgrades; deep mines find scrap.",
+ "items": {
+  "minecraft:diamond": 4
+ }
+}

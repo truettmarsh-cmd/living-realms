@@ -1,0 +1,10 @@
+{
+ "name": "Archery",
+ "branch": "Military",
+ "cost": 60,
+ "requires": [],
+ "icon": "minecraft:bow",
+ "x": 0,
+ "y": 10,
+ "description": "Train Bowmen; smiths make bows and arrows."
+}

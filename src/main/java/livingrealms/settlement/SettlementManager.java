@@ -1,0 +1,95 @@
+package livingrealms.settlement;
+
+import livingrealms.Config;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.saveddata.SavedData;
+
+import javax.annotation.Nullable;
+import java.util.*;
+
+/** All settlements of the world, saved with the overworld. */
+public final class SettlementManager extends SavedData {
+    private final Map<UUID, Settlement> byId = new LinkedHashMap<>();
+
+    public static SettlementManager get(MinecraftServer server) {
+        return server.overworld().getDataStorage().computeIfAbsent(SettlementManager::load, SettlementManager::new, "livingrealms_settlements");
+    }
+
+    public Collection<Settlement> all() { return byId.values(); }
+
+    @Nullable
+    public Settlement get(UUID id) { return byId.get(id); }
+
+    public void add(Settlement s) {
+        byId.put(s.id, s);
+        setDirty();
+    }
+
+    public void remove(Settlement s) {
+        byId.remove(s.id);
+        setDirty();
+    }
+
+    /** The settlement whose territory contains pos. */
+    @Nullable
+    public Settlement at(ResourceKey<Level> dim, BlockPos pos) {
+        Settlement best = null;
+        long bestD = Long.MAX_VALUE;
+        for (Settlement s : byId.values()) {
+            if (!s.dim.equals(dim) || !s.contains(pos)) continue;
+            long d = s.center.distSqr(pos) > 0 ? (long) s.center.distSqr(pos) : 0;
+            if (d < bestD) { bestD = d; best = s; }
+        }
+        return best;
+    }
+
+    @Nullable
+    public Settlement nearest(ResourceKey<Level> dim, BlockPos pos, int maxDist) {
+        Settlement best = null;
+        double bestD = (double) maxDist * maxDist;
+        for (Settlement s : byId.values()) {
+            if (!s.dim.equals(dim)) continue;
+            double d = s.center.distSqr(pos);
+            if (d <= bestD) { bestD = d; best = s; }
+        }
+        return best;
+    }
+
+    public List<Settlement> ownedBy(UUID player) {
+        List<Settlement> out = new ArrayList<>();
+        for (Settlement s : byId.values()) if (player.equals(s.owner)) out.add(s);
+        return out;
+    }
+
+    /** Is pos far enough from every other settlement to found a new one? */
+    public boolean roomFor(ResourceKey<Level> dim, BlockPos pos) {
+        return nearest(dim, pos, Config.AI_MIN_DISTANCE.get()) == null;
+    }
+
+    @Override
+    public CompoundTag save(CompoundTag tag) {
+        ListTag l = new ListTag();
+        byId.values().forEach(s -> l.add(s.save()));
+        tag.put("settlements", l);
+        return tag;
+    }
+
+    static SettlementManager load(CompoundTag tag) {
+        SettlementManager m = new SettlementManager();
+        for (Tag t : tag.getList("settlements", Tag.TAG_COMPOUND)) {
+            Settlement s = Settlement.load((CompoundTag) t);
+            m.byId.put(s.id, s);
+        }
+        return m;
+    }
+
+    /** Settlements change constantly; save them whenever the world saves. */
+    @Override
+    public boolean isDirty() { return true; }
+}

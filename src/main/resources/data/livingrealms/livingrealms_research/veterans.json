@@ -1,0 +1,12 @@
+{
+ "name": "Veteran Training",
+ "branch": "Military",
+ "cost": 350,
+ "requires": [
+  "command"
+ ],
+ "icon": "minecraft:experience_bottle",
+ "x": 2,
+ "y": 9,
+ "description": "New soldiers start at level 3."
+}

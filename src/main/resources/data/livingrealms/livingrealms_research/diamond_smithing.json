@@ -1,0 +1,16 @@
+{
+ "name": "Diamond Smithing",
+ "branch": "Smithing",
+ "cost": 500,
+ "requires": [
+  "iron_working",
+  "deep_mining"
+ ],
+ "icon": "minecraft:diamond_sword",
+ "x": 4,
+ "y": 8,
+ "description": "Diamond arms and armour.",
+ "items": {
+  "minecraft:diamond": 2
+ }
+}

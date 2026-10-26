@@ -1,0 +1,33 @@
+{
+ "name": "Gothic Plate",
+ "order": 47,
+ "color": "#D0D8E8",
+ "research": "gothic_plate",
+ "requires_mod": "magistuarmory",
+ "pieces": {
+  "helmet": {
+   "item": "magistuarmory:sallet",
+   "cost": {
+    "magistuarmory:steel_ingot": 7
+   }
+  },
+  "chestplate": {
+   "item": "magistuarmory:gothic_chestplate",
+   "cost": {
+    "magistuarmory:steel_ingot": 12
+   }
+  },
+  "leggings": {
+   "item": "magistuarmory:gothic_leggings",
+   "cost": {
+    "magistuarmory:steel_ingot": 9
+   }
+  },
+  "boots": {
+   "item": "magistuarmory:gothic_boots",
+   "cost": {
+    "magistuarmory:steel_ingot": 5
+   }
+  }
+ }
+}

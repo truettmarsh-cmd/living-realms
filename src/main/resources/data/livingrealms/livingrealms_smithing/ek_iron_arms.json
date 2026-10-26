@@ -1,0 +1,39 @@
+{
+ "name": "Knightly Iron Arms",
+ "order": 31,
+ "color": "#C8C8D0",
+ "research": "iron_working",
+ "requires_mod": "magistuarmory",
+ "pieces": {
+  "sword": {
+   "item": "magistuarmory:iron_bastardsword",
+   "cost": {
+    "minecraft:iron_ingot": 3,
+    "minecraft:stick": 1
+   }
+  },
+  "mace": {
+   "item": "magistuarmory:iron_heavymace",
+   "cost": {
+    "minecraft:iron_ingot": 4,
+    "minecraft:stick": 1
+   }
+  },
+  "lance": {
+   "item": "magistuarmory:iron_chivalrylance",
+   "research": "cavalry",
+   "cost": {
+    "minecraft:iron_ingot": 3,
+    "minecraft:stick": 3
+   }
+  },
+  "shield": {
+   "item": "magistuarmory:iron_heatershield",
+   "research": "shieldcraft",
+   "cost": {
+    "minecraft:iron_ingot": 4,
+    "#minecraft:planks": 4
+   }
+  }
+ }
+}

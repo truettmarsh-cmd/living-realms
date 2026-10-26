@@ -1,0 +1,15 @@
+{
+ "name": "Deep Mining",
+ "branch": "Economy",
+ "cost": 250,
+ "requires": [
+  "mining"
+ ],
+ "icon": "minecraft:diamond_pickaxe",
+ "x": 1,
+ "y": 2,
+ "description": "Mines also find gold, redstone, lapis and diamonds.",
+ "items": {
+  "minecraft:iron_ingot": 12
+ }
+}

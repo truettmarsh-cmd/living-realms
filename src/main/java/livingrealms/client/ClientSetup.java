@@ -1,0 +1,35 @@
+package livingrealms.client;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import livingrealms.LivingRealms;
+import livingrealms.Registry;
+import net.minecraft.client.KeyMapping;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.settings.KeyConflictContext;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import org.lwjgl.glfw.GLFW;
+
+@Mod.EventBusSubscriber(modid = LivingRealms.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+public final class ClientSetup {
+    public static final KeyMapping OPEN = new KeyMapping("key.livingrealms.open", KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_K), "key.categories.livingrealms");
+
+    @SubscribeEvent
+    public static void renderers(EntityRenderersEvent.RegisterRenderers e) {
+        e.registerEntityRenderer(Registry.SETTLER.get(), SettlerRenderer::new);
+    }
+
+    @SubscribeEvent
+    public static void keys(RegisterKeyMappingsEvent e) { e.register(OPEN); }
+
+    @SubscribeEvent
+    public static void overlays(RegisterGuiOverlaysEvent e) {
+        e.registerAboveAll("placement", (gui, g, partial, w, h) -> Hud.render(g, w, h));
+    }
+
+    private ClientSetup() {}
+}

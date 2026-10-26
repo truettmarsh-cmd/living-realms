@@ -1,0 +1,22 @@
+{
+ "name": "Stone",
+ "order": 15,
+ "color": "#8A8A8A",
+ "research": "smithing",
+ "pieces": {
+  "sword": {
+   "item": "minecraft:stone_sword",
+   "cost": {
+    "minecraft:cobblestone": 2,
+    "minecraft:stick": 1
+   }
+  },
+  "axe": {
+   "item": "minecraft:stone_axe",
+   "cost": {
+    "minecraft:cobblestone": 3,
+    "minecraft:stick": 2
+   }
+  }
+ }
+}

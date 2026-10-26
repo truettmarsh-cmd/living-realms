@@ -1,0 +1,15 @@
+{
+ "name": "Education",
+ "branch": "Scholarship",
+ "cost": 220,
+ "requires": [
+  "scholarship"
+ ],
+ "icon": "minecraft:writable_book",
+ "x": 1,
+ "y": 5,
+ "description": "All research goes half again as fast.",
+ "items": {
+  "minecraft:book": 4
+ }
+}

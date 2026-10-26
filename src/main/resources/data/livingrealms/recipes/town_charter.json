@@ -1,0 +1,3 @@
+{"type": "minecraft:crafting_shaped", "pattern": ["PEP", "PBP", "LLL"],
+ "key": {"P": {"item": "minecraft:paper"}, "E": {"item": "minecraft:emerald"}, "B": {"item": "minecraft:book"}, "L": {"tag": "minecraft:logs"}},
+ "result": {"item": "livingrealms:town_charter"}}

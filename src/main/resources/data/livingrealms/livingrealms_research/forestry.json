@@ -1,0 +1,10 @@
+{
+ "name": "Forestry",
+ "branch": "Economy",
+ "cost": 40,
+ "requires": [],
+ "icon": "minecraft:iron_axe",
+ "x": 0,
+ "y": 1,
+ "description": "Lumber camps bring in half again as much wood."
+}

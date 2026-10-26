@@ -1,0 +1,39 @@
+{
+ "name": "Steel Arms",
+ "order": 41,
+ "color": "#A8B4C4",
+ "research": "steelmaking",
+ "requires_mod": "magistuarmory",
+ "pieces": {
+  "sword": {
+   "item": "magistuarmory:steel_bastardsword",
+   "cost": {
+    "magistuarmory:steel_ingot": 3,
+    "minecraft:stick": 1
+   }
+  },
+  "mace": {
+   "item": "magistuarmory:steel_heavymace",
+   "cost": {
+    "magistuarmory:steel_ingot": 4,
+    "minecraft:stick": 1
+   }
+  },
+  "lance": {
+   "item": "magistuarmory:steel_chivalrylance",
+   "research": "cavalry",
+   "cost": {
+    "magistuarmory:steel_ingot": 3,
+    "minecraft:stick": 3
+   }
+  },
+  "shield": {
+   "item": "magistuarmory:steel_heatershield",
+   "research": "shieldcraft",
+   "cost": {
+    "magistuarmory:steel_ingot": 4,
+    "#minecraft:planks": 4
+   }
+  }
+ }
+}
