@@ -398,6 +398,7 @@ public class CityScreen extends Screen {
         }
         ui.endScroll();
         y += rh + 6;
+        if (mine() && !v().getBoolean("ai")) { autonomy(y); y += 22; }
         // chronicle
         int lh = cy + ch - y;
         ui.card(cx, y, cw, lh);
@@ -411,6 +412,41 @@ public class CityScreen extends Screen {
             ly += 11;
         }
         ui.endScroll();
+    }
+
+    /** Switches for what the town does on its own while you are away. */
+    void autonomy(int y) {
+        ui.card(cx, y, cw, 18);
+        int x = cx + 6, gw = (cw - 12) / 4, skips = v().getInt("researchSkips");
+        String active = v().getString("activeResearch"), next = v().getString("nextResearch");
+        String now = !active.isEmpty() ? (v().getBoolean("researchAuto") ? "Auto pick: " : "Your pick: ") + researchName(active)
+                : !next.isEmpty() ? "Next pick: " + researchName(next) : "Nothing affordable to start";
+        String[][] sw = {{"autoResearch", "Research" + (skips > 0 ? " (" + skips + ")" : "")}, {"autoTier", "Rank"}, {"autoTrain", "Training"}};
+        String[][] tips = {
+                {"Auto research. " + now, "Rank research once the town is half way there, then economy and construction,",
+                        "then smithing and military. Your choice always wins; cancelling an auto pick skips it.",
+                        skips > 0 ? "Click to allow the " + skips + " skipped projects again." : "No projects skipped."},
+                {"Auto rank: claims the next rank once every requirement is met", "and " + v().getInt("tierFunds") + " emeralds are in the treasury, so a 25% reserve stays."},
+                {"Auto training: one recruit at a time up to the garrison goal, a third of them ranged.",
+                        "Best researched units the armoury can arm; keeps 6 townsfolk and an emerald reserve.",
+                        "With auto-equip on, soldiers at home with empty slots are re-equipped."}};
+        for (int i = 0; i < sw.length; i++) {
+            String key = sw[i][0];
+            boolean on = v().getBoolean(key);
+            int gx = x + i * gw;
+            ui.toggle(key, gx, y + 3, on, () -> act(key, tag("on", !on)));
+            ui.text(sw[i][1], gx + 26, y + 5, on ? TEXT : MUTED);
+            if (i == 0 && skips > 0) ui.area(gx + 24, y + 2, gw - 28, 14, () -> act("clearSkips"));
+            if (ui.over(gx, y + 2, gw - 4, 14)) ui.tip(tips[i]);
+        }
+        int gx = x + 3 * gw, goal = v().getInt("garrisonGoal"), cap = v().getInt("garrisonCap");
+        boolean fixed = v().getInt("garrisonTarget") >= 0;
+        ui.button("garMinus", gx, y + 2, 14, 14, "-", Style.SECONDARY, goal > 0, () -> act("garrisonTarget", tag("value", Math.max(0, goal - 1))));
+        ui.center(v().getInt("garrisonNow") + "/" + goal, gx + 36, y + 5, fixed ? GOLD : TEXT);
+        if (fixed) ui.area(gx + 16, y + 2, 40, 14, () -> act("garrisonTarget", tag("value", -1)));
+        ui.button("garPlus", gx + 58, y + 2, 14, 14, "+", Style.SECONDARY, goal < cap, () -> act("garrisonTarget", tag("value", Math.min(cap, goal + 1))));
+        if (ui.over(gx, y + 2, gw, 14)) ui.tip("Garrison goal: soldiers and recruits now / goal (" + cap + " places).",
+                fixed ? "Set by you; click the number to follow half the capacity again." : "Follows half the garrison capacity.");
     }
 
     void tile(int x, int y, int w, String label, String value, float frac, int color, String sub, Item icon) {

@@ -24,6 +24,18 @@ public final class View {
         t.putString("raidStatus", s.raidStatus);
         t.putBoolean("autoBuild", s.autoBuild);
         t.putString("autoBuildStatus", AutoBuild.status(s));
+        t.putBoolean("autoResearch", s.autoResearch);
+        t.putBoolean("autoTier", s.autoTier);
+        t.putBoolean("autoTrain", s.autoTrain);
+        t.putInt("garrisonTarget", s.garrisonTarget);
+        t.putInt("garrisonGoal", Autonomy.target(s));
+        t.putInt("garrisonNow", s.soldiers.size() + s.training.size());
+        t.putBoolean("researchAuto", s.researchAuto);
+        t.putInt("researchSkips", s.researchSkip.size());
+        String next = s.activeResearch.isEmpty() ? Autonomy.pickResearch(s) : null;
+        t.putString("nextResearch", next == null ? "" : next);
+        Tier up = s.tier.next();
+        t.putInt("tierFunds", up == null ? 0 : Autonomy.tierFunds(up));
         t.putBoolean("canRaid", Raids.playerSource(p.server, manager, p.getUUID(), s) != null);
         t.putBoolean("canMoveCapital", p.getUUID().equals(s.owner) && !s.capital && !Raids.engaged(manager, s)
                 && Kingdoms.cities(manager, s).stream().noneMatch(c -> c.capitalMovedAt > p.server.overworld().getGameTime()));

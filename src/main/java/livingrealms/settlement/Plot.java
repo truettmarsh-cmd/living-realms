@@ -30,6 +30,10 @@ public final class Plot {
     public int priority;
     public boolean ai;
     public boolean automatic;
+    /** Planned while unloaded: the foundation is measured when the site loads. */
+    public boolean unsited;
+    /** Finished while unloaded: counts as built, its paid blocks are placed when the site loads. */
+    public boolean deferred;
     /** One-off blueprint (roads) stored with the plot. */
     @Nullable public CompoundTag customBlueprint;
     // runtime status, synced to clients
@@ -90,6 +94,8 @@ public final class Plot {
         t.putInt("prio", priority);
         t.putBoolean("ai", ai);
         t.putBoolean("automatic", automatic);
+        if (unsited) t.putBoolean("unsited", true);
+        if (deferred) t.putBoolean("deferred", true);
         if (customBlueprint != null) t.put("custom", customBlueprint);
         return t;
     }
@@ -109,6 +115,8 @@ public final class Plot {
         p.priority = t.getInt("prio");
         p.ai = t.getBoolean("ai");
         p.automatic = t.getBoolean("automatic");
+        p.unsited = t.getBoolean("unsited");
+        p.deferred = t.getBoolean("deferred");
         if (t.contains("custom")) p.customBlueprint = t.getCompound("custom");
         return p;
     }

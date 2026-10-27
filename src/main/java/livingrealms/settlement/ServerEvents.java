@@ -123,7 +123,7 @@ public final class ServerEvents {
 
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent e) {
-        if (e.getEntity() instanceof ServerPlayer sp) Net.sendCatalog(sp);
+        if (e.getEntity() instanceof ServerPlayer sp) { Net.sendCatalog(sp); Autonomy.login(sp); }
     }
 
     @SubscribeEvent

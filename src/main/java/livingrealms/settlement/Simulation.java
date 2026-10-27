@@ -191,6 +191,7 @@ public final class Simulation {
             AiPlanner.think(level, s);
         }
         CapitalCastles.tick(level, s);
+        Autonomy.think(level, s);
         if (!s.isAi()) AutoBuild.think(level, s);
         if (loaded) {
             settlers(level, s, d);
@@ -368,7 +369,8 @@ public final class Simulation {
             s.researchBank += s.researchProgress - node.cost();
             s.researchProgress = 0;
             s.activeResearch = "";
-            if (!s.isAi()) s.log("Research complete: " + node.name());
+            s.researchAuto = false;
+            if (!s.isAi()) { s.log("Research complete: " + node.name()); s.away.note(s.away.researched, node.name()); }
         }
     }
 
@@ -422,6 +424,7 @@ public final class Simulation {
             so.name = name;
             livingrealms.military.RecruitOrigins.sync(so, e);
             s.soldiers.add(so);
+            s.away.trained(t.type);
             s.log(name + " has finished training");
             applyStance(level, s, e, so, 0);
         }
@@ -643,6 +646,7 @@ public final class Simulation {
             s.alarmUntil = now + 400;
             if (!was) {
                 s.log(s.manualAlarm ? "The alarm bell was rung" : "Raiders sighted! The alarm bell rings");
+                if (!s.manualAlarm && !s.isAi()) s.away.note(s.away.raids, "hostiles reached the town");
                 level.playSound(null, s.center, SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 3f, 1f);
                 applyStanceAll(level, s);
                 s.dirty = true;
@@ -681,23 +685,41 @@ public final class Simulation {
         if (haveF < folk && !folkJobs.isEmpty()) SettlerEntity.spawn(level, s, folkJobs.get(level.random.nextInt(folkJobs.size())), spawn);
     }
 
-    /** Builders not in loaded range still work, slower, paying ahead; the blocks appear when someone comes near. */
+    /**
+     * Builders not in loaded range still work, slower, paying ahead; the blocks appear when someone comes near. A new
+     * building fully paid for while unloaded counts as built at once and is placed on the next visit.
+     */
     static void offscreenBuild(ServerLevel level, Settlement s, Settlement.Derived d) {
         double rate = Config.OFFSCREEN_BUILD_RATE.get();
         if (rate <= 0) return;
         int builders = d.workers.getOrDefault(Job.BUILDER, 0);
         if (builders == 0) return;
         double speed = speed(s);
+        boolean home = level.hasChunkAt(s.center);
         List<Plot> active = activePlots(s);
         int per = Math.max(1, builders / Math.max(1, active.size()));
+        boolean changed = false;
         for (Plot p : active) {
             if (builders <= 0) break;
-            if (Construction.loaded(level, p)) continue;
+            if (home && Construction.loaded(level, p)) continue;
             if (p.state == Plot.State.REPAIRING || p.state == Plot.State.UPGRADING) continue;
             int steps = (int) (Config.SIM_INTERVAL.get() / (double) Config.BUILD_INTERVAL.get() * rate * per * speed);
             Construction.payAhead(s, p, steps);
             builders -= per;
+            if (p.state == Plot.State.BUILDING && p.totalSteps() > 0 && p.paid >= p.totalSteps()) { finishDeferred(s, p); changed = true; }
         }
+        if (changed) recompute(s);
+    }
+
+    static void finishDeferred(Settlement s, Plot p) {
+        BuildingType t = BuildingCatalog.get(p.typeId);
+        String name = p.typeId.equals("road") ? "road" : t == null ? "building" : t.name;
+        p.state = Plot.State.BUILT;
+        p.deferred = true;
+        p.builder = null;
+        p.status = "Blocks appear when someone is near";
+        if (!s.isAi()) { s.log("Builders finished the " + name + " out of sight"); s.away.built(t == null ? "Road" : t.name); }
+        s.dirty = true;
     }
 
     public static double speed(Settlement s) {
@@ -712,8 +734,23 @@ public final class Simulation {
     }
 
     /** Called often (every second) for loaded settlements: catch up paid work and finish plots. */
+    public static final int CATCH_UP_BUDGET = 4000;
+
     public static void fast(ServerLevel level, Settlement s) {
         boolean changed = false;
+        int budget = CATCH_UP_BUDGET;
+        for (Plot p : s.plots) {
+            if (!p.deferred || budget <= 0 || !Construction.loaded(level, p)) continue;
+            budget -= Construction.catchUp(level, s, p, budget);
+            if (p.placed >= p.paid) {
+                p.deferred = false;
+                p.placed = 0;
+                p.paid = 0;
+                p.status = "";
+                p.foundation = new long[0];
+                s.dirty = true;
+            }
+        }
         for (Plot p : new ArrayList<>(s.plots)) {
             if (!p.active() || !AutoBuild.mayWork(s, p)) continue;
             if (p.builder != null) {
@@ -724,7 +761,7 @@ public final class Simulation {
                 if (p.paid >= p.totalSteps() && p.totalSteps() > 0) p.status = "Finishing when someone is near";
                 continue;
             }
-            if (p.paid > p.placed) Construction.catchUp(level, s, p, 3000);
+            if (p.paid > p.placed) budget -= Construction.catchUp(level, s, p, Math.max(0, budget));
             if (p.placed >= p.totalSteps() || (p.paid >= p.totalSteps() && Construction.nextWork(level, s, p, 400) == null)) {
                 finish(level, s, p);
                 changed = true;
@@ -737,8 +774,8 @@ public final class Simulation {
         BuildingType t = BuildingCatalog.get(p.typeId);
         String name = p.typeId.equals("road") ? "road" : t == null ? "building" : t.name;
         switch (p.state) {
-            case BUILDING -> { p.state = Plot.State.BUILT; if (!s.isAi() || level.random.nextInt(3) == 0) s.log("Builders finished the " + name); }
-            case UPGRADING -> { p.state = Plot.State.BUILT; p.level++; s.log("The " + name + " is now level " + p.level); }
+            case BUILDING -> { p.state = Plot.State.BUILT; if (!s.isAi() || level.random.nextInt(3) == 0) s.log("Builders finished the " + name); if (!s.isAi()) s.away.built(t == null ? "Road" : t.name); }
+            case UPGRADING -> { p.state = Plot.State.BUILT; p.level++; s.log("The " + name + " is now level " + p.level); if (!s.isAi()) s.away.built(name + " (level " + p.level + ")"); }
             case REPAIRING -> { p.state = Plot.State.BUILT; s.log("Repairs to the " + name + " are done"); }
             case DEMOLISHING -> { s.plots.remove(p); s.log("The " + name + " was torn down"); }
             default -> {}

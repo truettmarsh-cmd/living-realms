@@ -185,6 +185,7 @@ public final class Raids {
 
     private static void announce(MinecraftServer server, Settlement s, String message) {
         s.log(message);
+        if (!s.isAi()) s.away.note(s.away.raids, message);
         if (s.owner != null) {
             ServerPlayer p = server.getPlayerList().getPlayer(s.owner);
             if (p != null) p.sendSystemMessage(Component.literal(message));
