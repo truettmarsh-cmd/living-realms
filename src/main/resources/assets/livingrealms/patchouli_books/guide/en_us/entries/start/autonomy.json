@@ -1,0 +1,16 @@
+{
+  "name": "While You're Away",
+  "icon": "minecraft:clock",
+  "category": "livingrealms:start",
+  "sortnum": 4,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Your towns keep going while you are AFK, far away or offline (on a server): villagers $(l)build$(), $(l)research$(), $(l)rank up$() the town (keeping a quarter of the treasury), $(l)train$() soldiers up to your garrison goal and re-equip them.$(br2)Buildings finished while the area is unloaded appear when you return."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Your own choices always come first. Switch each part off on the $(l)Overview$() page, set the garrison goal there, and clear skipped research.$(br2)When you come back you get a $(l)While you were away$() report of what was built, researched, trained and fought."
+    }
+  ]
+}

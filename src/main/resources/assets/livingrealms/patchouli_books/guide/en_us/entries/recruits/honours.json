@@ -1,0 +1,16 @@
+{
+  "name": "Honours & Requests",
+  "icon": "minecraft:gold_nugget",
+  "category": "livingrealms:recruits",
+  "sortnum": 8,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Military → Honours$() ranks your 10 best recruits by $(l)merit$(): kills, damage, raids defended or won, Royal Guard duty and staying alive. Merit fades about 15% a day, so the board shows who is in form now."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A recruit with merit 60+ may $(l)ask for gear$(): their favourite weapon, or better armour when theirs lags behind what your town can make. Up to 3 requests at once.$(li)$(l)Grant$(): equip it from the stockpile (+morale)$(li)$(l)Order$(): the smithy forges it$(li)$(l)Decline$() (-morale)"
+    }
+  ]
+}
