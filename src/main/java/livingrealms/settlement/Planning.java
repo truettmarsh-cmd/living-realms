@@ -17,6 +17,22 @@ import java.util.Map;
 
 /** City planning: placing, upgrading, repairing and tearing down buildings, and laying roads. */
 public final class Planning {
+    /** Map clicks choose X/Z; server terrain and normal permissions determine the real foundation height. */
+    public static String planMap(ServerLevel level, Settlement s, String id, int x, int z, int rotation) {
+        BuildingType t = BuildingCatalog.get(id);
+        if (t == null) return "Unknown building";
+        if (rotation < 0 || rotation > 3) return "Invalid rotation";
+        if (Math.abs((long)x - s.center.getX()) > s.radius() || Math.abs((long)z - s.center.getZ()) > s.radius()
+                || !s.contains(new BlockPos(x, s.center.getY(), z))) return "Outside the town's land";
+        Blueprint bp = BuildingCatalog.blueprint(t.blueprintKey(1, s.style));
+        if (bp == null) return "Blueprint missing";
+        Rotation rot = Rotation.values()[rotation];
+        if (!level.hasChunksAt(x, z, x + bp.width(rot), z + bp.depth(rot))) return "Visit this area so its terrain is loaded";
+        int y = Construction.ground(level, x + bp.width(rot) / 2, z + bp.depth(rot) / 2);
+        BlockPos at = new BlockPos(x, y, z);
+        if (!AutoBuild.clear(level, at.below(t.sink), bp, rot)) return "Choose a clear site; existing buildings or containers block this footprint";
+        return plan(level, s, t, at, rot, false);
+    }
     public static final Map<String, BlockState> ROAD_MATERIALS = new LinkedHashMap<>();
 
     static {
@@ -173,6 +189,7 @@ public final class Planning {
             String err = checkSite(s, probe, p);
             if (err != null) return err;
             p.blueprintKey = key;
+            p.automatic = false;
             p.state = Plot.State.UPGRADING;
             p.placed = 0;
             p.paid = 0;
@@ -202,6 +219,7 @@ public final class Planning {
 
     public static void repair(Settlement s, Plot p) {
         if (p.state != Plot.State.BUILT) return;
+        p.automatic = false;
         p.state = Plot.State.REPAIRING;
         p.placed = 0;
         p.paid = 0;
@@ -212,7 +230,8 @@ public final class Planning {
         if (p.state == Plot.State.BUILDING && p.placed == 0) {
             s.plots.remove(p);
         } else {
-            p.state = Plot.State.DEMOLISHING;
+            p.automatic = false;
+        p.state = Plot.State.DEMOLISHING;
             p.placed = 0;
             p.paid = 0;
         }

@@ -85,6 +85,7 @@ public final class Construction {
 
     /** One step of work by a builder (paid now). */
     public static Result work(ServerLevel level, Settlement s, Plot p) {
+        if (!livingrealms.settlement.AutoBuild.mayWork(s, p)) { p.status = "Waiting for your queued projects or automatic building to resume"; return Result.MISSING; }
         Step st = nextWork(level, s, p, 64);
         if (st == null) return Result.DONE;
         BlockState cur = level.getBlockState(st.pos);
@@ -125,6 +126,7 @@ public final class Construction {
 
     /** Pays for steps while the plot is out of loaded range. They are placed when it loads. */
     public static int payAhead(Settlement s, Plot p, int steps) {
+        if (!livingrealms.settlement.AutoBuild.mayWork(s, p)) return 0;
         int total = p.totalSteps(), done = 0;
         while (done < steps && p.paid < total) {
             Step st = step(s, p, p.paid);
@@ -144,6 +146,7 @@ public final class Construction {
 
     /** Places what was paid for while the area was unloaded. */
     public static void catchUp(ServerLevel level, Settlement s, Plot p, int max) {
+        if (!livingrealms.settlement.AutoBuild.mayWork(s, p)) return;
         while (p.placed < p.paid && max-- > 0) {
             Step st = step(s, p, p.placed);
             if (st == null) break;

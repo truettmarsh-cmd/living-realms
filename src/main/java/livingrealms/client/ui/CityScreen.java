@@ -76,6 +76,9 @@ public class CityScreen extends Screen {
     // map and research canvas
     private float mapZoom = 1, mapPanX, mapPanY, resPanX, resPanY;
     private boolean dragMap, dragRes;
+    private String mapPlan;
+    private int mapRotation;
+    private float mapScale, mapOriginX, mapOriginY;
     private int mapX, mapY, mapW, mapH, resX, resY, resW, resH;
 
     public CityScreen(String tab) {
@@ -86,6 +89,10 @@ public class CityScreen extends Screen {
             case "military" -> Tab.MILITARY;
             default -> lastTab;
         };
+    }
+
+    public void beginMapPlan(String type) {
+        mapPlan = type; mapRotation = 0; selPlot = -1; dragMap = false; switchTab(Tab.MAP);
     }
 
     public void showSoldierTab(int index) {
@@ -306,7 +313,13 @@ public class CityScreen extends Screen {
                 v().getBoolean("ruler") ? "Unavailable during raids or within a day of moving it."
                 : "Defeat local defenders, then hold the center for 60 seconds. Both cities and armies must stay loaded.");
         String raid = v().getString("raidStatus");
-        ui.text(ui.clip(raid.isEmpty() ? "Capital loss transfers the kingdom; other losses transfer one city." : raid, cw), cx, warY + 18, raid.isEmpty() ? MUTED : ORANGE);
+        ui.text(ui.clip(raid.isEmpty() ? "Capital loss transfers the kingdom; other losses transfer one city." : raid, mine() ? cw - 120 : cw), cx, warY + 18, raid.isEmpty() ? MUTED : ORANGE);
+        if (mine()) {
+            ui.button("autoBuild", cx + cw - 112, warY + 16, 112, 16, "Auto build: " + (v().getBoolean("autoBuild") ? "ON" : "OFF"),
+                    Style.SECONDARY, true, () -> act("autoBuild", tag("on", !v().getBoolean("autoBuild"))));
+            if (ui.over(cx + cw - 112, warY + 16, 112, 16)) ui.tip(v().getString("autoBuildStatus"),
+                    "Villagers choose one affordable building when your queue is empty.", "Your plans pause automatic work. All construction uses town materials.");
+        }
         int y = cy + 66, tw = (cw - 9) / 4;
         int pop = v().getInt("pop"), housing = v().getInt("housing");
         tile(cx, y, tw, "People", pop + " / " + housing, (float) Math.max(0, v().getDouble("growth")), BLUE,
@@ -466,6 +479,7 @@ public class CityScreen extends Screen {
         float s = base * mapZoom;
         float ox = mapX + mapW / 2f - (center.getX() - CityMap.originX) * s + mapPanX;
         float oy = mapY + mapH / 2f - (center.getZ() - CityMap.originZ) * s + mapPanY;
+        mapScale = s; mapOriginX = ox; mapOriginY = oy;
         ui.g.pose().pushPose();
         ui.g.pose().translate(ox, oy, 0);
         ui.g.pose().scale(s, s, 1);
@@ -495,7 +509,7 @@ public class CityScreen extends Screen {
             if (!built && x1 - x0 > 6) ui.rect(x0 + 1, z1 - 3, (int) ((x1 - x0 - 2) * p.progress), 2, GOLD);
             if (ui.over(x0, z0, x1 - x0, z1 - z0)) hover = p;
             final int id = p.id;
-            ui.area(x0, z0, x1 - x0, z1 - z0, () -> selPlot = id, false);
+            if (mapPlan == null) ui.area(x0, z0, x1 - x0, z1 - z0, () -> selPlot = id, false);
         }
         // the player
         var pl = Minecraft.getInstance().player;
@@ -504,12 +518,33 @@ public class CityScreen extends Screen {
             ui.round(x - 3, y - 3, 6, 6, 3, 0xFFFFFFFF);
             ui.round(x - 2, y - 2, 4, 4, 2, BLUE);
         }
+        if (mapPlan != null && ui.over(mapX, mapY, mapW, mapH)) {
+            BuildingType planned = BuildingCatalog.get(mapPlan);
+            if (planned != null) {
+                int wx = (int)Math.floor((ui.mx - ox) / s) + CityMap.originX;
+                int wz = (int)Math.floor((ui.my - oy) / s) + CityMap.originZ;
+                Blueprint bp = ClientState.blueprint(planned.blueprintKey(1, v().getString("style")));
+                int w = bp == null ? (mapRotation % 2 == 0 ? planned.w : planned.d) : bp.width(net.minecraft.world.level.block.Rotation.values()[mapRotation]);
+                int d = bp == null ? (mapRotation % 2 == 0 ? planned.d : planned.w) : bp.depth(net.minecraft.world.level.block.Rotation.values()[mapRotation]);
+                int xx = (int)(ox + (wx - CityMap.originX) * s), zz = (int)(oy + (wz - CityMap.originZ) * s);
+                ui.rect(xx, zz, Math.max(1, (int)(w*s)), Math.max(1, (int)(d*s)), 0x806FCF7F);
+            }
+        }
         ui.popClip();
         if (hover != null) ui.tip(plotName(hover) + (hover.level > 1 ? " (level " + hover.level + ")" : ""), stateLabel(hover));
-        ui.text("Scroll to zoom · drag to pan", mapX + 6, mapY + mapH - 12, 0xA0FFFFFF);
+        ui.text(mapPlan == null ? "Scroll to zoom · drag to pan" : "Click to queue · R rotates · right-drag pans", mapX + 6, mapY + mapH - 12, 0xA0FFFFFF);
         // side panel
         int sx = cx + cw - side;
         ui.card(sx, cy, side, ch);
+        if (mapPlan != null) {
+            BuildingType planned = BuildingCatalog.get(mapPlan);
+            ui.text("Plan on City Map", sx + 8, cy + 8, GOLD);
+            if (planned != null) ui.wrap(planned.name, sx + 8, cy + 25, side - 16, TEXT);
+            ui.wrap("Click clear terrain to queue this building. Villagers use your stockpile and build it block by block.", sx + 8, cy + 58, side - 16, MUTED);
+            ui.button("rotateMap", sx + 8, cy + 126, side - 16, 18, "Rotate: " + mapRotation * 90 + "°", Style.SECONDARY, true, () -> mapRotation = (mapRotation + 1) % 4);
+            ui.button("finishMap", sx + 8, cy + 151, side - 16, 18, "Done planning", Style.PRIMARY, true, () -> mapPlan = null);
+            return;
+        }
         PlotView sel = null;
         for (PlotView p : plots()) if (p.id == selPlot) sel = p;
         if (sel == null) {
@@ -631,7 +666,7 @@ public class CityScreen extends Screen {
     // ------------------------------------------------------------------ build catalogue
 
     void build() {
-        header("Build", mine() ? "Choose a building, then place it with the Architect's Plans." : "This town's buildings.", cw - 124);
+        header("Build", mine() ? "Choose a building, then plan on the City Map or in the world." : "This town's buildings.", cw - 124);
         int top = cy + 30;
         // left: categories
         int lw = 96;
@@ -760,7 +795,10 @@ public class CityScreen extends Screen {
         }
         if (mine()) {
             boolean ok = lock.isEmpty();
-            ui.button("place", dx + 6, top + ch - 30 - 22, dw - 12, 17, ok ? "Plan it" : "Locked", Style.PRIMARY, ok, () -> {
+            ui.button("mapPlace", dx + 6, top + ch - 30 - 22, (dw - 18) / 2, 17, "City Map", Style.PRIMARY, ok, () -> {
+                beginMapPlan(t.id);
+            });
+            ui.button("place", dx + 12 + (dw - 18) / 2, top + ch - 30 - 22, (dw - 18) / 2, 17, "In world", Style.SECONDARY, ok, () -> {
                 Placement.startBuilding(v().getUUID("id"), v().getString("style"), t.id);
                 if (Minecraft.getInstance().player != null && !Placement.holdingPlans())
                     Minecraft.getInstance().player.displayClientMessage(Component.literal("Hold the Architect's Plans to place it.").withStyle(net.minecraft.ChatFormatting.YELLOW), false);
@@ -1539,6 +1577,15 @@ public class CityScreen extends Screen {
     public boolean mouseClicked(double x, double y, int button) {
         if (search.visible && search.mouseClicked(x, y, button)) { setFocused(search); return true; }
         search.setFocused(false);
+        if (tab == Tab.MAP && mapPlan != null && x >= mapX && x < mapX + mapW && y >= mapY && y < mapY + mapH) {
+            if (button == 1) { dragMap = true; return true; }
+            if (button == 0 && mine() && mapScale > 0) {
+                int wx = (int)Math.floor((x - mapOriginX) / mapScale) + CityMap.originX;
+                int wz = (int)Math.floor((y - mapOriginY) / mapScale) + CityMap.originZ;
+                act("planMap", tag("type", mapPlan, "x", wx, "z", wz, "rot", mapRotation));
+                return true;
+            }
+        }
         if (button == 0 && ui.click(x, y)) return true;
         if (button == 0 && tab == Tab.MAP && x >= mapX && x < mapX + mapW && y >= mapY && y < mapY + mapH) { dragMap = true; return true; }
         if (button == 0 && tab == Tab.RESEARCH && x >= resX && x < resX + resW && y >= resY && y < resY + resH) { dragRes = true; selResearch = null; return true; }
@@ -1580,6 +1627,8 @@ public class CityScreen extends Screen {
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
         if (search.isFocused() && key != GLFW.GLFW_KEY_ESCAPE) return search.keyPressed(key, scan, mods) || true;
+        if (tab == Tab.MAP && mapPlan != null && key == GLFW.GLFW_KEY_R) { mapRotation = (mapRotation + 1) % 4; return true; }
+        if (tab == Tab.MAP && mapPlan != null && key == GLFW.GLFW_KEY_ESCAPE) { mapPlan = null; return true; }
         if (key == livingrealms.client.ClientSetup.OPEN.getKey().getValue()) { onClose(); return true; }
         return super.keyPressed(key, scan, mods);
     }

@@ -17,7 +17,9 @@ public final class CapitalCastles {
                     "Capital Castle: " + p.state.name().toLowerCase(java.util.Locale.ROOT) + " · " + (int)(100*p.progress()) + "%";
             return;
         }
+        if (!s.isAi() && (!s.autoBuild || s.plots.stream().anyMatch(AutoBuild::pending))) return;
         String reason = plan(level, s);
+        if (reason == null && !s.isAi()) s.plots.get(s.plots.size() - 1).automatic = true;
         String status = reason == null ? "Builders have planned the central Capital Castle" : "Capital Castle: " + reason;
         if (!status.equals(s.castleStatus)) { s.castleStatus = status; s.log(status); s.dirty = true; }
     }

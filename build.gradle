@@ -14,7 +14,7 @@ minecraft {
     copyIdeResources = true
     runs {
         configureEach {
-            workingDirectory project.file('run')
+            workingDirectory project.file(project.findProperty('runDir') ?: 'run')
             property 'forge.logging.console.level', 'info'
             args '--mixin', 'livingrealms.mixins.json'
             // Recruits ships mixins with SRG refmaps
@@ -23,6 +23,7 @@ minecraft {
             mods { "${mod_id}" { source sourceSets.main } }
         }
         client {
+            if (project.hasProperty('cityPlanningTour')) property 'livingrealms.cityPlanningTour', 'true'
             // ./gradlew runClient -Ptour : automated test run with screenshots (see DevTour)
             if (project.hasProperty('castleUiTest')) property 'livingrealms.castleUiTest', 'true'
             if (project.hasProperty('militaryUiTest')) property 'livingrealms.militaryUiTest', 'true'
@@ -30,6 +31,10 @@ minecraft {
         }
         server {
             args '--nogui'
+            if (project.hasProperty('cityPlanningTest')) {
+                workingDirectory project.file(project.property('cityPlanningTestDir'))
+                property 'livingrealms.cityPlanningTest', 'true'
+            }
             if (project.hasProperty('warfareTest')) {
                 workingDirectory project.file(project.property('warfareTestDir'))
                 property 'livingrealms.warfareTest', 'true'

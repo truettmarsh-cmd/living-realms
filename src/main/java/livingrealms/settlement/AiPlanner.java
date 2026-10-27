@@ -86,6 +86,10 @@ public final class AiPlanner {
     /** A fairly flat, open spot inside the territory, as close to the center as possible. */
     @Nullable
     public static BlockPos findSite(ServerLevel level, Settlement s, int w, int d) {
+        return findSite(level, s, w, d, true);
+    }
+
+    public static BlockPos findSite(ServerLevel level, Settlement s, int w, int d, boolean reserveCastle) {
         RandomSource r = level.random;
         int radius = (int) (s.radius() * 0.8) - Math.max(w, d);
         if (radius < 8) radius = 8;
@@ -101,7 +105,7 @@ public final class AiPlanner {
             Arrays.sort(hs);
             int y = hs[2];
             if (!level.getBlockState(new BlockPos(x + w / 2, y, z + d / 2)).getFluidState().isEmpty()) continue;
-            if (CapitalCastles.reserved(s, x - 2, z - 2, x + w + 1, z + d + 1)) continue;
+            if (reserveCastle && CapitalCastles.reserved(s, x - 2, z - 2, x + w + 1, z + d + 1)) continue;
             if (overlaps(s, x - 2, z - 2, x + w + 1, z + d + 1)) continue;
             if (!open(level, x, y, z, w, d)) continue;
             return new BlockPos(x, y, z);

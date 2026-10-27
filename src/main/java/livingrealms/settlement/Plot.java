@@ -29,6 +29,7 @@ public final class Plot {
     public long[] foundation = new long[0];
     public int priority;
     public boolean ai;
+    public boolean automatic;
     /** One-off blueprint (roads) stored with the plot. */
     @Nullable public CompoundTag customBlueprint;
     // runtime status, synced to clients
@@ -88,6 +89,7 @@ public final class Plot {
         t.putLongArray("found", foundation);
         t.putInt("prio", priority);
         t.putBoolean("ai", ai);
+        t.putBoolean("automatic", automatic);
         if (customBlueprint != null) t.put("custom", customBlueprint);
         return t;
     }
@@ -106,6 +108,7 @@ public final class Plot {
         p.foundation = t.getLongArray("found");
         p.priority = t.getInt("prio");
         p.ai = t.getBoolean("ai");
+        p.automatic = t.getBoolean("automatic");
         if (t.contains("custom")) p.customBlueprint = t.getCompound("custom");
         return p;
     }

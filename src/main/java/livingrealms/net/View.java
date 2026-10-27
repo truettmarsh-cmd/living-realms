@@ -22,6 +22,8 @@ public final class View {
         t.putBoolean("ruler", p.getUUID().equals(s.owner));
         t.putInt("kingdomCities", Kingdoms.cities(manager, s).size());
         t.putString("raidStatus", s.raidStatus);
+        t.putBoolean("autoBuild", s.autoBuild);
+        t.putString("autoBuildStatus", AutoBuild.status(s));
         t.putBoolean("canRaid", Raids.playerSource(p.server, manager, p.getUUID(), s) != null);
         t.putBoolean("canMoveCapital", p.getUUID().equals(s.owner) && !s.capital && !Raids.engaged(manager, s)
                 && Kingdoms.cities(manager, s).stream().noneMatch(c -> c.capitalMovedAt > p.server.overworld().getGameTime()));

@@ -37,6 +37,7 @@ public final class Settlement {
     public long raidCooldown;
     public long capitalMovedAt;
     public String raidStatus = "";
+    public boolean autoBuild = true;
     public String style = "minecraft:plains";
     public Tier tier = Tier.CAMP;
     public final Stockpile stock = new Stockpile();
@@ -337,6 +338,7 @@ public final class Settlement {
         t.putLong("raidCooldown", raidCooldown);
         t.putLong("capitalMovedAt", capitalMovedAt);
         t.putString("raidStatus", raidStatus);
+        t.putBoolean("autoBuild", autoBuild);
         t.putString("style", style);
         t.putInt("tier", tier.number());
         t.put("stock", stock.save());
@@ -399,6 +401,7 @@ public final class Settlement {
         s.raidCooldown = t.getLong("raidCooldown");
         s.capitalMovedAt = t.getLong("capitalMovedAt");
         s.raidStatus = t.getString("raidStatus");
+        s.autoBuild = !t.contains("autoBuild") || t.getBoolean("autoBuild");
         s.style = t.getString("style");
         s.tier = Tier.of(t.getInt("tier"));
         s.stock.load(t.getList("stock", Tag.TAG_COMPOUND));

@@ -39,14 +39,14 @@ public class BuildGoal extends Goal {
     public boolean canContinueToUse() {
         Settlement s = mob.settlement();
         return s != null && plot != null && plot.active() && s.plots.contains(plot) && !mob.alarm()
-                && mob.getUUID().equals(plot.builder);
+                && mob.getUUID().equals(plot.builder) && AutoBuild.mayWork(s, plot);
     }
 
     /** Takes the most urgent loaded plot no other builder is on. */
     @Nullable
     Plot claim(Settlement s) {
         ServerLevel level = (ServerLevel) mob.level();
-        for (Plot p : s.plots) if (mob.getUUID().equals(p.builder) && p.active()) return p;
+        for (Plot p : s.plots) if (mob.getUUID().equals(p.builder) && p.active() && AutoBuild.mayWork(s, p)) return p;
         for (Plot p : Simulation.activePlots(s)) {
             if (p.builder != null && level.getEntity(p.builder) != null) continue;
             if (!Construction.loaded(level, p)) continue;

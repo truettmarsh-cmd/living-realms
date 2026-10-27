@@ -77,7 +77,7 @@ public final class Simulation {
         s.stock.capacity = d.capacity;
 
         // jobs: builders first while there's building to do, then food, then the rest
-        boolean building = s.plots.stream().anyMatch(Plot::active);
+        boolean building = s.plots.stream().anyMatch(p -> p.active() && AutoBuild.mayWork(s, p));
         boolean hungry = s.starving || s.stock.count(Items.BREAD) + s.stock.count(Items.CARROT) + s.stock.count(Items.POTATO) < s.population * 4;
         List<Job> order = new ArrayList<>();
         if (hungry) order.add(Job.FARMER);
@@ -191,6 +191,7 @@ public final class Simulation {
             AiPlanner.think(level, s);
         }
         CapitalCastles.tick(level, s);
+        if (!s.isAi()) AutoBuild.think(level, s);
         if (loaded) {
             settlers(level, s, d);
             garrison(level, s, true);
@@ -703,7 +704,7 @@ public final class Simulation {
 
     public static List<Plot> activePlots(Settlement s) {
         List<Plot> l = new ArrayList<>();
-        for (Plot p : s.plots) if (p.active()) l.add(p);
+        for (Plot p : s.plots) if (p.active() && AutoBuild.mayWork(s, p)) l.add(p);
         l.sort(Comparator.comparingInt((Plot p) -> -p.priority).thenComparingInt(p -> p.id));
         return l;
     }
@@ -712,7 +713,7 @@ public final class Simulation {
     public static void fast(ServerLevel level, Settlement s) {
         boolean changed = false;
         for (Plot p : new ArrayList<>(s.plots)) {
-            if (!p.active()) continue;
+            if (!p.active() || !AutoBuild.mayWork(s, p)) continue;
             if (p.builder != null) {
                 Entity b = level.getEntity(p.builder);
                 if (b == null || !b.isAlive()) p.builder = null;

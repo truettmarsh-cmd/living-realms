@@ -52,6 +52,8 @@ public final class Actions {
         String err = switch (action) {
             case "rename" -> { String n = d.getString("name").trim(); if (!n.isEmpty() && n.length() <= 32) { s.name = n; } yield null; }
             case "plan" -> plan(level, s, d);
+            case "planMap" -> Planning.planMap(level, s, d.getString("type"), d.getInt("x"), d.getInt("z"), d.getInt("rot"));
+            case "autoBuild" -> { s.autoBuild = d.getBoolean("on"); yield null; }
             case "road" -> Planning.road(level, s, BlockPos.of(d.getLong("a")), BlockPos.of(d.getLong("b")), d.getInt("width"), d.getString("material"));
             case "upgrade" -> withPlot(s, d, p -> Planning.upgrade(level, s, p));
             case "repair" -> withPlot(s, d, p -> { Planning.repair(s, p); return null; });
