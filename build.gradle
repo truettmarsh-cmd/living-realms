@@ -31,6 +31,8 @@ minecraft {
             if (project.hasProperty('recruitUiTest')) property 'livingrealms.recruitUiTest', 'true'
             if (project.hasProperty('guideTest')) property 'livingrealms.guideTest', 'true'
             if (project.hasProperty('honoursUiTest')) property 'livingrealms.honoursUiTest', 'true'
+            // ./gradlew runClient -ParchitectTest -PrunDir=<dir> : Architect view walkthrough with screenshots (see ArchitectTour)
+            if (project.hasProperty('architectTest')) property 'livingrealms.architectTest', 'true'
             if (project.hasProperty('tour')) property 'livingrealms.tour', 'true'
         }
         server {

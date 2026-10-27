@@ -18,7 +18,7 @@ public final class ClientNet {
             case "view" -> {
                 ClientState.view = data;
                 Minecraft mc = Minecraft.getInstance();
-                if (data.getBoolean("open")) mc.setScreen(new CityScreen(data.getString("tab")));
+                if (data.getBoolean("open") && !data.getString("tab").equals("architect")) mc.setScreen(new CityScreen(data.getString("tab")));
             }
             case "recruit" -> livingrealms.client.ui.RecruitScreen.receive(data);
             case "plots" -> ClientState.setTowns(data);

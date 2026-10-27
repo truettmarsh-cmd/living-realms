@@ -15,6 +15,10 @@
     {
       "type": "patchouli:text",
       "text": "$(l)Roads$(): with the plans, click from point to point to lay a road; scroll to change its width and pick a material in the Build page."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Architect view$(): shift + right-click in the air with the plans, the Architect view button on the Build page, or $(k:livingrealms.architect) lifts a free camera over your town. Fly around, pick a building or road from the side panel and click to plan it. Your body stays behind and can be hurt: any damage closes the view."
     }
   ]
 }

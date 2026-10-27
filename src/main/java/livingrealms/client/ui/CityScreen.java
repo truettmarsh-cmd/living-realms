@@ -718,7 +718,7 @@ public class CityScreen extends Screen {
         List<String> cats = new ArrayList<>();
         cats.add("ALL");
         for (Category c : Category.values()) cats.add(c.name());
-        int off = ui.beginScroll("cats", cx + 2, top + 4, lw - 4, ch - 38, cats.size() * 17);
+        int off = ui.beginScroll("cats", cx + 2, top + 4, lw - 4, ch - 38 - (mine() ? 22 : 0), cats.size() * 17);
         int yy = top + 4 - off;
         for (String c : cats) {
             final String cc = c;
@@ -734,6 +734,10 @@ public class CityScreen extends Screen {
             yy += 17;
         }
         ui.endScroll();
+        if (mine()) {
+            ui.button("architect", cx + 4, top + ch - 30 - 22, lw - 8, 17, "Architect view", Style.PRIMARY, true, () -> livingrealms.client.ArchitectView.enter(v().getUUID("id"), true));
+            if (ui.over(cx + 4, top + ch - 52, lw - 8, 17)) ui.tip("Fly a free camera over the town and plan buildings where they will stand.", "Your body stays here and can be hurt.");
+        }
         if (catFilter.equals("ROAD")) {
             int mx = cx + lw + 6;
             ui.card(mx, top, cw - lw - 6, ch - 30);

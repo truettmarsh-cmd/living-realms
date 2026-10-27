@@ -3,11 +3,14 @@
   "block.livingrealms.town_charter": "Town Charter",
   "block.livingrealms.delivery_barrel": "Delivery Barrel",
   "item.livingrealms.architects_plans": "Architect's Plans",
-  "item.livingrealms.architects_plans.tip": "Right-click: building catalogue. While placing: right-click to set down, scroll to turn.",
+  "item.livingrealms.architects_plans.tip": "Right-click: building catalogue. While placing: right-click to set down, scroll to turn. Shift + right-click in the air: Architect view.",
   "entity.livingrealms.settler": "Settler",
   "key.categories.livingrealms": "Living Realms",
   "key.livingrealms.open": "Open City Manager",
-  "key.livingrealms.rotate": "Rotate building (City Map)",
+  "key.livingrealms.rotate": "Rotate building (City Map, Architect view)",
+  "key.livingrealms.architect": "Architect view (enter / leave)",
+  "key.livingrealms.raise": "Raise building (Architect view)",
+  "key.livingrealms.lower": "Lower building (Architect view)",
   "key.livingrealms.recruit": "Recruit Command (look at your recruit)",
   "key.livingrealms.recruit.none": "Look at one of your recruits to command it"
 }
