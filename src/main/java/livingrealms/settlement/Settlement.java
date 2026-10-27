@@ -38,6 +38,14 @@ public final class Settlement {
     public long capitalMovedAt;
     public String raidStatus = "";
     public boolean autoBuild = true;
+    public boolean autoResearch = true, autoTier = true, autoTrain = true;
+    /** Garrison size auto training keeps; -1 means half the garrison capacity. */
+    public int garrisonTarget = -1;
+    public boolean researchAuto;
+    public final Set<String> researchSkip = new LinkedHashSet<>();
+    /** Clear building sites surveyed while loaded, so villagers can plan while nobody is near. */
+    public final List<BlockPos> sites = new ArrayList<>();
+    public final Autonomy.Away away = new Autonomy.Away();
     public String style = "minecraft:plains";
     public Tier tier = Tier.CAMP;
     public final Stockpile stock = new Stockpile();
@@ -339,6 +347,16 @@ public final class Settlement {
         t.putLong("capitalMovedAt", capitalMovedAt);
         t.putString("raidStatus", raidStatus);
         t.putBoolean("autoBuild", autoBuild);
+        t.putBoolean("autoResearch", autoResearch);
+        t.putBoolean("autoTier", autoTier);
+        t.putBoolean("autoTrain", autoTrain);
+        t.putInt("garrisonTarget", garrisonTarget);
+        t.putBoolean("researchAuto", researchAuto);
+        ListTag skip = new ListTag();
+        researchSkip.forEach(r -> skip.add(StringTag.valueOf(r)));
+        t.put("researchSkip", skip);
+        t.putLongArray("sites", sites.stream().mapToLong(BlockPos::asLong).toArray());
+        t.put("away", away.save());
         t.putString("style", style);
         t.putInt("tier", tier.number());
         t.put("stock", stock.save());
@@ -402,6 +420,14 @@ public final class Settlement {
         s.capitalMovedAt = t.getLong("capitalMovedAt");
         s.raidStatus = t.getString("raidStatus");
         s.autoBuild = !t.contains("autoBuild") || t.getBoolean("autoBuild");
+        s.autoResearch = !t.contains("autoResearch") || t.getBoolean("autoResearch");
+        s.autoTier = !t.contains("autoTier") || t.getBoolean("autoTier");
+        s.autoTrain = !t.contains("autoTrain") || t.getBoolean("autoTrain");
+        s.garrisonTarget = t.contains("garrisonTarget") ? Math.max(-1, t.getInt("garrisonTarget")) : -1;
+        s.researchAuto = t.getBoolean("researchAuto");
+        t.getList("researchSkip", Tag.TAG_STRING).forEach(r -> s.researchSkip.add(r.getAsString()));
+        for (long l : t.getLongArray("sites")) s.sites.add(BlockPos.of(l));
+        s.away.load(t.getCompound("away"));
         s.style = t.getString("style");
         s.tier = Tier.of(t.getInt("tier"));
         s.stock.load(t.getList("stock", Tag.TAG_COMPOUND));

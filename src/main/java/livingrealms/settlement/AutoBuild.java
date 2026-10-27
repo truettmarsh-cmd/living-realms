@@ -21,23 +21,16 @@ public final class AutoBuild {
         return "Villagers will plan when materials and a clear site are available";
     }
 
+    /** Surveyed sites are squares this wide, checked this high. */
+    public static final int SITE = 17, SITE_HEIGHT = 16, MAX_SITES = 4;
+
     public static void think(ServerLevel level, Settlement s) {
-        if (s.isAi() || !s.autoBuild || !level.hasChunkAt(s.center) || s.plots.stream().anyMatch(AutoBuild::pending)
-                || s.alarmUntil > level.getGameTime()) return;
-        List<BuildingType> candidates = new ArrayList<>();
-        if (!s.d.hasTownHall) {
-            var hall = BuildingCatalog.get("livingrealms:town_hall");
-            if (hall != null) candidates.add(hall);
-        } else {
-            Category need = AiPlanner.decide(level.random, s);
-            for (BuildingType t : BuildingCatalog.types().values()) {
-                if (t.category == Category.CIVIC || t.category == Category.ROAD || t.category == Category.WALL
-                        || t.id.equals(CapitalCastles.ID) || s.cannotBuild(t) != null) continue;
-                candidates.add(t);
-            }
-            Collections.shuffle(candidates, new Random(level.random.nextLong()));
-            candidates.sort(Comparator.comparingInt(t -> t.category == need ? 0 : 1));
-        }
+        if (s.isAi() || !s.autoBuild || Autonomy.underAttack(level, s)) return;
+        boolean home = level.hasChunkAt(s.center);
+        if (home) survey(level, s);
+        if (s.plots.stream().anyMatch(AutoBuild::pending)) return;
+        if (!home) { away(s, level.random); return; }
+        List<BuildingType> candidates = candidates(s, level.random);
         int sitesTried = 0;
         for (BuildingType t : candidates) {
             if (s.cannotBuild(t) != null) continue;
@@ -63,6 +56,73 @@ public final class AutoBuild {
         }
     }
 
+    /** While loaded, keeps a few clear squares on file (one new or rechecked per step) for planning while nobody is near. */
+    static void survey(ServerLevel level, Settlement s) {
+        boolean castle = s.capital && s.tier.number() >= 5;
+        if (!s.sites.isEmpty()) {
+            BlockPos at = s.sites.remove(0);
+            if (level.hasChunksAt(at.getX(), at.getZ(), at.getX() + SITE, at.getZ() + SITE)) {
+                if (usable(s, at) && clearBox(level, at, SITE, SITE, SITE_HEIGHT)) s.sites.add(at);
+            } else s.sites.add(at);
+        }
+        if (s.sites.size() >= MAX_SITES) return;
+        BlockPos at = AiPlanner.findSite(level, s, SITE, SITE, castle);
+        if (at != null && usable(s, at) && clearBox(level, at, SITE, SITE, SITE_HEIGHT)) s.sites.add(at);
+    }
+
+    /** Inside the land, clear of plots, other surveyed sites and the future castle. */
+    static boolean usable(Settlement s, BlockPos at) {
+        int x0 = at.getX(), z0 = at.getZ(), x1 = x0 + SITE - 1, z1 = z0 + SITE - 1;
+        if (!s.contains(at) || !s.contains(new BlockPos(x1, at.getY(), z1)) || !s.contains(new BlockPos(x0, at.getY(), z1)) || !s.contains(new BlockPos(x1, at.getY(), z0))) return false;
+        if (AiPlanner.overlaps(s, x0 - 2, z0 - 2, x1 + 2, z1 + 2)) return false;
+        if (s.capital && s.tier.number() >= 5 && CapitalCastles.reserved(s, x0 - 2, z0 - 2, x1 + 2, z1 + 2)) return false;
+        for (BlockPos o : s.sites) if (o != at && x0 <= o.getX() + SITE + 1 && x1 + 2 >= o.getX() && z0 <= o.getZ() + SITE + 1 && z1 + 2 >= o.getZ()) return false;
+        return true;
+    }
+
+    /** Plans on a surveyed site without reading terrain; the foundation is measured when the site loads. */
+    static void away(Settlement s, net.minecraft.util.RandomSource random) {
+        if (s.sites.isEmpty()) return;
+        for (BuildingType t : candidates(s, random)) {
+            if (t.sink != 0 || s.cannotBuild(t) != null) continue;
+            Blueprint bp = BuildingCatalog.blueprint(t.blueprintKey(1, s.style));
+            if (bp == null || bp.sy > SITE_HEIGHT) continue;
+            Rotation rot = null;
+            for (Rotation r : Rotation.values()) if (bp.width(r) <= SITE && bp.depth(r) <= SITE) { rot = r; break; }
+            if (rot == null || !affordable(s, bp, new long[bp.width(rot) * bp.depth(rot) / 4])) continue;
+            for (BlockPos at : new ArrayList<>(s.sites)) {
+                s.sites.remove(at);
+                if (!usable(s, at)) continue;
+                if (Planning.plan(null, s, t, at, rot, false) == null) {
+                    Plot p = s.plots.get(s.plots.size() - 1);
+                    p.automatic = true;
+                    p.priority = -2;
+                    s.log("Villagers chose to build " + t.name + " while you were away");
+                    return;
+                }
+            }
+            return;
+        }
+    }
+
+    static List<BuildingType> candidates(Settlement s, net.minecraft.util.RandomSource random) {
+        List<BuildingType> candidates = new ArrayList<>();
+        if (!s.d.hasTownHall) {
+            var hall = BuildingCatalog.get("livingrealms:town_hall");
+            if (hall != null) candidates.add(hall);
+        } else {
+            Category need = AiPlanner.decide(random, s);
+            for (BuildingType t : BuildingCatalog.types().values()) {
+                if (t.category == Category.CIVIC || t.category == Category.ROAD || t.category == Category.WALL
+                        || t.id.equals(CapitalCastles.ID) || s.cannotBuild(t) != null) continue;
+                candidates.add(t);
+            }
+            Collections.shuffle(candidates, new Random(random.nextLong()));
+            candidates.sort(Comparator.comparingInt(t -> t.category == need ? 0 : 1));
+        }
+        return candidates;
+    }
+
     static boolean affordable(Settlement s, Blueprint bp, long[] foundation) {
         Map<Item, Integer> bill = new HashMap<>(bp.bill());
         Item base = Blueprint.costItem(Construction.foundationBlock(s));
@@ -72,7 +132,11 @@ public final class AutoBuild {
 
     /** Check every block, including containers and upper floors; do not flatten player-built structures. */
     static boolean clear(ServerLevel level, BlockPos origin, Blueprint bp, Rotation rot) {
-        for (int x = 0; x < bp.width(rot); x++) for (int z = 0; z < bp.depth(rot); z++) for (int y = 0; y < bp.sy; y++) {
+        return clearBox(level, origin, bp.width(rot), bp.depth(rot), bp.sy);
+    }
+
+    static boolean clearBox(ServerLevel level, BlockPos origin, int w, int d, int h) {
+        for (int x = 0; x < w; x++) for (int z = 0; z < d; z++) for (int y = 0; y < h; y++) {
             BlockPos pos = origin.offset(x, y, z);
             var state = level.getBlockState(pos);
             if (state.hasBlockEntity() || state.is(net.minecraft.tags.BlockTags.LOGS)) return false;

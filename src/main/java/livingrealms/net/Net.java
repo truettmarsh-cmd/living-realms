@@ -125,6 +125,7 @@ public final class Net {
 
     public static void openManager(ServerPlayer p, Settlement s, String tab) {
         Simulation.recompute(s);
+        Autonomy.back(p, s);
         WATCHING.put(p.getUUID(), s.id);
         sendView(p, s, true, tab);
     }

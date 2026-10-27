@@ -55,12 +55,17 @@ public final class Actions {
             case "planMap" -> Planning.planMap(level, s, d.getString("type"), d.getInt("x"), d.getInt("z"), d.getInt("rot"));
             case "autoBuild" -> { s.autoBuild = d.getBoolean("on"); yield null; }
             case "road" -> Planning.road(level, s, BlockPos.of(d.getLong("a")), BlockPos.of(d.getLong("b")), d.getInt("width"), d.getString("material"));
-            case "upgrade" -> withPlot(s, d, p -> Planning.upgrade(level, s, p));
-            case "repair" -> withPlot(s, d, p -> { Planning.repair(s, p); return null; });
+            case "upgrade" -> withPlot(s, d, p -> p.deferred ? DEFERRED : Planning.upgrade(level, s, p));
+            case "repair" -> withPlot(s, d, p -> { if (p.deferred) return DEFERRED; Planning.repair(s, p); return null; });
             case "demolish" -> withPlot(s, d, p -> { Planning.demolish(s, p); return null; });
             case "priority" -> withPlot(s, d, p -> { p.priority = Math.max(-5, Math.min(20, p.priority + d.getInt("delta"))); return null; });
             case "research" -> research(s, d.getString("id"));
-            case "cancelResearch" -> { s.researchBank += s.researchProgress; s.researchProgress = 0; s.activeResearch = ""; yield null; }
+            case "cancelResearch" -> cancelResearch(s);
+            case "clearSkips" -> { s.researchSkip.clear(); yield null; }
+            case "autoResearch" -> { s.autoResearch = d.getBoolean("on"); yield null; }
+            case "autoTier" -> { s.autoTier = d.getBoolean("on"); yield null; }
+            case "autoTrain" -> { s.autoTrain = d.getBoolean("on"); yield null; }
+            case "garrisonTarget" -> { s.garrisonTarget = Math.max(-1, Math.min(s.d.garrisonCap, d.getInt("value"))); yield null; }
             case "tier" -> advance(s);
             case "capital" -> player.getUUID().equals(s.owner) ? Kingdoms.designate(player.server, m, s) : "Only the ruler may move the capital";
             case "tax" -> tax(s, d.getInt("level"));
@@ -84,6 +89,8 @@ public final class Actions {
         Simulation.recompute(s);
         s.dirty = true;
     }
+
+    static final String DEFERRED = "Builders finish placing it when the area is loaded";
 
     static void tell(ServerPlayer p, String msg) {
         p.displayClientMessage(Component.literal(msg).withStyle(ChatFormatting.GOLD), true);
@@ -113,8 +120,24 @@ public final class Actions {
         n.items().forEach(s.stock::takeIngredient);
         if (!s.activeResearch.isEmpty()) s.researchBank += s.researchProgress;
         s.activeResearch = id;
+        s.researchAuto = false;
         s.researchProgress = 0;
         s.log("Scholars began studying " + n.name());
+        return null;
+    }
+
+    /** Cancelling a choice auto research made also tells it to leave that project alone. */
+    @Nullable
+    static String cancelResearch(Settlement s) {
+        if (s.researchAuto && !s.activeResearch.isEmpty()) {
+            s.researchSkip.add(s.activeResearch);
+            var n = ResearchTree.get(s.activeResearch);
+            s.log("Auto research will skip " + (n == null ? s.activeResearch : n.name()));
+        }
+        s.researchBank += s.researchProgress;
+        s.researchProgress = 0;
+        s.activeResearch = "";
+        s.researchAuto = false;
         return null;
     }
 

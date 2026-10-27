@@ -43,10 +43,12 @@ public final class Planning {
         ROAD_MATERIALS.put("planks", Blocks.SPRUCE_PLANKS.defaultBlockState());
     }
 
-    /** Plans a building with its bounding box corner at origin (before sinking). Returns an error or null. */
+    /** Plans a building with its bounding box corner at origin (before sinking). Returns an error or null. A null level
+     * plans an unsited building on a surveyed site whose foundation is measured once it loads. */
     @Nullable
-    public static String plan(ServerLevel level, Settlement s, BuildingType t, BlockPos origin, Rotation rot, boolean ai) {
+    public static String plan(@Nullable ServerLevel level, Settlement s, BuildingType t, BlockPos origin, Rotation rot, boolean ai) {
         if (t.id.equals(CapitalCastles.ID)) {
+            if (level == null) return "The castle needs a loaded site";
             String site = CapitalCastles.site(level, s, t, origin, rot);
             if (site != null) return site;
         }
@@ -66,7 +68,8 @@ public final class Planning {
         if (err != null) return err;
         p.id = s.nextId++;
         p.state = Plot.State.BUILDING;
-        p.foundation = Construction.foundation(level, bp, o, rot);
+        p.foundation = level == null ? new long[0] : Construction.foundation(level, bp, o, rot);
+        p.unsited = level == null;
         p.priority = t.category == Category.CIVIC ? 10 : 0;
         s.plots.add(p);
         if (!ai) s.log("Planned a " + t.name);
@@ -227,6 +230,7 @@ public final class Planning {
     }
 
     public static void demolish(Settlement s, Plot p) {
+        p.deferred = false;
         if (p.state == Plot.State.BUILDING && p.placed == 0) {
             s.plots.remove(p);
         } else {

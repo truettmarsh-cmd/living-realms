@@ -32,6 +32,7 @@ public final class MilitarySelfTest {
                 checks += RecruitProgressionSelfTest.run(event.getServer().overworld());
                 checks += livingrealms.military.RecruitOriginSelfTest.run(event.getServer().overworld());
                 checks += CapitalCastleSelfTest.run(event.getServer().overworld());
+                checks += AutonomySelfTest.run(event.getServer().overworld());
                 checks += equipment(event.getServer().overworld());
                 checks += dragons(event.getServer().overworld());
                 report = "PASS: " + checks + " assertions; " + Smithing.patterns().size() + " smithing patterns\n";

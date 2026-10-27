@@ -62,6 +62,7 @@ public final class Construction {
     /** Advances past steps that need no work. Returns the next step that does, or null when the plot is finished. */
     @Nullable
     public static Step nextWork(ServerLevel level, Settlement s, Plot p, int budget) {
+        site(level, s, p);
         int total = p.totalSteps();
         while (p.placed < total && budget-- > 0) {
             Step st = step(s, p, p.placed);
@@ -144,9 +145,24 @@ public final class Construction {
         return done;
     }
 
-    /** Places what was paid for while the area was unloaded. */
-    public static void catchUp(ServerLevel level, Settlement s, Plot p, int max) {
-        if (!livingrealms.settlement.AutoBuild.mayWork(s, p)) return;
+    /** Measures the foundation of a plot planned while unloaded, once its site loads; paid from stock as far as it goes. */
+    public static void site(ServerLevel level, Settlement s, Plot p) {
+        if (!p.unsited || !loaded(level, p)) return;
+        Blueprint bp = p.blueprint();
+        long[] f = bp == null ? new long[0] : foundation(level, bp, p.origin, p.rotation);
+        Item base = Blueprint.costItem(foundationBlock(s));
+        if (base != null && !s.isAi()) s.stock.takeUpTo(base, f.length);
+        p.foundation = f;
+        if (p.placed > 0) p.placed += f.length;
+        p.paid += f.length;
+        p.unsited = false;
+    }
+
+    /** Places what was paid for while the area was unloaded. Returns the steps used. */
+    public static int catchUp(ServerLevel level, Settlement s, Plot p, int max) {
+        if (!p.deferred && !livingrealms.settlement.AutoBuild.mayWork(s, p)) return 0;
+        site(level, s, p);
+        int start = max;
         while (p.placed < p.paid && max-- > 0) {
             Step st = step(s, p, p.placed);
             if (st == null) break;
@@ -159,6 +175,7 @@ public final class Construction {
             }
             p.placed++;
         }
+        return start - Math.max(0, max);
     }
 
     /** Blocks cleared off a site go into the stockpile if they are worth keeping. */
