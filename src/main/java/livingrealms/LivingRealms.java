@@ -37,6 +37,20 @@ public class LivingRealms {
             e.addListener(Smithing.INSTANCE);
             e.addListener(BuildingCatalog.RELOADER);
         });
+        MinecraftForge.EVENT_BUS.addListener(LivingRealms::giveGuide);
+    }
+
+    /** Every player gets the Living Realms Handbook (a Patchouli guide book) once, on first join. */
+    private static void giveGuide(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent e) {
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("patchouli")) return;
+        var tag = e.getEntity().getPersistentData();
+        if (tag.getBoolean("livingrealms_guide")) return;
+        tag.putBoolean("livingrealms_guide", true);
+        var book = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new ResourceLocation("patchouli", "guide_book"));
+        if (book == null) return;
+        var s = new net.minecraft.world.item.ItemStack(book);
+        s.getOrCreateTag().putString("patchouli:book", MODID + ":guide");
+        if (!e.getEntity().getInventory().add(s)) e.getEntity().drop(s, false);
     }
 
     public static ResourceLocation id(String path) {

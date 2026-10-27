@@ -1,0 +1,12 @@
+{
+  "name": "Auto Build",
+  "icon": "minecraft:scaffolding",
+  "category": "livingrealms:building",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "When your queue is empty, villagers choose an affordable building the town needs, find a clear site and build it. They can even start with the Town Hall.$(br2)Your own queued projects always come first: adding one pauses automatic work, which resumes afterwards. Turn it off with $(l)Overview → Auto build$()."
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "Blacksmith Orders",
+  "icon": "minecraft:anvil",
+  "category": "livingrealms:smithing",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Build a $(l)Smithy$() (Smithing research). In $(l)Blacksmith$(), choose a piece or a full armour set, a material and an amount. Smiths forge the order from the stockpile.$(br2)Materials unlock with research: leather, chainmail, iron, gold, diamond and netherite."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Equipment from $(l)Epic Knights$() and its addons and from $(l)Ice and Fire$() is found automatically. Search by name or mod; order complete matched sets or single pieces, including mount armour.$(br2)$(l)Master Armourer$() commissions loot-only equipment at a high price. Dragonsteel still needs real dragonsteel from a dragonforge."
+    }
+  ]
+}

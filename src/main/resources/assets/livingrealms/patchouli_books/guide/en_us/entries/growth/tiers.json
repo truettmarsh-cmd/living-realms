@@ -1,0 +1,16 @@
+{
+  "name": "Town Tiers",
+  "icon": "minecraft:emerald",
+  "category": "livingrealms:growth",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Towns grow through six tiers. Each needs population, buildings, sometimes research, and emeralds to advance (Overview):$(li)$(l)Camp$()$(li)$(l)Hamlet$(): 6 people, 4 buildings, 16 emeralds$(li)$(l)Village$(): 12, 9, Masonry, 48$(li)$(l)Town$(): 24, 16, Architecture, 96"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l)City$(): 42, 26, Urban Planning, 192$(li)$(l)Capital$(): 70, 40, Royal Charter, 384. Only your kingdom's capital can reach it.$(br2)Higher tiers widen the town's territory and allow bigger building levels."
+    }
+  ]
+}

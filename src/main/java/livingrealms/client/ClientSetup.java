@@ -16,7 +16,9 @@ import org.lwjgl.glfw.GLFW;
 @Mod.EventBusSubscriber(modid = LivingRealms.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class ClientSetup {
     public static final KeyMapping OPEN = new KeyMapping("key.livingrealms.open", KeyConflictContext.IN_GAME,
-            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_K), "key.categories.livingrealms");
+            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_O), "key.categories.livingrealms");
+    public static final KeyMapping ROTATE = new KeyMapping("key.livingrealms.rotate", KeyConflictContext.GUI,
+            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_R), "key.categories.livingrealms");
 
     @SubscribeEvent
     public static void renderers(EntityRenderersEvent.RegisterRenderers e) {
@@ -24,7 +26,10 @@ public final class ClientSetup {
     }
 
     @SubscribeEvent
-    public static void keys(RegisterKeyMappingsEvent e) { e.register(OPEN); }
+    public static void keys(RegisterKeyMappingsEvent e) {
+        e.register(OPEN);
+        e.register(ROTATE);
+    }
 
     @SubscribeEvent
     public static void overlays(RegisterGuiOverlaysEvent e) {

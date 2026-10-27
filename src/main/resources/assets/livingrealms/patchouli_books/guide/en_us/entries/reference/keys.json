@@ -1,0 +1,12 @@
+{
+  "name": "Keys",
+  "icon": "minecraft:command_block",
+  "category": "livingrealms:reference",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "All keys can be changed in $(l)Options → Controls$():$(li)$(k:livingrealms.open) City Manager$(li)$(k:livingrealms.command) command the recruit you look at$(li)$(k:livingrealms.rotate) rotate a building on the City Map$(br2)$(l)Shift + right-click$() a recruit: Recruit Command."
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "Research",
+  "icon": "minecraft:enchanted_book",
+  "category": "livingrealms:growth",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Build a $(l)Library$() (Scholarship) for research points. Research is paid in points plus some items and has five branches: $(l)Economy$(), $(l)Construction$(), $(l)Scholarship$(), $(l)Smithing$() and $(l)Military$().$(br2)It unlocks buildings, tiers, materials and unit types. Cancelling keeps the progress banked."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Highlights$()$(li)Masonry / Architecture / Urban Planning / Royal Charter: tier gates$(li)Carpentry, Engineering: faster builders$(li)Command: more soldiers and Royal Guards$(li)Veteran Training: soldiers start at level 3$(li)Dragon Riders: train dragon-mounted bowmen$(li)Education: faster research"
+    }
+  ]
+}

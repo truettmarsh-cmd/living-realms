@@ -6,5 +6,6 @@
   "item.livingrealms.architects_plans.tip": "Right-click: building catalogue. While placing: right-click to set down, scroll to turn.",
   "entity.livingrealms.settler": "Settler",
   "key.categories.livingrealms": "Living Realms",
-  "key.livingrealms.open": "Open City Manager"
+  "key.livingrealms.open": "Open City Manager",
+  "key.livingrealms.rotate": "Rotate building (City Map)"
 }

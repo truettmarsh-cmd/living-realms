@@ -1,0 +1,6 @@
+{
+  "name": "Building",
+  "description": "Plan buildings and roads; your villagers build them.",
+  "icon": "minecraft:bricks",
+  "sortnum": 1
+}

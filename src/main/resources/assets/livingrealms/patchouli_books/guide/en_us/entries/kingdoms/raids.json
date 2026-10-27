@@ -1,0 +1,16 @@
+{
+  "name": "Raids & Conquest",
+  "icon": "minecraft:iron_sword",
+  "category": "livingrealms:kingdoms",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Open a rival city's City Manager and choose $(l)Raid this city$(). Your nearest eligible town sends half its foot soldiers (2–12).$(br2)Defeat the defenders, then hold the centre for $(l)60 seconds$() uncontested. Taking an ordinary city gives you that city; taking a $(l)capital$() gives you $(l)every city$() of that kingdom."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "NPC kingdoms raid too, including you. A warning tells you which city is attacked and whether your capital is at stake.$(br2)Raids pause while armies are unloaded; no chunks are force-loaded. Surviving soldiers change sides on conquest; Royal Guard status is cleared."
+    }
+  ]
+}

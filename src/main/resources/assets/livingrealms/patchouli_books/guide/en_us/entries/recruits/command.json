@@ -1,0 +1,16 @@
+{
+  "name": "Recruit Command",
+  "icon": "minecraft:golden_helmet",
+  "category": "livingrealms:recruits",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Shift + right-click$() one of your recruits to open $(l)Recruit Command$(). A normal right-click still opens Villager Recruits' own menu. You can also bind a key to command the recruit under your crosshair (Controls).$(br2)From the City Manager's Garrison list, $(l)Command$() opens the same screen and $(l)Inventory$() opens a soldier's inventory."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Pages$()$(li)$(l)Overview$(): health, morale, kills, levels, gear, quick orders (follow, hold, wander), rename$(li)$(l)Skills$(), $(l)Weapons$(), $(l)Legendary$(), $(l)Special skills$()$(li)$(l)Promotions$()$(li)$(l)Inventory$(): opens the recruit's equipment$(br2)Recruits hired the normal way can $(l)Enlist$() in your nearest town to use skills and town upkeep."
+    }
+  ]
+}

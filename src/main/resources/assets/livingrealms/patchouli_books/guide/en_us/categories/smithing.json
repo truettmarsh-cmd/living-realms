@@ -1,0 +1,6 @@
+{
+  "name": "Blacksmith",
+  "description": "Order arms and armour from your smithies.",
+  "icon": "minecraft:anvil",
+  "sortnum": 3
+}

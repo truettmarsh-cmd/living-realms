@@ -8,3 +8,5 @@ libs/
 run-tour.log
 tools/.venv/
 run-military-test/
+.claude/
+output/

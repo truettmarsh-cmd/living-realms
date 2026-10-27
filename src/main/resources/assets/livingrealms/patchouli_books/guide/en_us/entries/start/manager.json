@@ -1,0 +1,16 @@
+{
+  "name": "The City Manager",
+  "icon": "minecraft:bell",
+  "category": "livingrealms:start",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Open it with $(k:livingrealms.open) or by using the charter. Its pages:$(li)$(l)Overview$(): population, tier, food, taxes, capital and auto-build$(li)$(l)City Map$(): your territory, plots and roads$(li)$(l)Build$() and $(l)Projects$(): plan and manage construction"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l)Stockpile$(): the town's shared stores$(li)$(l)Research$(): the technology tree$(li)$(l)Military$(): training, kits, garrison, stances and the alarm$(li)$(l)Blacksmith$(): equipment orders$(br2)Everything you change here is checked by the server, so nothing breaks if you click too fast."
+    }
+  ]
+}

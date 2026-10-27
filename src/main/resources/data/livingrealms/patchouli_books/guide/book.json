@@ -1,0 +1,11 @@
+{
+  "name": "Living Realms Handbook",
+  "landing_text": "How to found a $(l)town$(), plan and grow it into a $(#d4a838)capital$(), research, forge equipment, raise and command an $(#e8642a)army$(), and win wars between kingdoms.$(br2)Open your City Manager with $(k:livingrealms.open), or use your Town Charter. $(l)Shift + right-click$() one of your recruits to command it.",
+  "use_resource_pack": true,
+  "version": 1,
+  "model": "patchouli:book_brown",
+  "book_texture": "patchouli:textures/gui/book_brown.png",
+  "show_progress": false,
+  "i18n": false,
+  "creative_tab": "livingrealms:main"
+}

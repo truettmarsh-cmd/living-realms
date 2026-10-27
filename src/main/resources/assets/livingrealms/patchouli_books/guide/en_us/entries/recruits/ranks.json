@@ -1,0 +1,16 @@
+{
+  "name": "Ranks & Experience",
+  "icon": "minecraft:experience_bottle",
+  "category": "livingrealms:recruits",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Town soldiers earn $(l)combat XP$(): 25 per hostile kill, plus smaller amounts for damage dealt, surviving alarms, defending and surviving raids, and Royal Guard escort time (75 a day from these).$(br2)Every 50 XP is a $(l)skill point$(), up to 18. Ranks give titles: Recruit, Soldier (2), Veteran (4), Sergeant (7), Elite (11), Champion (16)."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Drill$(): pay emeralds and food from the stockpile for 40 combat XP plus some Villager Recruits XP. Each soldier can drill every 10 minutes; the price grows with rank.$(br2)$(l)Respec$(): refund every learned skill for some emeralds.$(br2)The $(l)Villager Recruits level$() is separate; it comes from kills and drills and gates promotions and legendary perks."
+    }
+  ]
+}

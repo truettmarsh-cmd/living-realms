@@ -1,0 +1,16 @@
+{
+  "name": "Stockpile & Deliveries",
+  "icon": "minecraft:chest",
+  "category": "livingrealms:start",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Builders, smiths and soldiers all draw from the town's $(l)shared stockpile$(), so no chest needs to sit next to a building site.$(br2)Put items in from the $(l)Stockpile$() page, or craft a $(l)Delivery Barrel$(): anything dropped into it is moved into the stockpile."
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "livingrealms:delivery_barrel"
+    }
+  ]
+}

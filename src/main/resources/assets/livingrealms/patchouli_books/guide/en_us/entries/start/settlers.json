@@ -1,0 +1,12 @@
+{
+  "name": "Settlers",
+  "icon": "minecraft:villager_spawn_egg",
+  "category": "livingrealms:start",
+  "sortnum": 3,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Your town's people are $(l)settlers$(). They take jobs by themselves: builders, farmers, lumberjacks, miners, smiths, merchants and scholars, depending on the buildings you have.$(br2)Keep them $(l)fed$(): a starving town works slowly and its soldiers weaken. Houses raise how many settlers can live in the town."
+    }
+  ]
+}

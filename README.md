@@ -6,7 +6,7 @@ Living Realms is an original mod. It does not include or modify code from Recrui
 
 ## Features
 
-- **Founding a town.** Craft a **Town Charter** and place it to found a settlement. You get **Architect's Plans** and the City Manager opens (press **K** to reopen it).
+- **Founding a town.** Craft a **Town Charter** and place it to found a settlement. You get **Architect's Plans** and the City Manager opens (press **O** to reopen it; every key can be changed in Controls).
 - **City planning.** Choose a building in the Build tab, click **City Map**, and click the map to queue it without leaving the UI. Press **R** or use **Rotate** to change its orientation. You can also choose **In world** to place it with Architect's Plans. A translucent ghost shows where it goes: scroll to rotate it and shift-scroll to raise it. Roads are laid out by clicking from point to point, and scrolling changes their width. Settlers called *builders* walk to each site and place the blocks themselves.
 - **Shared town stockpile.** Builders take materials from the town stockpile, so no chest needs to sit near the site. Put items in through the Storage tab or a **Delivery Barrel**, which feeds the stockpile.
 - **Over 200 buildings.** About 20 hand-made building kinds (town hall, cottages, smithy, library, barracks, watchtowers, walls, gatehouse, farms, stables, tavern, chapel, market, mine and more) in plains, taiga, snowy, desert and savanna styles. Village houses from vanilla, ChoiceTheorem's Overhauled Village and Towns & Towers are picked up automatically when those mods are installed.

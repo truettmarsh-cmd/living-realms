@@ -1,0 +1,16 @@
+{
+  "name": "Planning on the City Map",
+  "icon": "minecraft:filled_map",
+  "category": "livingrealms:building",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "In $(l)Build$(), pick a building and choose $(l)City Map$(). The footprint follows your cursor: click clear ground to queue it.$(li)$(k:livingrealms.rotate) or the Rotate button turns it$(li)Scroll zooms; right-drag pans$(li)Queue several buildings without closing the screen$(li)$(l)Done planning$() returns to the normal map"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Builders then walk to each site and place the blocks themselves, paying from the stockpile. Buildings wait, not fail, while materials are missing.$(br2)Over 200 buildings exist: about 20 hand-made kinds (town hall, cottages, smithy, library, barracks, watchtowers, walls, gatehouse, farms, stables, tavern, chapel, market, mine and more) in plains, taiga, snowy, desert and savanna styles, plus village houses from other installed mods."
+    }
+  ]
+}

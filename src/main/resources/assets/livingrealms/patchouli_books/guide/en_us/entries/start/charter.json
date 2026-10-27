@@ -1,0 +1,20 @@
+{
+  "name": "Founding a Town",
+  "icon": "livingrealms:town_charter",
+  "category": "livingrealms:start",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Craft a $(l)Town Charter$() and place it where your town's centre should be. That founds a settlement and you become its ruler.$(br2)Your $(l)first town is your kingdom's capital$(). The charter comes with what the first Town Hall needs, food for the first days, and you receive $(l)Architect's Plans$()."
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "livingrealms:town_charter"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Towns need room: a charter is refused inside or too close to another town.$(br2)Placing another charter inside your own town moves its seat of government there.$(br2)Right-click the charter at any time to open the $(l)City Manager$()."
+    }
+  ]
+}

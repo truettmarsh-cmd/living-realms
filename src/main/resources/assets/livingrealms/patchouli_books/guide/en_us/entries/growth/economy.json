@@ -1,0 +1,12 @@
+{
+  "name": "Taxes & Trade",
+  "icon": "minecraft:gold_ingot",
+  "category": "livingrealms:growth",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Set taxes on the $(l)Overview$(). Higher taxes earn more emeralds but slow growth; the highest level needs $(l)Taxation$().$(br2)A $(l)Market Square$() (Trade) lets merchants earn emeralds; Banking raises it. Farms, lumber camps and mines (Mining, Deep Mining) fill the stockpile with food, wood and ore."
+    }
+  ]
+}

@@ -1628,7 +1628,7 @@ public class CityScreen extends Screen {
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
         if (search.isFocused() && key != GLFW.GLFW_KEY_ESCAPE) return search.keyPressed(key, scan, mods) || true;
-        if (tab == Tab.MAP && mapPlan != null && key == GLFW.GLFW_KEY_R) { mapRotation = (mapRotation + 1) % 4; return true; }
+        if (tab == Tab.MAP && mapPlan != null && livingrealms.client.ClientSetup.ROTATE.matches(key, scan)) { mapRotation = (mapRotation + 1) % 4; return true; }
         if (tab == Tab.MAP && mapPlan != null && key == GLFW.GLFW_KEY_ESCAPE) { mapPlan = null; return true; }
         if (key == livingrealms.client.ClientSetup.OPEN.getKey().getValue()) { onClose(); return true; }
         return super.keyPressed(key, scan, mods);

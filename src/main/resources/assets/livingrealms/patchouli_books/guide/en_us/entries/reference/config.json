@@ -1,0 +1,12 @@
+{
+  "name": "Settings",
+  "icon": "minecraft:comparator",
+  "category": "livingrealms:reference",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Server settings live in $(l)serverconfig/livingrealms-server.toml$():$(li)AI villages on or off$(li)$(l)warfare.npcRaids$(), raidRange, raidCooldown$(li)Recruit origin weights$(br2)Data packs can add or change research, smithing patterns and buildings."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Skill Tree",
+  "icon": "minecraft:nether_star",
+  "category": "livingrealms:recruits",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Three branches of six: $(l)Defence$() (health, armour, knockback, shields, last stand), $(l)Combat$() (damage, projectiles, armour breaking, finishing) and $(l)Support$() (speed, field medic, scouting, fire and blast wards, recovery).$(br2)Each node costs a point and needs the previous one and a minimum rank."
+    }
+  ]
+}

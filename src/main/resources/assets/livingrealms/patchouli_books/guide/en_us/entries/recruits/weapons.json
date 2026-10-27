@@ -1,0 +1,12 @@
+{
+  "name": "Favourite Weapons",
+  "icon": "minecraft:iron_axe",
+  "category": "livingrealms:recruits",
+  "sortnum": 3,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Every soldier has a favourite weapon family: swords, greatswords, daggers, spears and polearms, axes, maces and hammers, bows or crossbows. Using it gives $(l)+5% damage$() and faster practice.$(br2)Practice with each family builds five mastery ranks (100/300/600/1,000/1,500 XP), each +2% damage."
+    }
+  ]
+}

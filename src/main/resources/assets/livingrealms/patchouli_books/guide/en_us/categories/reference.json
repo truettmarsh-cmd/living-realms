@@ -1,0 +1,6 @@
+{
+  "name": "Keys & Settings",
+  "description": "Controls, commands and configuration.",
+  "icon": "minecraft:command_block",
+  "sortnum": 7
+}

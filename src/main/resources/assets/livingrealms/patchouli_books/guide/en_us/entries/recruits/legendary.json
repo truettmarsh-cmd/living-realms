@@ -1,0 +1,12 @@
+{
+  "name": "Legendary Perks",
+  "icon": "minecraft:enchanted_golden_apple",
+  "category": "livingrealms:recruits",
+  "sortnum": 4,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "From Villager Recruits level 8, each new level has a chance to grant a $(l)legendary perk$(); a second slot opens at level 14. Results are saved, so reopening screens never rerolls them.$(br2)They are strong but fair: no invulnerability or resurrection."
+    }
+  ]
+}

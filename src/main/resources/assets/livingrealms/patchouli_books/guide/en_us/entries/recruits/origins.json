@@ -1,0 +1,12 @@
+{
+  "name": "Origins",
+  "icon": "minecraft:totem_of_undying",
+  "category": "livingrealms:recruits",
+  "sortnum": 7,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "New recruits may be born $(l)Human$(), $(l)Dwarf$() (+health, slower), $(l)Elf$() (faster, less health) or $(l)Giant$() (much more health, slower). Origins stay for life. With Pehkui installed they are also visibly shorter or taller."
+    }
+  ]
+}

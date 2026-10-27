@@ -1,0 +1,12 @@
+{
+  "name": "Special Skills",
+  "icon": "minecraft:blaze_powder",
+  "category": "livingrealms:recruits",
+  "sortnum": 5,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Higher ranks unlock $(l)special skill slots$(). Choose a special for each slot on the Special skills page; recruits use them on their own in battle, each with a cooldown. Choosing an equipped special again unequips it."
+    }
+  ]
+}

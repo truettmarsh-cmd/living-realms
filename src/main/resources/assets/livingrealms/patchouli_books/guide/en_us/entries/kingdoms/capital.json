@@ -1,0 +1,12 @@
+{
+  "name": "Your Capital",
+  "icon": "minecraft:white_banner",
+  "category": "livingrealms:kingdoms",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "All your towns form one $(l)kingdom$() with exactly one $(l)capital$(), at first your first town. $(l)Make capital$() on the Overview moves it (once a day, never during a raid).$(br2)Only the capital can reach Capital rank. There, with Royal Charter, builders raise a $(l)41 × 41 Capital Castle$() around the town centre, keeping the courtyard and central buildings."
+    }
+  ]
+}

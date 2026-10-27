@@ -1,0 +1,20 @@
+{
+  "name": "Placing in the World",
+  "icon": "livingrealms:architects_plans",
+  "category": "livingrealms:building",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Choose $(l)In world$() to place a building with the $(l)Architect's Plans$() instead. A translucent ghost shows where it goes: scroll to rotate it, shift-scroll to raise or lower it, and use the plans to confirm."
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "livingrealms:architects_plans"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Roads$(): with the plans, click from point to point to lay a road; scroll to change its width and pick a material in the Build page."
+    }
+  ]
+}

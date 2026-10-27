@@ -1,0 +1,12 @@
+{
+  "name": "Upgrades, Repairs & Demolition",
+  "icon": "minecraft:iron_pickaxe",
+  "category": "livingrealms:building",
+  "sortnum": 3,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "On the $(l)Projects$() page you can raise a project's priority, $(l)upgrade$() a finished building (it is rebuilt as its bigger next level), $(l)repair$() damage, or $(l)demolish$() it.$(br2)How many levels a building can reach depends on the town's tier."
+    }
+  ]
+}

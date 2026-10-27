@@ -1,0 +1,16 @@
+{
+  "name": "Training Soldiers",
+  "icon": "minecraft:iron_sword",
+  "category": "livingrealms:military",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Build a $(l)Barracks$(), then train units in $(l)Military → Recruit$(): footmen, shieldbearers (Drill), bowmen (Archery), crossbowmen (Crossbows), horsemen (Cavalry + Stables) and dragon riders.$(br2)They become real $(l)Villager Recruits$() soldiers owned by you."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Kits$() set what gear each unit type gets. $(l)Equip from the armoury$() hands every soldier the best kit the stockpile holds; old gear goes back into stores.$(br2)The town feeds and pays its garrison. Fed soldiers heal; hungry ones weaken."
+    }
+  ]
+}

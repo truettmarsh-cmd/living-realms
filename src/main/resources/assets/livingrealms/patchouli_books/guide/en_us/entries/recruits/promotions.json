@@ -1,0 +1,12 @@
+{
+  "name": "Promotions",
+  "icon": "minecraft:gold_ingot",
+  "category": "livingrealms:recruits",
+  "sortnum": 6,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Royal Guard$(): your personal bodyguard. Needs Command research, the Soldier title and 32 emeralds. Guards follow and protect you, independent of town orders and alarms.$(br2)Villager Recruits' own professions are on the same page: $(l)Messenger$() and $(l)Scout$() (level 2), $(l)Siege Engineer$() (level 3, with siege weapons), $(l)Patrol Leader$() (level 5) and $(l)Captain$() (level 5, with Small Ships)."
+    }
+  ]
+}

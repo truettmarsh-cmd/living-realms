@@ -1,0 +1,12 @@
+{
+  "name": "Stances & the Alarm",
+  "icon": "minecraft:bell",
+  "category": "livingrealms:military",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Town stances: $(l)Patrol$(), $(l)Garrison$(), $(l)Muster$(), $(l)Follow$() and $(l)Free$().$(br2)Watchtowers ring the $(l)alarm$() when enemies approach, rallying soldiers. Ring it yourself from the Military page; Royal Guards keep protecting you either way."
+    }
+  ]
+}

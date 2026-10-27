@@ -1,0 +1,12 @@
+{
+  "name": "Dragon Riders",
+  "icon": "minecraft:dragon_egg",
+  "category": "livingrealms:military",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Research Cavalry, Veteran Training and $(l)Dragon Riders$(), build Stables, then train a mounted bowman.$(br2)Bring one of your unoccupied, tamed stage 3+ Ice and Fire dragons within 48 blocks of the barracks. Training waits until a dragon is there; no free dragons are spawned. Riders keep your dragon's ownership."
+    }
+  ]
+}
