@@ -321,9 +321,8 @@ public final class Imm {
 
     public void popClip() {
         clip.pop();
+        // GuiGraphics keeps its own scissor stack and restores the parent on pop; re-enabling here leaked a scissor into the next frame
         g.disableScissor();
-        int[] c = clip.peek();
-        if (c != null) g.enableScissor(c[0], c[1], c[2], c[3]);
     }
 
     // ------------------------------------------------------------------ colour

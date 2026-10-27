@@ -20,6 +20,7 @@ public final class ClientNet {
                 Minecraft mc = Minecraft.getInstance();
                 if (data.getBoolean("open")) mc.setScreen(new CityScreen(data.getString("tab")));
             }
+            case "recruit" -> livingrealms.client.ui.RecruitScreen.receive(data);
             case "plots" -> ClientState.setTowns(data);
             case "blueprint" -> ClientState.putBlueprint(data);
             default -> {}

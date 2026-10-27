@@ -19,6 +19,9 @@ public final class ClientSetup {
             InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_O), "key.categories.livingrealms");
     public static final KeyMapping ROTATE = new KeyMapping("key.livingrealms.rotate", KeyConflictContext.GUI,
             InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_R), "key.categories.livingrealms");
+    /** Opens Recruit Command for the recruit under the crosshair; unbound by default. */
+    public static final KeyMapping RECRUIT = new KeyMapping("key.livingrealms.recruit", KeyConflictContext.IN_GAME,
+            InputConstants.UNKNOWN, "key.categories.livingrealms");
 
     @SubscribeEvent
     public static void renderers(EntityRenderersEvent.RegisterRenderers e) {
@@ -29,6 +32,7 @@ public final class ClientSetup {
     public static void keys(RegisterKeyMappingsEvent e) {
         e.register(OPEN);
         e.register(ROTATE);
+        e.register(RECRUIT);
     }
 
     @SubscribeEvent

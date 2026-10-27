@@ -74,7 +74,7 @@ public final class View {
         t.putBoolean("stables", d.hasStables);
         t.putBoolean("townHall", d.hasTownHall);
         ListTag soldiers = new ListTag();
-        s.soldiers.forEach(so -> soldiers.add(so.save()));
+        s.soldiers.forEach(so -> soldiers.add(soldier(s, so)));
         t.put("soldiers", soldiers);
         ListTag training = new ListTag();
         s.training.forEach(tr -> training.add(tr.save()));
@@ -125,6 +125,16 @@ public final class View {
             bills.put(String.valueOf(pl.id), b);
         }
         t.put("bills", bills);
+        return t;
+    }
+
+    /** One garrison soldier as the client sees it, in the City Manager and the Recruit Command screen. */
+    public static CompoundTag soldier(Settlement s, Settlement.Soldier so) {
+        CompoundTag t = so.save();
+        t.putUUID("settlement", s.id);
+        t.putString("town", s.name);
+        livingrealms.military.SoldierRanks.describe(s, so, t);
+        livingrealms.military.SoldierSpecials.describe(s, so, t);
         return t;
     }
 

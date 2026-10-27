@@ -78,6 +78,7 @@ public final class Net {
                 openManager(p, s, m.data.getString("tab"));
             }
             case "close" -> WATCHING.remove(p.getUUID());
+            case "recruit" -> livingrealms.military.RecruitCommand.handle(p, m.data);
             case "action" -> {
                 UUID id = m.data.getUUID("id");
                 Actions.handle(p, id, m.data.getString("action"), m.data.getCompound("data"));

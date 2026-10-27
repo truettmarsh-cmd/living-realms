@@ -27,6 +27,8 @@ minecraft {
             // ./gradlew runClient -Ptour : automated test run with screenshots (see DevTour)
             if (project.hasProperty('castleUiTest')) property 'livingrealms.castleUiTest', 'true'
             if (project.hasProperty('militaryUiTest')) property 'livingrealms.militaryUiTest', 'true'
+            // ./gradlew runClient -PrecruitUiTest -PrunDir=run-recruit-ui : Recruit Command screenshots (see RecruitUiTour)
+            if (project.hasProperty('recruitUiTest')) property 'livingrealms.recruitUiTest', 'true'
             if (project.hasProperty('tour')) property 'livingrealms.tour', 'true'
         }
         server {

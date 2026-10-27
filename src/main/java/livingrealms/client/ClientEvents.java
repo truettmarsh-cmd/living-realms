@@ -32,6 +32,15 @@ public final class ClientEvents {
         while (ClientSetup.OPEN.consumeClick()) {
             if (mc.player != null) Net.toServer("open", new CompoundTag());
         }
+        while (ClientSetup.RECRUIT.consumeClick()) {
+            if (mc.player == null) continue;
+            if (mc.crosshairPickEntity != null && livingrealms.military.RecruitsBridge.ownedBy(mc.crosshairPickEntity, mc.player.getUUID())) {
+                CompoundTag t = new CompoundTag();
+                t.putUUID("e", mc.crosshairPickEntity.getUUID());
+                t.putString("op", "open");
+                Net.toServer("recruit", t);
+            } else mc.player.displayClientMessage(net.minecraft.network.chat.Component.translatable("key.livingrealms.recruit.none"), true);
+        }
         if (Placement.mode != Placement.Mode.NONE && mc.player != null && !Placement.holdingPlans() && mc.player.tickCount % 20 == 0) {
             // put the plans away to stop placing
             Placement.cancel();
