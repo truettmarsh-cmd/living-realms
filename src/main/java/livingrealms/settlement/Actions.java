@@ -332,15 +332,23 @@ public final class Actions {
         boolean appoint = d.getBoolean("on");
         if (appoint == so.royalGuard) return null;
         if (appoint) {
-            if (!s.has("command")) return "Research Command first";
-            if (SoldierSkills.earnedPoints(so.skillXp) < 2) return "Royal Guards need recruit rank 2 (100 combat XP)";
-            if (!s.stock.has(Items.EMERALD, 32)) return "Royal Guard promotion costs 32 emeralds from town stock";
+            String why = royalGuardBlocker(s, so);
+            if (why != null) return why;
             s.stock.take(Items.EMERALD, 32);
         }
         so.royalGuard = appoint;
         if (!appoint && e.level() != level) RecruitsBridge.holdAt(e, e.blockPosition());
         else Simulation.applyStance((ServerLevel) e.level(), s, e, so, s.soldiers.indexOf(so));
         s.log(so.name + (appoint ? " joined your Royal Guard" : " returned to the town garrison"));
+        return null;
+    }
+
+    /** Why this recruit can't be appointed a Royal Guard yet, or null. */
+    @Nullable
+    public static String royalGuardBlocker(Settlement s, Settlement.Soldier so) {
+        if (!s.has("command")) return "Research Command first";
+        if (SoldierSkills.earnedPoints(so.skillXp) < 2) return "Royal Guards need recruit rank 2 (100 combat XP)";
+        if (!s.stock.has(Items.EMERALD, 32)) return "Royal Guard promotion costs 32 emeralds from town stock";
         return null;
     }
 

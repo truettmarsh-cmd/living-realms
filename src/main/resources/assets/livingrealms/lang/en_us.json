@@ -6,5 +6,7 @@
   "item.livingrealms.architects_plans.tip": "Right-click: building catalogue. While placing: right-click to set down, scroll to turn.",
   "entity.livingrealms.settler": "Settler",
   "key.categories.livingrealms": "Living Realms",
-  "key.livingrealms.open": "Open City Manager"
+  "key.livingrealms.open": "Open City Manager",
+  "key.livingrealms.recruit": "Recruit Command (look at your recruit)",
+  "key.livingrealms.recruit.none": "Look at one of your recruits to command it"
 }

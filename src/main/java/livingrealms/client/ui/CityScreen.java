@@ -9,10 +9,6 @@ import livingrealms.client.ClientState;
 import livingrealms.client.Placement;
 import livingrealms.military.Stance;
 import livingrealms.military.SoldierSkills;
-import livingrealms.military.WeaponProficiency;
-import livingrealms.military.RecruitOrigin;
-import livingrealms.military.PehkuiBridge;
-import livingrealms.military.LegendaryPerk;
 import livingrealms.military.UnitType;
 import livingrealms.net.Net;
 import livingrealms.research.ResearchTree;
@@ -67,7 +63,14 @@ public class CityScreen extends Screen {
     private String selResearch;
     private int milTab;
     private UUID selectedSoldier;
-    private int soldierTab;
+    private String soldierTab = "Skills";
+    private final SoldierPanels panels = new SoldierPanels(ui, new SoldierPanels.Host() {
+        public boolean canCommand() { return mine(); }
+        public void act(String action, CompoundTag data) { CityScreen.this.act(action, data); }
+        public boolean hasResearch(String id) { return strings("research").contains(id); }
+        public int emeralds() { return stock().getOrDefault(Items.EMERALD, 0); }
+        public void dismissed() { selectedSoldier = null; }
+    });
     private String forgePiece = "SET", forgePattern;
     private int forgeQty = 1, trainQty = 1;
     private UnitType selUnit = UnitType.FOOTMAN;
@@ -96,8 +99,8 @@ public class CityScreen extends Screen {
     }
 
     public void showSoldierTab(int index) {
-        soldierTab = Math.max(0, Math.min(3, index));
-        ui.resetScroll("soldierSkills"); ui.resetScroll("soldierWeapons"); ui.resetScroll("soldierLegends"); ui.resetScroll("soldierOrigin");
+        soldierTab = SoldierPanels.TABS[Math.max(0, Math.min(SoldierPanels.TABS.length - 1, index))];
+        panels.resetScroll();
     }
 
     /** Opens an individual recruit from the roster or a development tour. */
@@ -1123,19 +1126,30 @@ public class CityScreen extends Screen {
             CompoundTag s = (CompoundTag) t;
             UnitType u = UnitType.valueOf(s.getString("type"));
             boolean seen = s.getBoolean("seen");
-            ui.item(u.icon, cx + 8, y + 3);
-            ui.text(ui.clip((s.getBoolean("royalGuard") ? "♛ " : "") + s.getString("name"), 120), cx + 28, y + 2, s.getBoolean("royalGuard") ? GOLD : seen ? TEXT : MUTED);
-            int lvl = s.getInt("lvl");
-            ui.text("★".repeat(Math.max(0, Math.min(5, lvl))) + (lvl > 5 ? "+" : ""), cx + 28, y + 12, GOLD);
-            int bx = cx + 160;
-            float hp = s.getFloat("max") <= 0 ? 0 : s.getFloat("hp") / s.getFloat("max");
-            ui.text("HP", bx, y + 2, FAINT);
-            ui.bar(bx + 16, y + 3, 60, 5, hp, hp > 0.5 ? GREEN : hp > 0.25 ? GOLD : RED, hp > 0.5 ? 0xFF4FA860 : hp > 0.25 ? GOLD_DK : 0xFFB84A4A);
-            ui.text("Morale " + (int) s.getFloat("morale"), bx, y + 12, FAINT);
-            ui.text(ui.clip(seen ? s.getString("gear") : "away from town", Math.max(20, cw - 322)), cx + 250, y + 2, MUTED);
-            ui.text(ui.clip(s.getInt("kills") + " kills · Rank " + SoldierSkills.earnedPoints(s.getInt("skillXp")), Math.max(20, cw - 322)), cx + 250, y + 12, FAINT);
             final UUID id = s.getUUID("e");
-            ui.button("skills" + id, cx + cw - 65, y + 4, 56, 14, "Skills", Style.GHOST, true, () -> selectedSoldier = id);
+            boolean row = ui.over(cx + 2, y, cw - 4, 24);
+            if (row) ui.round(cx + 4, y, cw - 8, 23, 4, 0x14FFFFFF);
+            ui.area(cx + 2, y, cw - 4, 24, () -> selectedSoldier = id);
+            ui.item(u.icon, cx + 8, y + 3);
+            ui.text(ui.clip((s.getBoolean("royalGuard") ? "♛ " : "") + s.getString("name"), 116), cx + 28, y + 2, s.getBoolean("royalGuard") ? GOLD : seen ? TEXT : MUTED);
+            int lvl = s.getInt("lvl");
+            String stars = "★".repeat(Math.max(0, Math.min(5, lvl))) + (lvl > 5 ? "+" : "");
+            ui.text(stars, cx + 28, y + 12, GOLD);
+            ui.text(ui.clip("Rank " + (s.contains("rank") ? s.getInt("rank") : SoldierSkills.earnedPoints(s.getInt("skillXp"))), 116 - ui.width(stars) - 4), cx + 32 + ui.width(stars), y + 12, FAINT);
+            int bx = cx + 152, rx = cx + cw - 60;
+            float hp = s.getFloat("max") <= 0 ? 0 : s.getFloat("hp") / s.getFloat("max");
+            if (rx - 56 >= bx + 70) {
+                ui.text("HP", bx, y + 2, FAINT);
+                ui.bar(bx + 16, y + 3, 50, 5, hp, hp > 0.5 ? GREEN : hp > 0.25 ? GOLD : RED, hp > 0.5 ? 0xFF4FA860 : hp > 0.25 ? GOLD_DK : 0xFFB84A4A);
+                ui.text("Morale " + (int) s.getFloat("morale"), bx, y + 12, FAINT);
+            }
+            ui.button("command" + id, rx, y + 4, 50, 14, "Command", Style.SECONDARY, seen, () -> recruitOp(id, "open"));
+            rx -= 56;
+            ui.button("inventory" + id, rx, y + 4, 54, 14, "Inventory", Style.GHOST, seen && mine(), () -> recruitOp(id, "inventory"));
+            if (rx - 42 >= bx + 68) ui.button("skills" + id, rx - 42, y + 4, 40, 14, "Skills", Style.GHOST, true, () -> selectedSoldier = id);
+            if (row && !ui.over(rx - 42, y + 4, cx + cw - rx + 34, 14))
+                ui.tip(s.getString("name"), seen ? s.getString("gear") : "Away from town", "HP " + Math.round(hp * 100) + "% · morale " + (int) s.getFloat("morale"),
+                        s.getInt("kills") + " kills · Recruits level " + lvl, "Click for skills, weapons and legendary perks");
             y += 24;
         }
         if (soldiers.isEmpty()) ui.text("No soldiers yet. Build a Barracks and train some on the Recruit page.", cx + 10, ly + 10, FAINT);
@@ -1156,133 +1170,23 @@ public class CityScreen extends Screen {
         }
         if (soldier == null) { selectedSoldier = null; garrison(); return; }
         int top = cy + 30;
+        final UUID id = selectedSoldier;
         ui.button("backRoster", cx, top, 76, 16, "← Garrison", Style.GHOST, true, () -> selectedSoldier = null);
-        ui.text(ui.clip(soldier.getString("name"), cw - 90), cx + 86, top + 4, soldier.getBoolean("royalGuard") ? GOLD : TEXT);
-        ui.segments("soldierTabs", cx, top + 22, cw - 4, 16, new String[]{"Skills", "Weapons", "Legendary", "Origin"}, soldierTab, i -> soldierTab = i);
-        int sy = top + 45, sh = ch - 75;
-        switch (soldierTab) {
-            case 1 -> soldierWeapons(soldier, sy, sh);
-            case 2 -> soldierLegends(soldier, sy, sh);
-            case 3 -> soldierOrigin(soldier, sy, sh);
-            default -> soldierSkills(soldier, sy, sh);
-        }
+        ui.text(ui.clip(soldier.getString("name"), cw - 230), cx + 86, top + 4, soldier.getBoolean("royalGuard") ? GOLD : TEXT);
+        ui.button("detailInv", cx + cw - 128, top, 60, 16, "Inventory", Style.SECONDARY, soldier.getBoolean("seen") && mine(), () -> recruitOp(id, "inventory"));
+        ui.button("detailCmd", cx + cw - 64, top, 60, 16, "Command", Style.PRIMARY, soldier.getBoolean("seen"), () -> recruitOp(id, "open"));
+        String[] tabs = SoldierPanels.tabs(soldier);
+        int sel = Math.max(0, Arrays.asList(tabs).indexOf(soldierTab));
+        ui.segments("soldierTabs", cx, top + 22, cw - 4, 16, tabs, sel, i -> soldierTab = tabs[i]);
+        panels.draw(soldier, sel, cx, cw, top + 45, ch - 75);
     }
 
-    void soldierOrigin(CompoundTag so, int sy, int sh) {
-        RecruitOrigin origin = RecruitOrigin.byId(so.getString("origin"));
-        int off = ui.beginScroll("soldierOrigin", cx, sy, cw, sh, 250);
-        int y = sy - off;
-        ui.text("Born " + origin.label, cx + 4, y + 4, GOLD);
-        ui.wrap(origin.description + ". Origin traits stay with this recruit, including after leaving town service. These bonuses stack with learned skills.", cx + 4, y + 23, cw - 14, MUTED);
-        ui.wrap(PehkuiBridge.installed() ? "Pehkui size: " + Math.round(origin.height * 100) + "% height, " + Math.round(origin.width * 100) + "% width. Innate size does not add damage or reach." : "Install optional Pehkui for visible height and width differences. Origin and attribute traits already work without it.", cx + 4, y + 80, cw - 14, TEXT);
-        ui.wrap("Origins are assigned once to new recruits using configurable weights (default: human 80, dwarf 8, elf 9, giant 3). Existing unmarked recruits remain human. Equipment and training never reroll origin.", cx + 4, y + 140, cw - 14, FAINT);
-        ui.endScroll();
-    }
-
-    void soldierSkills(CompoundTag so, int sy, int sh) {
-        UUID id = so.getUUID("e");
-        Set<SoldierSkills> learned = EnumSet.noneOf(SoldierSkills.class);
-        for (Tag value : so.getList("skills", Tag.TAG_STRING)) {
-            SoldierSkills skill = SoldierSkills.byId(value.getAsString());
-            if (skill != null) learned.add(skill);
-        }
-        int xp = so.getInt("skillXp"), rank = SoldierSkills.earnedPoints(xp);
-        int points = SoldierSkills.availablePoints(xp, learned);
-        int off = ui.beginScroll("soldierSkills", cx, sy, cw, sh, 654);
-        int y = sy - off;
-        ui.text(ui.clip("Skill rank " + rank + " · " + xp + " combat XP · " + points + " points available", cw - 12), cx + 4, y + 2, GOLD);
-        ui.wrap("25 XP per hostile kill. Every 50 XP earns a point (18 max). Follow each branch; deeper skills need higher ranks.", cx + 4, y + 17, cw - 12, MUTED);
-        int cardW = (cw - 16) / 3;
-        SoldierSkills[] all = SoldierSkills.values();
-        for (int branch = 0; branch < 3; branch++) {
-            int x = cx + branch * (cardW + 6);
-            ui.text(all[branch * 6].branch, x + 4, y + 47, FAINT);
-            for (int depth = 0; depth < 6; depth++) {
-                final SoldierSkills skill = all[branch * 6 + depth];
-                int yy = y + 61 + depth * 82;
-                boolean known = learned.contains(skill), prerequisite = skill.unlocked(learned), ranked = rank >= skill.requiredRank;
-                ui.card(x, yy, cardW, 76, known ? 0xFF303725 : CARD, known ? GOLD : BORDER);
-                ui.text(ui.clip(skill.label, cardW - 10), x + 5, yy + 5, known ? GOLD : TEXT);
-                ui.wrap(skill.description, x + 5, yy + 17, cardW - 10, MUTED);
-                String label = known ? "Learned" : !ranked ? "Needs rank " + skill.requiredRank : !prerequisite ? "Needs prior skill" : "Learn · 1 point";
-                ui.button("learn" + skill.name(), x + 4, yy + 57, cardW - 8, 15, ui.clip(label, cardW - 16),
-                        known ? Style.GHOST : Style.PRIMARY, mine() && !known && prerequisite && ranked && points > 0 && so.getBoolean("seen"), () -> {
-                            CompoundTag data = new CompoundTag(); data.putUUID("soldier", id); data.putString("skill", skill.name()); act("learnSoldierSkill", data);
-                        });
-                if (ui.over(x, yy, cardW, 76)) ui.tip(skill.label, skill.description, "Skill rank " + skill.requiredRank + " · 1 earned point",
-                        skill.prerequisite == null ? "Root skill" : "Requires " + skill.prerequisite.label);
-            }
-        }
-        boolean royal = so.getBoolean("royalGuard");
-        int gy = y + 566;
-        ui.text(royal ? "Royal Guard · your personal bodyguard" : "Royal Guard promotion", cx + 4, gy, GOLD);
-        ui.wrap("Royal Guards follow you and defend against nearby hostiles, even during town alarms. Promotion: Command research, skill rank 2, and 32 emeralds.", cx + 4, gy + 13, cw - 12, MUTED);
-        boolean canAppoint = strings("research").contains("command") && rank >= 2 && stock().getOrDefault(Items.EMERALD, 0) >= 32;
-        if (mine()) {
-            ui.button("royalGuard", cx + 4, gy + 55, 170, 17, royal ? "Return to town duty" : "Promote to Royal Guard", Style.PRIMARY,
-                    so.getBoolean("seen") && (royal || canAppoint), () -> { CompoundTag data = new CompoundTag(); data.putUUID("soldier", id); data.putBoolean("on", !royal); act("royalGuard", data); });
-            ui.button("dismissSoldier", cx + cw - 105, gy + 55, 96, 17, "Dismiss recruit", Style.GHOST, so.getBoolean("seen"), () -> {
-                CompoundTag data = new CompoundTag(); data.putUUID("soldier", id); act("dismiss", data); selectedSoldier = null;
-            });
-            if (ui.over(cx + cw - 105, gy + 55, 96, 17)) ui.tip("Releases town service and its skill bonuses. The recruit remains yours in Villager Recruits.");
-        }
-        ui.endScroll();
-    }
-
-    void soldierWeapons(CompoundTag so, int sy, int sh) {
-        WeaponProficiency favorite = WeaponProficiency.byId(so.getString("preferredWeapon"));
-        CompoundTag practice = so.getCompound("weaponXp");
-        int off = ui.beginScroll("soldierWeapons", cx, sy, cw, sh, 420);
-        int y = sy - off;
-        ui.text(ui.clip("Favourite: " + (favorite == null ? "Being assigned" : favorite.label), cw - 12), cx + 4, y + 3, GOLD);
-        ui.wrap("The favourite gives +5% damage and faster practice. Proficiency adds +2% per rank (10% max). Weapon bonuses cap at 15%; normal combat bonuses at 15%; legendary bonuses at 10%.", cx + 4, y + 19, cw - 12, MUTED);
-        y += 68;
-        for (WeaponProficiency family : WeaponProficiency.values()) {
-            int xp = Math.max(0, practice.getInt(family.name()));
-            int rank = WeaponProficiency.rank(xp), bonus = rank * 2 + (family == favorite ? 5 : 0);
-            ui.card(cx + 2, y, cw - 10, 35, family == favorite ? 0xFF303725 : CARD, family == favorite ? GOLD : BORDER);
-            ui.text(ui.clip(family.label + (family == favorite ? " · favourite" : ""), cw - 136), cx + 9, y + 5, family == favorite ? GOLD : TEXT);
-            ui.right("Rank " + rank + "/5 · +" + bonus + "%", cx + cw - 16, y + 5, family == favorite ? GOLD : MUTED);
-            ui.bar(cx + 9, y + 20, Math.max(25, cw - 153), 4, Math.min(1, xp / (float)WeaponProficiency.MAX_XP), GOLD, GOLD_DK);
-            ui.right(xp + " / " + WeaponProficiency.MAX_XP + " XP", cx + cw - 16, y + 19, FAINT);
-            if (ui.over(cx + 2, y, cw - 10, 35)) ui.tip(family.label,
-                    "Practice comes from actual damage and kills against hostile creatures.",
-                    "Weapon material changes preserve practice in the same weapon family.",
-                    family == favorite ? "Favourite: +5% damage, +25% practice XP." : "Proficiency adds +2% damage per rank.");
-            y += 40;
-        }
-        ui.wrap("Weapon affinity belongs to this recruit; opening the screen or changing equipment does not reroll it.", cx + 4, y + 4, cw - 12, FAINT);
-        ui.endScroll();
-    }
-
-    void soldierLegends(CompoundTag so, int sy, int sh) {
-        Set<LegendaryPerk> earned = EnumSet.noneOf(LegendaryPerk.class);
-        for (Tag value : so.getList("legendary", Tag.TAG_STRING)) {
-            LegendaryPerk perk = LegendaryPerk.byId(value.getAsString());
-            if (perk != null) earned.add(perk);
-        }
-        int nativeLevel = so.getInt("lvl");
-        int slots = nativeLevel < LegendaryPerk.FIRST_LEVEL ? 0 : nativeLevel < LegendaryPerk.SECOND_SLOT_LEVEL ? 1 : LegendaryPerk.MAX_PERKS;
-        LegendaryPerk[] all = LegendaryPerk.values();
-        int rows = (all.length + 1) / 2;
-        int off = ui.beginScroll("soldierLegends", cx, sy, cw, sh, 108 + rows * 88);
-        int y = sy - off;
-        ui.text("Recruits level " + nativeLevel + " · " + earned.size() + " / " + slots + " legendary slots", cx + 4, y + 3, GOLD);
-        ui.wrap("12% chance on each newly reached Recruits level from level 8. One legendary slot; a second opens at level 14. Skill rank is separate. Reopening this screen never rerolls a result.", cx + 4, y + 19, cw - 12, MUTED);
-        ui.wrap("Normal combat bonuses cap at 15%; weapon bonuses at 15%; legendary bonuses at 10% (40% combined). Damage reduction caps at 25%.", cx + 4, y + 65, cw - 12, FAINT);
-        int w = (cw - 16) / 2;
-        for (int i = 0; i < all.length; i++) {
-            LegendaryPerk perk = all[i];
-            int x = cx + (i % 2) * (w + 6), yy = y + 98 + (i / 2) * 88;
-            boolean known = earned.contains(perk);
-            ui.card(x, yy, w, 82, known ? 0xFF343044 : CARD, known ? 0xFFC59BF5 : BORDER);
-            ui.text(ui.clip(perk.label, w - 12), x + 6, yy + 6, known ? 0xFFC59BF5 : TEXT);
-            ui.wrap(perk.description, x + 6, yy + 20, w - 12, MUTED);
-            ui.text(known ? "Earned" : "Rare level-up reward", x + 6, yy + 67, known ? GOLD : FAINT);
-            if (ui.over(x, yy, w, 82)) ui.tip(perk.label, perk.description,
-                    known ? "Earned and saved on this recruit" : "A rare roll picks a perk suited to the recruit; this is not a purchase.");
-        }
-        ui.endScroll();
+    /** Asks the server about one recruit: open its Recruit Command screen, its inventory, and so on. */
+    public static void recruitOp(UUID entity, String op) {
+        CompoundTag t = new CompoundTag();
+        t.putUUID("e", entity);
+        t.putString("op", op);
+        Net.toServer("recruit", t);
     }
 
     void recruit() {

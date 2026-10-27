@@ -170,5 +170,72 @@ public final class RecruitsBridge {
     @Nullable
     public static UUID owner(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getOwnerUUID() : null; }
 
+    public static boolean ownedBy(Entity e, UUID player) { return e instanceof AbstractRecruitEntity r && r.isOwned() && player.equals(r.getOwnerUUID()); }
+
+    public static int xp(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getXp() : 0; }
+
+    public static int xpForLevel() { return com.talhanation.recruits.config.RecruitsServerConfig.RecruitsMaxXpForLevelUp.get(); }
+
+    public static int followState(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getFollowState() : 0; }
+
+    public static void wander(Entity e) { if (e instanceof AbstractRecruitEntity r) r.setFollowState(0); }
+
+    public static void openInventory(Entity e, net.minecraft.server.level.ServerPlayer p) { if (e instanceof AbstractRecruitEntity r) r.openGUI(p); }
+
+    /** Workers-mod workers are recruit entities too, but they belong in the fields, not a garrison. */
+    public static boolean isWorker(Entity e) { return e.getClass().getName().startsWith("com.talhanation.workers"); }
+
+    /** Already promoted to one of Recruits' professions (messenger, captain, ...). */
+    public static boolean isCompanion(Entity e) { return e instanceof com.talhanation.recruits.entities.ICompanion; }
+
+    /** The closest Living Realms unit for a recruit hired the normal Recruits way. */
+    public static UnitType unitOf(Entity e) {
+        EntityType<?> t = e.getType();
+        if (t == ModEntityTypes.RECRUIT_SHIELDMAN.get()) return UnitType.SHIELDBEARER;
+        if (t == ModEntityTypes.BOWMAN.get()) return UnitType.BOWMAN;
+        if (t == ModEntityTypes.CROSSBOWMAN.get()) return UnitType.CROSSBOWMAN;
+        if (t == ModEntityTypes.HORSEMAN.get()) return UnitType.HORSEMAN;
+        return UnitType.FOOTMAN;
+    }
+
+    /** Recruits' own professions, in its PromoteScreen order (the index is the profession id). */
+    public record Profession(String label, int level, String note) {}
+    public static final Profession[] PROFESSIONS = {
+            new Profession("Messenger", 2, "Carries messages to other players"),
+            new Profession("Scout", 2, "Scouts ahead and reports what it sees"),
+            new Profession("Siege Engineer", 3, "Crews siege weapons (needs Siege Weapons)"),
+            new Profession("Captain", 5, "Commands a ship and its crew (needs Small Ships)"),
+            new Profession("Patrol Leader", 5, "Leads a patrol along waypoints"),
+            new Profession("Assassin", 0, "Disabled in Villager Recruits"),
+            new Profession("Governor", 0, "Disabled in Villager Recruits"),
+            new Profession("Spy", 0, "Disabled in Villager Recruits")};
+
+    /** Why a recruit can't take a profession now, or null. Mirrors Recruits' PromoteScreen gates. */
+    @Nullable
+    public static String promotionBlocker(Entity e, int profession) {
+        if (profession < 0 || profession >= PROFESSIONS.length) return "Unknown profession";
+        if (profession >= 5) return "Disabled in Villager Recruits";
+        if (!(e instanceof AbstractRecruitEntity r)) return "Not a recruit";
+        if (isWorker(e)) return "Workers can't take soldier professions";
+        if (isCompanion(e)) return "Already promoted";
+        if (profession == 2 && !(com.talhanation.recruits.Main.isSiegeWeaponsLoaded && com.talhanation.recruits.Main.isSiegeWeaponsCompatible)) return "Needs the Siege Weapons mod";
+        if (profession == 3 && !(com.talhanation.recruits.Main.isSmallShipsLoaded && com.talhanation.recruits.Main.isSmallShipsCompatible)) return "Needs the Small Ships mod";
+        int need = PROFESSIONS[profession].level;
+        return r.getXpLevel() < need ? "Needs Recruits level " + need : null;
+    }
+
+    /** Recruits replaces the entity on promotion; returns the new one, or null. */
+    @Nullable
+    public static Entity promote(Entity e, int profession, net.minecraft.server.level.ServerPlayer p) {
+        if (!(e instanceof AbstractRecruitEntity r) || !(e.level() instanceof ServerLevel level)) return null;
+        String name = e.getName().getString();
+        Vec3 at = e.position();
+        com.talhanation.recruits.RecruitEvents.promoteRecruit(r, profession, name, p);
+        if (!e.isRemoved()) return null;
+        for (AbstractRecruitEntity n : level.getEntitiesOfClass(AbstractRecruitEntity.class, new net.minecraft.world.phys.AABB(at, at).inflate(2),
+                n -> n != e && n.isAlive() && n.getName().getString().equals(name) && n.tickCount < 5)) return n;
+        return null;
+    }
+
     private RecruitsBridge() {}
 }

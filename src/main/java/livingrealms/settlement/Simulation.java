@@ -556,7 +556,7 @@ public final class Simulation {
         }
     }
 
-    static String gearSummary(LivingEntity e) {
+    public static String gearSummary(LivingEntity e) {
         int armor = e.getArmorValue();
         ItemStack main = e.getMainHandItem();
         return (main.isEmpty() ? "Unarmed" : main.getHoverName().getString()) + " · " + armor + " armour";

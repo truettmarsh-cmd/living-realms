@@ -17,6 +17,9 @@ import org.lwjgl.glfw.GLFW;
 public final class ClientSetup {
     public static final KeyMapping OPEN = new KeyMapping("key.livingrealms.open", KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_K), "key.categories.livingrealms");
+    /** Opens Recruit Command for the recruit under the crosshair; unbound by default. */
+    public static final KeyMapping RECRUIT = new KeyMapping("key.livingrealms.recruit", KeyConflictContext.IN_GAME,
+            InputConstants.UNKNOWN, "key.categories.livingrealms");
 
     @SubscribeEvent
     public static void renderers(EntityRenderersEvent.RegisterRenderers e) {
@@ -24,7 +27,7 @@ public final class ClientSetup {
     }
 
     @SubscribeEvent
-    public static void keys(RegisterKeyMappingsEvent e) { e.register(OPEN); }
+    public static void keys(RegisterKeyMappingsEvent e) { e.register(OPEN); e.register(RECRUIT); }
 
     @SubscribeEvent
     public static void overlays(RegisterGuiOverlaysEvent e) {
