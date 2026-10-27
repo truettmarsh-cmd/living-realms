@@ -8,6 +8,7 @@ import livingrealms.military.RecruitOrigin;
 import livingrealms.military.SoldierSkills;
 import livingrealms.military.WeaponProficiency;
 import livingrealms.military.LegendaryPerk;
+import livingrealms.military.SpecialSkill;
 import livingrealms.military.Stance;
 import livingrealms.military.UnitType;
 import livingrealms.research.ResearchTree;
@@ -99,6 +100,10 @@ public final class Settlement {
         public long drillReadyAt, trickleDay;
         public int trickleXp;
         public float damageBank;
+        public int legendaryPity;
+        public final List<SpecialSkill> specials = new ArrayList<>();
+        public final Map<SpecialSkill, Long> specialCooldowns = new EnumMap<>(SpecialSkill.class);
+        public long braceUntil, rallyUntil, chargeUntil;
 
         public CompoundTag save() {
             CompoundTag t = new CompoundTag();
@@ -133,6 +138,14 @@ public final class Settlement {
             t.putLong("drillReadyAt", drillReadyAt);
             t.putLong("trickleDay", trickleDay);
             t.putInt("trickleXp", trickleXp);
+            t.putInt("legendaryPity", legendaryPity);
+            ListTag equipped = new ListTag();
+            specials.forEach(sp -> equipped.add(StringTag.valueOf(sp.name())));
+            t.put("specials", equipped);
+            CompoundTag specialReady = new CompoundTag();
+            specialCooldowns.forEach((sp, ready) -> specialReady.putLong(sp.name(), ready));
+            t.put("specialCooldowns", specialReady);
+            t.putLong("braceUntil", braceUntil); t.putLong("rallyUntil", rallyUntil); t.putLong("chargeUntil", chargeUntil);
             return t;
         }
 
@@ -170,6 +183,15 @@ public final class Settlement {
             s.drillReadyAt = Math.max(0, t.getLong("drillReadyAt"));
             s.trickleDay = Math.max(0, t.getLong("trickleDay"));
             s.trickleXp = Math.max(0, Math.min(livingrealms.military.SoldierRanks.DAILY_TRICKLE_CAP, t.getInt("trickleXp")));
+            s.legendaryPity = t.contains("legendaryPity") ? Math.max(0, Math.min(LegendaryPerk.PITY_LIMIT, t.getInt("legendaryPity")))
+                    : LegendaryPerk.estimatePity(s);
+            for (Tag entry : t.getList("specials", Tag.TAG_STRING)) {
+                SpecialSkill sp = SpecialSkill.byId(entry.getAsString());
+                if (sp != null && !s.specials.contains(sp) && s.specials.size() < SpecialSkill.SLOT_RANKS.length) s.specials.add(sp);
+            }
+            CompoundTag specialReady = t.getCompound("specialCooldowns");
+            for (SpecialSkill sp : SpecialSkill.values()) if (specialReady.contains(sp.name())) s.specialCooldowns.put(sp, Math.max(0, specialReady.getLong(sp.name())));
+            s.braceUntil = Math.max(0, t.getLong("braceUntil")); s.rallyUntil = Math.max(0, t.getLong("rallyUntil")); s.chargeUntil = Math.max(0, t.getLong("chargeUntil"));
             return s;
         }
     }

@@ -1263,13 +1263,13 @@ public class CityScreen extends Screen {
             if (perk != null) earned.add(perk);
         }
         int nativeLevel = so.getInt("lvl");
-        int slots = nativeLevel < LegendaryPerk.FIRST_LEVEL ? 0 : nativeLevel < LegendaryPerk.SECOND_SLOT_LEVEL ? 1 : LegendaryPerk.MAX_PERKS;
+        int slots = LegendaryPerk.slots(nativeLevel), pity = so.getInt("legendaryPity");
         LegendaryPerk[] all = LegendaryPerk.values();
         int rows = (all.length + 1) / 2;
         int off = ui.beginScroll("soldierLegends", cx, sy, cw, sh, 108 + rows * 88);
         int y = sy - off;
-        ui.text("Recruits level " + nativeLevel + " · " + earned.size() + " / " + slots + " legendary slots", cx + 4, y + 3, GOLD);
-        ui.wrap("12% chance on each newly reached Recruits level from level 8. One legendary slot; a second opens at level 14. Skill rank is separate. Reopening this screen never rerolls a result.", cx + 4, y + 19, cw - 12, MUTED);
+        ui.text("Recruits level " + nativeLevel + " · " + earned.size() + " / " + slots + " legendary slots · next roll " + Math.round(LegendaryPerk.chance(pity) * 100) + "%", cx + 4, y + 3, GOLD);
+        ui.wrap("From Recruits level 8, each new level rolls 12%, +3% for every miss; after 6 misses the next roll is certain (a first perk by level 14 at the latest). A second slot opens at level 14. Reopening this screen never rerolls.", cx + 4, y + 19, cw - 12, MUTED);
         ui.wrap("Normal combat bonuses cap at 15%; weapon bonuses at 15%; legendary bonuses at 10% (40% combined). Damage reduction caps at 25%.", cx + 4, y + 65, cw - 12, FAINT);
         int w = (cw - 16) / 2;
         for (int i = 0; i < all.length; i++) {
