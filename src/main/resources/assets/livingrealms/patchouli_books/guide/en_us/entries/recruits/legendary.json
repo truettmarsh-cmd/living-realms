@@ -6,7 +6,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "From Villager Recruits level 8, each new level has a chance to grant a $(l)legendary perk$(); a second slot opens at level 14. Results are saved, so reopening screens never rerolls them.$(br2)They are strong but fair: no invulnerability or resurrection."
+      "text": "From Villager Recruits level 8, each new level rolls for a $(l)legendary perk$(): 12%, plus 3% for every miss, and a guaranteed perk by level 14. A $(l)second slot$() opens at level 14 and fills by level 21 at the latest. Results are saved; screens never reroll them."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "17 perks, strong but fair (no invulnerability or resurrection), for example:$(li)$(l)Vanguard$(): fights better beside 2+ comrades$(li)$(l)Tactician$(): special skills recharge 25% faster$(li)$(l)Giantslayer$(): +8% against big foes$(li)$(l)Unbroken$(): slowly recovers when badly hurt$(li)$(l)Warden$(): tougher near you"
     }
   ]
 }

@@ -6,7 +6,11 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Higher ranks unlock $(l)special skill slots$(). Choose a special for each slot on the Special skills page; recruits use them on their own in battle, each with a cooldown. Choosing an equipped special again unequips it."
+      "text": "Special skill slots open at skill $(l)rank 3, 8 and 14$(). Pick a special for each slot on the Special skills page; recruits use them on their own in battle, each with a cooldown. Picking an equipped special again unequips it. Specials must suit the recruit's unit and favourite weapon."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)$(l)Shield Wall$(), $(l)Taunt$(): shieldbearers, footmen$(li)$(l)Rally Cry$(), $(l)Second Wind$(), $(l)Field Dressing$(): anyone$(li)$(l)Stagger$() (maces), $(l)Disarm$(), $(l)Riposte$() (blades), $(l)Lunge$() (spears), $(l)Cleave$() (axes, greatswords)$(li)$(l)Charge$(): horsemen$(li)$(l)Volley$(), $(l)Aimed Shot$(): bows, crossbows$(li)$(l)Dragonfire Strafe$(): dragon riders"
     }
   ]
 }
