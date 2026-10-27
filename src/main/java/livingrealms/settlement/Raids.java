@@ -2,6 +2,7 @@ package livingrealms.settlement;
 
 import livingrealms.Config;
 import livingrealms.military.RecruitsBridge;
+import livingrealms.military.SoldierRanks;
 import livingrealms.military.UnitType;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
@@ -137,7 +138,11 @@ public final class Raids {
             if (e == null && town == target) {
                 status(source, target, "Raid paused: defending soldiers are unloaded"); return;
             }
-            if (e instanceof LivingEntity living && e.isAlive() && e.level() == level && target.contains(e.blockPosition())) defenders.add(living);
+            if (e instanceof LivingEntity living && e.isAlive() && e.level() == level && target.contains(e.blockPosition())) {
+                defenders.add(living);
+                if ((raid.elapsed + 20) % SoldierRanks.RAID_DEFEND_TICKS == 0)
+                    SoldierRanks.grant(town, so, e, SoldierRanks.RAID_DEFEND_XP, true, server.overworld().getGameTime());
+            }
         }
         for (ServerPlayer p : level.players()) if (p.getUUID().equals(target.owner) && !p.isCreative() && !p.isSpectator()
                 && p.isAlive() && target.contains(p.blockPosition())) defenders.add(p);
@@ -195,6 +200,7 @@ public final class Raids {
             announce(server, s, message);
             ServerLevel level = server.getLevel(s.dim);
             if (level != null) {
+                SoldierRanks.raidSurvived(level, s, raid.soldiers, s == target);
                 for (var so : s.soldiers) {
                     Entity e = level.getEntity(so.entity);
                     RecruitsBridge.clearRaidTarget(e);

@@ -154,6 +154,13 @@ public final class RecruitsBridge {
 
     public static int level(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getXpLevel() : 0; }
 
+    /** Recruits' own XP, so its native level (which gates its promotions) rises too. */
+    public static void addNativeXp(Entity e, int xp) {
+        if (e instanceof AbstractRecruitEntity r) { r.addXp(xp); r.checkLevel(); }
+    }
+
+    public static int xp(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getXp() : 0; }
+
     public static int kills(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getKills() : 0; }
 
     public static float morale(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getMorale() : 0; }

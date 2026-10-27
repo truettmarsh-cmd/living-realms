@@ -8,6 +8,7 @@ import livingrealms.building.Category;
 import livingrealms.client.ClientState;
 import livingrealms.client.Placement;
 import livingrealms.military.Stance;
+import livingrealms.military.SoldierRanks;
 import livingrealms.military.SoldierSkills;
 import livingrealms.military.WeaponProficiency;
 import livingrealms.military.RecruitOrigin;
@@ -1190,8 +1191,8 @@ public class CityScreen extends Screen {
         int points = SoldierSkills.availablePoints(xp, learned);
         int off = ui.beginScroll("soldierSkills", cx, sy, cw, sh, 654);
         int y = sy - off;
-        ui.text(ui.clip("Skill rank " + rank + " · " + xp + " combat XP · " + points + " points available", cw - 12), cx + 4, y + 2, GOLD);
-        ui.wrap("25 XP per hostile kill. Every 50 XP earns a point (18 max). Follow each branch; deeper skills need higher ranks.", cx + 4, y + 17, cw - 12, MUTED);
+        ui.text(ui.clip(SoldierRanks.title(rank) + " · Skill rank " + rank + " · " + xp + " combat XP · " + points + " points available", cw - 12), cx + 4, y + 2, GOLD);
+        ui.wrap("Kills give 25 XP; damage, alarms, raid defence and escort duty add up to 75 XP a day. Drill: 40 XP. 50 XP per point (18 max); respec refunds all.", cx + 4, y + 17, cw - 12, MUTED);
         int cardW = (cw - 16) / 3;
         SoldierSkills[] all = SoldierSkills.values();
         for (int branch = 0; branch < 3; branch++) {

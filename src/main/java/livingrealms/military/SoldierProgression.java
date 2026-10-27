@@ -56,13 +56,25 @@ public final class SoldierProgression {
         if (killer == null) return;
         Record r = record(level.getServer(), killer);
         if (r == null || !killer.isAlive()) return;
-        int old = SoldierSkills.earnedPoints(r.soldier.skillXp);
-        r.soldier.skillXp = Math.min(SoldierSkills.MAX_POINTS * SoldierSkills.XP_PER_POINT,
-                r.soldier.skillXp + SoldierSkills.XP_PER_KILL);
-        if (SoldierSkills.earnedPoints(r.soldier.skillXp) > old)
-            r.settlement.log(r.soldier.name + " earned a recruit skill point");
+        SoldierRanks.grant(r.settlement, r.soldier, killer, SoldierSkills.XP_PER_KILL, false, level.getServer().overworld().getGameTime());
         if (killer instanceof LivingEntity living) RecruitCombat.onKill(r.soldier, living, event.getSource());
         r.settlement.dirty = true;
+    }
+
+    /** Damage to hostiles trickles XP: 1 per 5 real damage, at most 3 per hit, inside the daily cap. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void damagedHostile(LivingHurtEvent event) {
+        LivingEntity target = event.getEntity();
+        if (event.isCanceled() || !(target instanceof Enemy) || !(target.level() instanceof ServerLevel level)) return;
+        Entity attacker = event.getSource().getEntity();
+        if (attacker == null || attacker == target || !attacker.isAlive() || !RecruitsBridge.isRecruit(attacker)) return;
+        Record r = record(level.getServer(), attacker);
+        if (r == null) return;
+        r.soldier.damageBank += Math.min(Math.min(event.getAmount(), target.getHealth()), SoldierRanks.DAMAGE_PER_XP * SoldierRanks.MAX_HIT_XP);
+        int xp = (int) (r.soldier.damageBank / SoldierRanks.DAMAGE_PER_XP);
+        if (xp <= 0) return;
+        r.soldier.damageBank -= xp * SoldierRanks.DAMAGE_PER_XP;
+        SoldierRanks.grant(r.settlement, r.soldier, attacker, xp, true, level.getServer().overworld().getGameTime());
     }
 
     @SubscribeEvent
@@ -86,7 +98,11 @@ public final class SoldierProgression {
             so.seen = true;
             so.health = le.getHealth(); so.maxHealth = le.getMaxHealth();
             so.level = RecruitsBridge.level(e); so.kills = RecruitsBridge.kills(e); so.morale = RecruitsBridge.morale(e);
-            if (so.royalGuard) escort(s, so, e);
+            if (so.royalGuard && escort(s, so, e) && server.getTickCount() % SoldierRanks.ESCORT_TICKS == 0) {
+                ServerPlayer owner = server.getPlayerList().getPlayer(s.owner);
+                if (owner != null && owner.isAlive() && owner.level() == e.level() && owner.distanceToSqr(e) < 32 * 32)
+                    SoldierRanks.grant(s, so, e, SoldierRanks.ESCORT_XP, true, server.overworld().getGameTime());
+            }
             if (so.skills.contains(SoldierSkills.FIELD_MEDIC) && server.getTickCount() % 100 == 0
                     && !s.starving && (!(le instanceof Mob mob) || mob.getTarget() == null)
                     && le.tickCount - le.getLastHurtByMobTimestamp() > 100) le.heal(so.skills.contains(SoldierSkills.RECOVERY) ? 2 : 1);

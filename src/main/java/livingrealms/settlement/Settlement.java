@@ -96,6 +96,9 @@ public final class Settlement {
         public int legendaryLevelChecked;
         public final Map<LegendaryPerk, Long> legendaryCooldowns = new EnumMap<>(LegendaryPerk.class);
         public long battleRhythmUntil;
+        public long drillReadyAt, trickleDay;
+        public int trickleXp;
+        public float damageBank;
 
         public CompoundTag save() {
             CompoundTag t = new CompoundTag();
@@ -127,6 +130,9 @@ public final class Settlement {
             legendaryCooldowns.forEach((perk, ready) -> cooldowns.putLong(perk.name(), ready));
             t.put("legendaryCooldowns", cooldowns);
             t.putLong("battleRhythmUntil", battleRhythmUntil);
+            t.putLong("drillReadyAt", drillReadyAt);
+            t.putLong("trickleDay", trickleDay);
+            t.putInt("trickleXp", trickleXp);
             return t;
         }
 
@@ -161,6 +167,9 @@ public final class Settlement {
             CompoundTag cooldowns = t.getCompound("legendaryCooldowns");
             for (LegendaryPerk perk : LegendaryPerk.values()) s.legendaryCooldowns.put(perk, Math.max(0, cooldowns.getLong(perk.name())));
             s.battleRhythmUntil = Math.max(0, t.getLong("battleRhythmUntil"));
+            s.drillReadyAt = Math.max(0, t.getLong("drillReadyAt"));
+            s.trickleDay = Math.max(0, t.getLong("trickleDay"));
+            s.trickleXp = Math.max(0, Math.min(livingrealms.military.SoldierRanks.DAILY_TRICKLE_CAP, t.getInt("trickleXp")));
             return s;
         }
     }

@@ -638,6 +638,7 @@ public final class Simulation {
                         && m.distanceToSqr(s.center.getX(), s.center.getY(), s.center.getZ()) < (double) r * r * 0.5).size();
         long now = level.getGameTime();
         boolean was = s.alarmUntil > now;
+        if (hostiles >= 3) livingrealms.military.SoldierRanks.threatSighted(s);
         if (hostiles >= 3 || s.manualAlarm) {
             s.alarmUntil = now + 400;
             if (!was) {
@@ -649,6 +650,7 @@ public final class Simulation {
         } else if (was && s.alarmUntil - now < 40) {
             s.alarmUntil = 0;
             s.log("The threat has passed");
+            livingrealms.military.SoldierRanks.alarmEnded(level, s);
             applyStanceAll(level, s);
             s.dirty = true;
         }

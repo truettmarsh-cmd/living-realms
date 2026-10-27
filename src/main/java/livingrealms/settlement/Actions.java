@@ -5,6 +5,7 @@ import livingrealms.building.BuildingType;
 import livingrealms.building.Category;
 import livingrealms.military.Kit;
 import livingrealms.military.RecruitsBridge;
+import livingrealms.military.SoldierRanks;
 import livingrealms.military.SoldierSkills;
 import livingrealms.military.SoldierProgression;
 import livingrealms.military.Stance;
@@ -77,6 +78,8 @@ public final class Actions {
             case "deposit" -> deposit(player, s, d.getString("item"));
             case "royalGuard" -> royalGuard(player, level, s, d);
             case "learnSoldierSkill" -> learnSoldierSkill(player, s, d);
+            case "drillSoldier" -> drillSoldier(player, s, d);
+            case "respecSoldier" -> respecSoldier(player, s, d);
             case "dismiss" -> dismissSoldier(player, level, s, d);
             default -> "Unknown action";
         };
@@ -333,7 +336,7 @@ public final class Actions {
         if (appoint == so.royalGuard) return null;
         if (appoint) {
             if (!s.has("command")) return "Research Command first";
-            if (SoldierSkills.earnedPoints(so.skillXp) < 2) return "Royal Guards need recruit rank 2 (100 combat XP)";
+            if (SoldierSkills.earnedPoints(so.skillXp) < 2) return "Royal Guards must reach the Soldier title (skill rank 2, 100 combat XP)";
             if (!s.stock.has(Items.EMERALD, 32)) return "Royal Guard promotion costs 32 emeralds from town stock";
             s.stock.take(Items.EMERALD, 32);
         }
@@ -353,13 +356,29 @@ public final class Actions {
         if (so.skills.contains(skill)) return "This recruit already learned that skill";
         if (!skill.unlocked(so.skills)) return "Learn " + skill.prerequisite.label + " first";
         if (SoldierSkills.earnedPoints(so.skillXp) < skill.requiredRank) return "This skill needs recruit rank " + skill.requiredRank;
-        if (SoldierSkills.availablePoints(so.skillXp, so.skills) < 1) return "Earn a skill point by defeating hostile creatures";
+        if (SoldierSkills.availablePoints(so.skillXp, so.skills) < 1) return "Earn a skill point through combat or drill";
         Entity e = SoldierProgression.findEntity(player.server, so.entity);
         if (e == null || !e.isAlive() || !s.owner.equals(RecruitsBridge.owner(e))) return "Your recruit must be loaded and still belong to you";
         so.skills.add(skill);
         if (e instanceof net.minecraft.world.entity.LivingEntity le) SoldierProgression.applySkills(le, so);
         s.log(so.name + " learned " + skill.label);
         return null;
+    }
+
+    @Nullable
+    static String drillSoldier(ServerPlayer player, Settlement s, CompoundTag d) {
+        if (!player.getUUID().equals(s.owner)) return "Only this town's owner can drill its recruits";
+        Settlement.Soldier so = soldier(s, d);
+        if (so == null) return "No such recruit";
+        return SoldierRanks.drill(s, so, SoldierProgression.findEntity(player.server, so.entity), player.server.overworld().getGameTime());
+    }
+
+    @Nullable
+    static String respecSoldier(ServerPlayer player, Settlement s, CompoundTag d) {
+        if (!player.getUUID().equals(s.owner)) return "Only this town's owner can retrain its recruits";
+        Settlement.Soldier so = soldier(s, d);
+        if (so == null) return "No such recruit";
+        return SoldierRanks.respec(s, so, SoldierProgression.findEntity(player.server, so.entity));
     }
 
     @Nullable
