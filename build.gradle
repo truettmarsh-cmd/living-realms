@@ -29,6 +29,8 @@ minecraft {
             if (project.hasProperty('militaryUiTest')) property 'livingrealms.militaryUiTest', 'true'
             // ./gradlew runClient -PrecruitUiTest -PrunDir=run-recruit-ui : Recruit Command screenshots (see RecruitUiTour)
             if (project.hasProperty('recruitUiTest')) property 'livingrealms.recruitUiTest', 'true'
+            // ./gradlew runClient -ParchitectTest -PrunDir=<dir> : Architect view walkthrough with screenshots (see ArchitectTour)
+            if (project.hasProperty('architectTest')) property 'livingrealms.architectTest', 'true'
             if (project.hasProperty('tour')) property 'livingrealms.tour', 'true'
         }
         server {

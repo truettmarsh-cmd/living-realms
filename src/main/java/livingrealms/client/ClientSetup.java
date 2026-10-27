@@ -22,6 +22,13 @@ public final class ClientSetup {
     /** Opens Recruit Command for the recruit under the crosshair; unbound by default. */
     public static final KeyMapping RECRUIT = new KeyMapping("key.livingrealms.recruit", KeyConflictContext.IN_GAME,
             InputConstants.UNKNOWN, "key.categories.livingrealms");
+    /** Enters and leaves the Architect view; unbound by default. Raise and lower only act inside it. */
+    public static final KeyMapping ARCHITECT = new KeyMapping("key.livingrealms.architect", KeyConflictContext.IN_GAME,
+            InputConstants.UNKNOWN, "key.categories.livingrealms");
+    public static final KeyMapping RAISE = new KeyMapping("key.livingrealms.raise", KeyConflictContext.GUI,
+            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_EQUAL), "key.categories.livingrealms");
+    public static final KeyMapping LOWER = new KeyMapping("key.livingrealms.lower", KeyConflictContext.GUI,
+            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_MINUS), "key.categories.livingrealms");
 
     @SubscribeEvent
     public static void renderers(EntityRenderersEvent.RegisterRenderers e) {
@@ -33,6 +40,9 @@ public final class ClientSetup {
         e.register(OPEN);
         e.register(ROTATE);
         e.register(RECRUIT);
+        e.register(ARCHITECT);
+        e.register(RAISE);
+        e.register(LOWER);
     }
 
     @SubscribeEvent

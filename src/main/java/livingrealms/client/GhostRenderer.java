@@ -35,7 +35,8 @@ public final class GhostRenderer {
         Vec3 cam = e.getCamera().getPosition();
         PoseStack ps = e.getPoseStack();
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
-        boolean planning = Placement.holdingPlans() || Placement.mode != Placement.Mode.NONE;
+        boolean planning = Placement.holdingPlans() || Placement.mode != Placement.Mode.NONE || ArchitectView.active();
+        BlockPos eye = e.getCamera().getBlockPosition();
         ps.pushPose();
         ps.translate(-cam.x, -cam.y, -cam.z);
 
@@ -48,11 +49,11 @@ public final class GhostRenderer {
                 BlockPos o = BlockPos.of(p.getLong("origin") == 0 ? 0 : p.getLong("origin"));
                 if (p.contains("origin", Tag.TAG_COMPOUND)) o = net.minecraft.nbt.NbtUtils.readBlockPos(p.getCompound("origin"));
                 p.putLong("o", o.asLong());
-                if (o.distSqr(mc.player.blockPosition()) < 96 * 96) near.add(p);
+                if (o.distSqr(eye) < 96 * 96) near.add(p);
             }
             if (planning) border(ps, buffers, town);
         }
-        near.sort((a, b) -> Double.compare(BlockPos.of(a.getLong("o")).distSqr(mc.player.blockPosition()), BlockPos.of(b.getLong("o")).distSqr(mc.player.blockPosition())));
+        near.sort((a, b) -> Double.compare(BlockPos.of(a.getLong("o")).distSqr(eye), BlockPos.of(b.getLong("o")).distSqr(eye)));
         int shown = 0;
         for (CompoundTag p : near) {
             Blueprint bp = ClientState.blueprint(p.getString("bp"));
@@ -63,7 +64,7 @@ public final class GhostRenderer {
             boolean demolish = state.equals("DEMOLISHING");
             float[] col = demolish ? new float[]{0.95f, 0.35f, 0.3f} : state.equals("BUILDING") ? new float[]{0.95f, 0.78f, 0.3f} : new float[]{0.45f, 0.75f, 1f};
             box(ps, buffers, o, bp, r, col, 0.7f);
-            if (shown++ < 8 && !demolish) {
+            if (shown++ < (ArchitectView.active() ? 32 : 8) && !demolish) {
                 int start = Math.max(0, p.getInt("placed") - p.getInt("foundN"));
                 ghost(ps, buffers, bp, o, r, start, 2500, 0.35f);
             }
@@ -112,7 +113,10 @@ public final class GhostRenderer {
     static String check(BlockPos o, Blueprint bp, Rotation r) {
         CompoundTag town = null;
         for (CompoundTag t : ClientState.towns) if (Placement.town != null && Placement.town.equals(t.getUUID("id"))) town = t;
-        if (town == null) return "Not in your town";
+        return town == null ? "Not in your town" : check(town, o, bp, r);
+    }
+
+    static String check(CompoundTag town, BlockPos o, Blueprint bp, Rotation r) {
         int x1 = o.getX() + bp.width(r) - 1, z1 = o.getZ() + bp.depth(r) - 1;
         BlockPos c = BlockPos.of(town.getLong("center"));
         long rad = town.getInt("radius") + 4;
@@ -134,10 +138,15 @@ public final class GhostRenderer {
     }
 
     static void ghost(PoseStack ps, MultiBufferSource.BufferSource buffers, Blueprint bp, BlockPos o, Rotation r, int start, int max, float alpha) {
+        ghost(ps, buffers, bp, o, r, start, max, alpha, null);
+    }
+
+    static void ghost(PoseStack ps, MultiBufferSource.BufferSource buffers, Blueprint bp, BlockPos o, Rotation r, int start, int max, float alpha, float[] tint) {
         Minecraft mc = Minecraft.getInstance();
         BlockRenderDispatcher brd = mc.getBlockRenderer();
         VertexConsumer base = buffers.getBuffer(RenderType.translucent());
-        MultiBufferSource src = type -> new Ghost(base, alpha);
+        float[] c = tint == null ? new float[]{1, 1, 1} : new float[]{0.3f + tint[0] * 0.7f, 0.3f + tint[1] * 0.7f, 0.3f + tint[2] * 0.7f};
+        MultiBufferSource src = type -> new Ghost(base, alpha, c[0], c[1], c[2]);
         int n = 0;
         for (int i = start; i < bp.size() && n < max; i++) {
             BlockState s = bp.state(i);
@@ -179,15 +188,15 @@ public final class GhostRenderer {
     }
 
     /** Passes vertices through with their alpha scaled down. */
-    record Ghost(VertexConsumer d, float alpha) implements VertexConsumer {
+    record Ghost(VertexConsumer d, float alpha, float tr, float tg, float tb) implements VertexConsumer {
         public VertexConsumer vertex(double x, double y, double z) { d.vertex(x, y, z); return this; }
-        public VertexConsumer color(int r, int g, int b, int a) { d.color(r, g, b, (int) (a * alpha)); return this; }
+        public VertexConsumer color(int r, int g, int b, int a) { d.color((int) (r * tr), (int) (g * tg), (int) (b * tb), (int) (a * alpha)); return this; }
         public VertexConsumer uv(float u, float v) { d.uv(u, v); return this; }
         public VertexConsumer overlayCoords(int u, int v) { d.overlayCoords(u, v); return this; }
         public VertexConsumer uv2(int u, int v) { d.uv2(u, v); return this; }
         public VertexConsumer normal(float x, float y, float z) { d.normal(x, y, z); return this; }
         public void endVertex() { d.endVertex(); }
-        public void defaultColor(int r, int g, int b, int a) { d.defaultColor(r, g, b, (int) (a * alpha)); }
+        public void defaultColor(int r, int g, int b, int a) { d.defaultColor((int) (r * tr), (int) (g * tg), (int) (b * tb), (int) (a * alpha)); }
         public void unsetDefaultColor() { d.unsetDefaultColor(); }
     }
 

@@ -67,6 +67,12 @@ public final class Placement {
         return p != null && (p.getMainHandItem().is(Registry.PLANNER.get()) || p.getOffhandItem().is(Registry.PLANNER.get()));
     }
 
+    /** Shift + right-click in the air with nothing being placed opens the Architect view. */
+    public static void useAir(boolean shift) {
+        if (mode == Mode.NONE && shift) ArchitectView.enter(null, false);
+        else use(shift);
+    }
+
     /** Right-click with the plans. */
     public static void use(boolean shift) {
         if (mode == Mode.NONE) {
