@@ -202,6 +202,7 @@ public final class Raids {
             ServerLevel level = server.getLevel(s.dim);
             if (level != null) {
                 SoldierRanks.raidSurvived(level, s, raid.soldiers, s == target);
+                Merit.raidEnded(level, s, raid.soldiers, s == target, raid.held >= HOLD_TICKS, s == target ? source : target);
                 for (var so : s.soldiers) {
                     Entity e = level.getEntity(so.entity);
                     RecruitsBridge.clearRaidTarget(e);

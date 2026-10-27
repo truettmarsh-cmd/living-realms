@@ -1108,7 +1108,7 @@ public class CityScreen extends Screen {
     // ------------------------------------------------------------------ military
 
     void milTabs() {
-        ui.segments("mil", cx + cw - 250, cy + 2, 250, 16, new String[]{"Garrison", "Recruit", "Blacksmith", "Kits"}, milTab, i -> {
+        ui.segments("mil", cx + cw - 290, cy + 2, 290, 16, new String[]{"Garrison", "Recruit", "Blacksmith", "Kits", "Honours"}, milTab, i -> {
             milTab = i;
             tab = i == 2 ? Tab.FORGE : Tab.MILITARY;
         });
@@ -1117,11 +1117,12 @@ public class CityScreen extends Screen {
     void military() {
         if (milTab == 2) milTab = 0;
         ListTag soldiers = list("soldiers");
-        header("Military", soldiers.size() + " / " + v().getInt("garrisonCap") + " soldiers" + (list("training").isEmpty() ? "" : " · " + list("training").size() + " in training"), cw - 252);
+        header("Military", soldiers.size() + " / " + v().getInt("garrisonCap") + " soldiers" + (list("training").isEmpty() ? "" : " · " + list("training").size() + " in training"), cw - 292);
         milTabs();
         switch (milTab) {
             case 1 -> recruit();
             case 3 -> kits();
+            case 4 -> HonoursPanel.draw(ui, cx, cy + 30, cw, ch - 30, v(), mine(), this::act);
             default -> garrison();
         }
     }
@@ -1365,7 +1366,7 @@ public class CityScreen extends Screen {
     void forge() {
         milTab = 2;
         int smiths = v().getCompound("jobs").contains("SMITH") ? v().getCompound("jobs").getIntArray("SMITH")[0] : 0;
-        header("Blacksmith", v().getInt("smithy") == 0 ? "Build a Smithy to take orders" : smiths + " smith" + (smiths == 1 ? "" : "s") + " at the forge", cw - 252);
+        header("Blacksmith", v().getInt("smithy") == 0 ? "Build a Smithy to take orders" : smiths + " smith" + (smiths == 1 ? "" : "s") + " at the forge", cw - 292);
         milTabs();
         int top = cy + 30;
         Map<Item, Integer> stock = stock();

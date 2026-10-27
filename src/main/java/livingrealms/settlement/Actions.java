@@ -86,6 +86,7 @@ public final class Actions {
             case "drillSoldier" -> drillSoldier(player, s, d);
             case "respecSoldier" -> respecSoldier(player, s, d);
             case "chooseSpecial" -> chooseSpecial(player, s, d);
+            case "grantRequest", "orderRequest", "declineRequest" -> Merit.handle(player, s, action, d);
             case "dismiss" -> dismissSoldier(player, level, s, d);
             default -> "Unknown action";
         };

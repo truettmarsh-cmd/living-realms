@@ -165,6 +165,8 @@ public final class RecruitsBridge {
 
     public static float morale(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getMorale() : 0; }
 
+    public static void addMorale(Entity e, float delta) { if (e instanceof AbstractRecruitEntity r) r.setMoral(Math.max(0, Math.min(100, r.getMorale() + delta))); }
+
     public static float hunger(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getHunger() : 0; }
 
     /** Veteran training: start soldiers at a higher level with Recruits' level buffs. */

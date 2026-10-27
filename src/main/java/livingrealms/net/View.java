@@ -88,6 +88,7 @@ public final class View {
         ListTag soldiers = new ListTag();
         s.soldiers.forEach(so -> soldiers.add(soldier(s, so)));
         t.put("soldiers", soldiers);
+        Merit.describe(s, t);
         ListTag training = new ListTag();
         s.training.forEach(tr -> training.add(tr.save()));
         t.put("training", training);

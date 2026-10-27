@@ -112,6 +112,7 @@ public final class Settlement {
         public final List<SpecialSkill> specials = new ArrayList<>();
         public final Map<SpecialSkill, Long> specialCooldowns = new EnumMap<>(SpecialSkill.class);
         public long braceUntil, rallyUntil, chargeUntil;
+        public final Merit.Record merit = new Merit.Record();
 
         public CompoundTag save() {
             CompoundTag t = new CompoundTag();
@@ -154,6 +155,7 @@ public final class Settlement {
             specialCooldowns.forEach((sp, ready) -> specialReady.putLong(sp.name(), ready));
             t.put("specialCooldowns", specialReady);
             t.putLong("braceUntil", braceUntil); t.putLong("rallyUntil", rallyUntil); t.putLong("chargeUntil", chargeUntil);
+            Merit.save(merit, t);
             return t;
         }
 
@@ -200,6 +202,7 @@ public final class Settlement {
             CompoundTag specialReady = t.getCompound("specialCooldowns");
             for (SpecialSkill sp : SpecialSkill.values()) if (specialReady.contains(sp.name())) s.specialCooldowns.put(sp, Math.max(0, specialReady.getLong(sp.name())));
             s.braceUntil = Math.max(0, t.getLong("braceUntil")); s.rallyUntil = Math.max(0, t.getLong("rallyUntil")); s.chargeUntil = Math.max(0, t.getLong("chargeUntil"));
+            Merit.load(s.merit, t);
             return s;
         }
     }

@@ -32,6 +32,7 @@ public final class MilitarySelfTest {
                 checks += RecruitProgressionSelfTest.run(event.getServer().overworld());
                 checks += SoldierRanksSelfTest.run(event.getServer().overworld());
                 checks += SpecialSkillsSelfTest.run(event.getServer().overworld());
+                checks += MeritSelfTest.run(event.getServer().overworld());
                 checks += livingrealms.military.RecruitOriginSelfTest.run(event.getServer().overworld());
                 checks += CapitalCastleSelfTest.run(event.getServer().overworld());
                 checks += AutonomySelfTest.run(event.getServer().overworld());
