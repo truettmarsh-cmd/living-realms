@@ -4,6 +4,18 @@ A Forge 1.20.1 add-on for [Villager Recruits](https://www.curseforge.com/minecra
 
 Living Realms is an original mod. It does not include or modify code from Recruits, Workers or Living Villages. It calls Recruits' public entity API and reads other mods' village structure files at runtime. A small optional Ice and Fire compatibility mixin seats owned recruit riders at the dragon's native saddle position instead of treating them as captured prey.
 
+## New in 0.4.0
+
+- **Recruit Command (shift + right-click your recruit).** Overview with health, morale, both levels and quick orders (follow, hold, wander, rename); Promotions (Royal Guard plus Villager Recruits' Messenger, Scout, Siege Engineer, Patrol Leader and Captain, each with its requirement); Skills, Weapons, Legendary and Special pages; and the recruit's inventory. Recruits hired outside a town can **Enlist** in your nearest town. The Garrison list has Command and Inventory buttons, and an optional key commands the recruit under your crosshair.
+- **Progression.** Combat XP also comes from damage dealt, surviving alarms and raids, defending, and Royal Guard escort (up to 75 XP a day). **Drill** spends emeralds and food for 40 XP plus Villager Recruits XP (10-minute cooldown); **Respec** refunds skills. Titles: Recruit, Soldier, Veteran, Sergeant, Elite, Champion.
+- **Special skills.** 14 abilities recruits use on their own in battle (Shield Wall, Taunt, Rally Cry, Second Wind, Field Dressing, Stagger, Disarm, Riposte, Lunge, Cleave, Charge, Volley, Aimed Shot, Dragonfire Strafe), fitted to unit type and favourite weapon; slots at skill rank 3, 8 and 14.
+- **Legendary perks.** 17 perks (5 new) and a pity counter: the first perk by Recruits level 14, the second by 21.
+- **Honours and gear requests.** Military → Honours ranks your top 10 recruits by merit (kills, damage, raids, guard duty, survival; fades 15% a day). Recruits with merit 60+ ask for their favourite weapon or better armour; Grant it from stock, Order it from the smithy, or Decline.
+- **Towns advance while you are away.** Auto build continues offscreen (blocks appear when the area loads), plus auto research, auto rank-up (keeps a 25% reserve) and auto training to a garrison goal, each switchable on Overview, with a "While you were away" report.
+- **Architect view.** A free camera over your town (Build → Architect view, shift + right-click in the air with the plans, or its key): fly around, place full hologram buildings and roads with green/red validity, the bill of materials, and your queued projects shown as ghosts.
+- **Living Realms Handbook**, a Patchouli guide given on first join (book + emerald to craft another).
+- **Keys.** City Manager is now **O**; rotate, raise, lower, Architect view and Recruit Command are all rebindable in Controls.
+
 ## Features
 
 - **Founding a town.** Craft a **Town Charter** and place it to found a settlement. You get **Architect's Plans** and the City Manager opens (press **O** to reopen it; every key can be changed in Controls).
