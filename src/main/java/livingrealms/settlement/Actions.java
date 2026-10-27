@@ -77,6 +77,7 @@ public final class Actions {
             case "deposit" -> deposit(player, s, d.getString("item"));
             case "royalGuard" -> royalGuard(player, level, s, d);
             case "learnSoldierSkill" -> learnSoldierSkill(player, s, d);
+            case "chooseSpecial" -> chooseSpecial(player, s, d);
             case "dismiss" -> dismissSoldier(player, level, s, d);
             default -> "Unknown action";
         };
@@ -360,6 +361,17 @@ public final class Actions {
         if (e instanceof net.minecraft.world.entity.LivingEntity le) SoldierProgression.applySkills(le, so);
         s.log(so.name + " learned " + skill.label);
         return null;
+    }
+
+    @Nullable
+    static String chooseSpecial(ServerPlayer player, Settlement s, CompoundTag d) {
+        if (!player.getUUID().equals(s.owner)) return "Only this town's owner can train its recruits";
+        Settlement.Soldier so = soldier(s, d);
+        if (so == null) return "Unknown recruit";
+        boolean had = so.specials.contains(livingrealms.military.SpecialSkill.byId(d.getString("special")));
+        String err = livingrealms.military.SoldierSpecials.choose(so, d.getString("special"));
+        if (err == null) s.log(so.name + (had ? " set aside " : " readied ") + livingrealms.military.SpecialSkill.valueOf(d.getString("special")).label);
+        return err;
     }
 
     @Nullable

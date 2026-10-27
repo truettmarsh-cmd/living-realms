@@ -133,10 +133,10 @@ public final class SoldierProgression {
     public static void applySkills(LivingEntity e, Settlement.Soldier so) {
         RecruitOrigins.sync(so, e);
         modifier(e, Attributes.KNOCKBACK_RESISTANCE, RESIST,
-                (so.skills.contains(SoldierSkills.RESOLVE) ? .1 : 0) + (so.legendary.contains(LegendaryPerk.SUREFOOTED) ? .08 : 0), AttributeModifier.Operation.ADDITION);
+                (so.skills.contains(SoldierSkills.RESOLVE) ? .1 : 0) + (so.legendary.contains(LegendaryPerk.SUREFOOTED) ? .15 : 0), AttributeModifier.Operation.ADDITION);
         modifier(e, Attributes.ARMOR_TOUGHNESS, TOUGH, so.skills.contains(SoldierSkills.BULWARK) ? 1 : 0, AttributeModifier.Operation.ADDITION);
         modifier(e, Attributes.FOLLOW_RANGE, RANGE,
-                (so.skills.contains(SoldierSkills.SCOUT) ? 8 : 0) + (so.legendary.contains(LegendaryPerk.FAR_SIGHT) ? 4 : 0), AttributeModifier.Operation.ADDITION);
+                (so.skills.contains(SoldierSkills.SCOUT) ? 8 : 0) + (so.legendary.contains(LegendaryPerk.FAR_SIGHT) ? 6 : 0), AttributeModifier.Operation.ADDITION);
         modifier(e, Attributes.MAX_HEALTH, HEALTH, so.skills.contains(SoldierSkills.ENDURANCE) ? 4 : 0, AttributeModifier.Operation.ADDITION);
         modifier(e, Attributes.ARMOR, ARMOUR, so.skills.contains(SoldierSkills.IRONCLAD) ? 2 : 0, AttributeModifier.Operation.ADDITION);
         modifier(e, Attributes.ATTACK_DAMAGE, ATTACK, so.skills.contains(SoldierSkills.WEAPON_DRILLS) ? 2 : 0, AttributeModifier.Operation.ADDITION);

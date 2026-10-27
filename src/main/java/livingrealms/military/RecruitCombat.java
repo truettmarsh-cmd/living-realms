@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ShieldItem;
@@ -41,9 +42,15 @@ public final class RecruitCombat {
 
     public static double damageBonus(Settlement.Soldier so, LivingEntity attacker, LivingEntity victim,
                                      WeaponProficiency weapon, boolean projectile, long time) {
+        return damageBonus(null, so, attacker, victim, weapon, projectile, time, 0);
+    }
+    /** special: bonus from a special that just fired; it shares the normal budget. */
+    public static double damageBonus(Settlement s, Settlement.Soldier so, LivingEntity attacker, LivingEntity victim,
+                                     WeaponProficiency weapon, boolean projectile, long time, double special) {
         if (weapon == null) return 0;
         WeaponProficiency.initialise(so);
-        double normal = 0;
+        double normal = special;
+        if (time < so.rallyUntil) normal += SoldierSpecials.RALLY_BONUS;
         if (projectile && so.skills.contains(SoldierSkills.DEADEYE)) normal += .08;
         if (victim.getArmorValue() > 0 && so.skills.contains(SoldierSkills.ARMOUR_BREAKER)) normal += .05;
         if (victim.getHealth() < victim.getMaxHealth() * .3 && so.skills.contains(SoldierSkills.FINISHER)) normal += .05;
@@ -53,9 +60,11 @@ public final class RecruitCombat {
         double rare = 0;
         if (!projectile && weapon == so.preferredWeapon && so.legendary.contains(LegendaryPerk.KEEN_EDGE)) rare += .08;
         if (projectile && attacker.distanceToSqr(victim) > 144 && so.legendary.contains(LegendaryPerk.HAWKEYE)) rare += .08;
-        if (!projectile && weapon == WeaponProficiency.SPEAR && attacker.getOffhandItem().getItem() instanceof ShieldItem
-                && so.legendary.contains(LegendaryPerk.SPEAR_SENTINEL)) rare += .08;
-        if (so.legendary.contains(LegendaryPerk.BATTLE_RHYTHM) && time < so.battleRhythmUntil) rare += .06;
+        if (!projectile && weapon == WeaponProficiency.SPEAR && so.legendary.contains(LegendaryPerk.SPEAR_SENTINEL)) rare += .08;
+        if (so.legendary.contains(LegendaryPerk.BATTLE_RHYTHM) && time < so.battleRhythmUntil) rare += .08;
+        if (so.legendary.contains(LegendaryPerk.OPPORTUNIST) && victim instanceof Mob mob && mob.getTarget() != null && mob.getTarget() != attacker) rare += .08;
+        if (so.legendary.contains(LegendaryPerk.GIANTSLAYER) && victim.getMaxHealth() >= 40) rare += .08;
+        if (s != null && so.legendary.contains(LegendaryPerk.VANGUARD) && SoldierSpecials.allies(s, attacker, 8).size() >= 2) rare += .06;
         return Math.min(NORMAL_CAP, normal) + Math.min(WEAPON_CAP, WeaponProficiency.bonus(so, weapon)) + Math.min(LEGENDARY_CAP, rare);
     }
 
@@ -68,25 +77,31 @@ public final class RecruitCombat {
         float damage = event.getAmount();
         if (source.getEntity() instanceof LivingEntity attacker) {
             var record = SoldierProgression.record(level.getServer(), attacker);
-            if (record != null) damage *= (float)(1 + damageBonus(record.soldier(), attacker, victim,
-                    weapon(source, attacker), source.getDirectEntity() instanceof Projectile, time));
+            if (record != null) {
+                WeaponProficiency weapon = weapon(source, attacker);
+                double special = SoldierSpecials.onAttack(record.soldier(), attacker, victim, source, weapon, damage, time);
+                damage *= (float)(1 + damageBonus(record.settlement(), record.soldier(), attacker, victim,
+                        weapon, source.getDirectEntity() instanceof Projectile, time, special));
+            }
         }
         var defender = SoldierProgression.record(level.getServer(), victim);
         if (defender != null && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             var so = defender.soldier();
-            double reduction = 0;
+            double reduction = SoldierSpecials.onDefend(so, victim, source, time);
             if (source.getDirectEntity() instanceof Projectile && victim.getOffhandItem().getItem() instanceof ShieldItem
                     && so.skills.contains(SoldierSkills.SHIELD_GUARD)) reduction += .10;
             if (victim.getHealth() < victim.getMaxHealth() * .3 && so.skills.contains(SoldierSkills.LAST_STAND)) reduction += .10;
             if (source.is(DamageTypeTags.IS_FIRE)) {
                 if (so.skills.contains(SoldierSkills.FIRE_WARD)) reduction += .15;
-                if (so.legendary.contains(LegendaryPerk.DRAGONHEART)) reduction += .15;
+                if (so.legendary.contains(LegendaryPerk.DRAGONHEART)) reduction += .20;
             }
             if (source.is(DamageTypeTags.IS_EXPLOSION) && so.skills.contains(SoldierSkills.BLAST_WARD)) reduction += .15;
-            if (victim.getHealth() < victim.getMaxHealth() * .4 && so.legendary.contains(LegendaryPerk.STEADFAST)) reduction += .08;
+            if (victim.getHealth() < victim.getMaxHealth() * .4 && so.legendary.contains(LegendaryPerk.STEADFAST)) reduction += .10;
             var owner = defender.settlement().owner == null ? null : level.getPlayerByUUID(defender.settlement().owner);
-            if (owner != null && victim.distanceToSqr(owner) <= 100 && so.legendary.contains(LegendaryPerk.WARDEN)) reduction += .06;
-            if (victim.getHealth() < victim.getMaxHealth() * .4 && trigger(so, LegendaryPerk.IRON_WILL, time, 1800)) reduction += .20;
+            if (owner != null && victim.distanceToSqr(owner) <= 100 && so.legendary.contains(LegendaryPerk.WARDEN)) reduction += .08;
+            if (so.legendary.contains(LegendaryPerk.SPEAR_SENTINEL) && victim.getOffhandItem().getItem() instanceof ShieldItem) reduction += .05;
+            if (so.legendary.contains(LegendaryPerk.VANGUARD) && SoldierSpecials.allies(defender.settlement(), victim, 8).size() >= 2) reduction += .06;
+            if (victim.getHealth() < victim.getMaxHealth() * .4 && trigger(so, LegendaryPerk.IRON_WILL, time, 1500)) reduction += .20;
             damage *= (float)(1 - Math.min(DEFENCE_CAP, reduction));
         }
         event.setAmount(damage);
@@ -107,8 +122,8 @@ public final class RecruitCombat {
     public static void onKill(Settlement.Soldier so, LivingEntity attacker, DamageSource source) {
         long time = now(attacker);
         WeaponProficiency.practice(so, weapon(source, attacker), 20);
-        if (trigger(so, LegendaryPerk.SECOND_WIND, time, 600)) attacker.heal(2);
-        if (trigger(so, LegendaryPerk.BATTLE_RHYTHM, time, 600)) so.battleRhythmUntil = time + 160;
+        if (trigger(so, LegendaryPerk.SECOND_WIND, time, 600)) attacker.heal(4);
+        if (trigger(so, LegendaryPerk.BATTLE_RHYTHM, time, 600)) so.battleRhythmUntil = time + 200;
     }
     public static boolean trigger(Settlement.Soldier so, LegendaryPerk perk, long time, int cooldown) {
         if (!so.legendary.contains(perk) || time < so.legendaryCooldowns.getOrDefault(perk, 0L)) return false;

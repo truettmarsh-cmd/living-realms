@@ -30,6 +30,7 @@ public final class MilitarySelfTest {
                 Smithing.discover(event.getServer());
                 int checks = SoldierProgressionSelfTest.run(event.getServer().overworld());
                 checks += RecruitProgressionSelfTest.run(event.getServer().overworld());
+                checks += SpecialSkillsSelfTest.run(event.getServer().overworld());
                 checks += livingrealms.military.RecruitOriginSelfTest.run(event.getServer().overworld());
                 checks += CapitalCastleSelfTest.run(event.getServer().overworld());
                 checks += equipment(event.getServer().overworld());
