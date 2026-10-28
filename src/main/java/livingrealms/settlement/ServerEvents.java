@@ -56,6 +56,7 @@ public final class ServerEvents {
         }
         if (livingrealms.settlement.vx.Vx.active()) Realms.tick(server, m, tick);
         if (tick % 20 == 0) Raids.tick(server, m);
+        if (tick % 20 == 10) Statecraft.tick(server, m);
         if (tick % Config.SIM_INTERVAL.get() == 0) {
             for (Settlement s : m.all()) {
                 if (s.mirror()) continue;

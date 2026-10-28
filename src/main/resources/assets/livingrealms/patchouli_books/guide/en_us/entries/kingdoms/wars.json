@@ -1,0 +1,16 @@
+{
+  "name": "Wars & War Score",
+  "icon": "minecraft:red_banner",
+  "category": "livingrealms:kingdoms",
+  "sortnum": 3,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "A raid between two kingdoms starts a $(l)war$(), and so does a Village Expansion faction declaring one. Every war is listed on the City Manager's $(l)Kingdom$() page.$(br2)$(l)War score$() (-100 to 100) shows who is winning:$(li)+15 for each city taken$(li)+10 for each raid held off$(li)+5 for each raid won$(li)+1 per enemy soldier killed on a raid"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l)War exhaustion$() (0 to 100) wears both sides down:$(li)+10 each day at war$(li)+3 per soldier lost on a raid$(li)+12 per city lost$(li)+5 per failed raid$(br2)A side at $(l)100$() must make peace. An NPC kingdom that is losing then pays the winner tribute; you pay only if the enemy leads by 30 or more. A three-day truce follows."
+    }
+  ]
+}

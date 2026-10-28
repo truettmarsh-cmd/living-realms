@@ -44,7 +44,8 @@ import static livingrealms.client.ui.Imm.*;
 public class CityScreen extends Screen {
     enum Tab {
         OVERVIEW("Overview", Items.BELL), MAP("City Map", Items.FILLED_MAP), BUILD("Build", Items.BRICKS), PROJECTS("Projects", Items.SCAFFOLDING),
-        STORAGE("Stockpile", Items.CHEST), RESEARCH("Research", Items.ENCHANTED_BOOK), MILITARY("Military", Items.IRON_SWORD), FORGE("Blacksmith", Items.ANVIL);
+        STORAGE("Stockpile", Items.CHEST), RESEARCH("Research", Items.ENCHANTED_BOOK), MILITARY("Military", Items.IRON_SWORD), FORGE("Blacksmith", Items.ANVIL),
+        KINGDOM("Kingdom", Items.GOLDEN_HELMET);
         final String label;
         final Item icon;
         Tab(String label, Item icon) { this.label = label; this.icon = icon; }
@@ -233,6 +234,7 @@ public class CityScreen extends Screen {
                 case RESEARCH -> research();
                 case MILITARY -> military();
                 case FORGE -> forge();
+                case KINGDOM -> KingdomPanel.draw(ui, cx, cy, cw, ch, v().getCompound("statecraft"), this::act);
             }
         } catch (Exception e) {
             ui.text("Something went wrong drawing this page: " + e, cx, cy + 20, RED);

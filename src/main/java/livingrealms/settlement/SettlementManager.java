@@ -21,6 +21,8 @@ public final class SettlementManager extends SavedData {
     /** Village Expansion: each player kingdom's Recruits faction, and truces (faction pair -> game time) after making peace. */
     public final Map<UUID, String> realms = new HashMap<>();
     public final Map<String, Long> truces = new HashMap<>();
+    /** Wars, truces, tribute and the loyalty of conquered cities (Statecraft). */
+    public final Statecraft state = new Statecraft();
 
     public static SettlementManager get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(SettlementManager::load, SettlementManager::new, "livingrealms_settlements");
@@ -98,6 +100,7 @@ public final class SettlementManager extends SavedData {
             truces.forEach(r::putLong);
             tag.put("vxTruces", r);
         }
+        if (!state.isEmpty()) tag.put("statecraft", state.save());
         return tag;
     }
 
@@ -114,6 +117,7 @@ public final class SettlementManager extends SavedData {
         for (String k : r.getAllKeys()) try { m.realms.put(UUID.fromString(k), r.getString(k)); } catch (IllegalArgumentException ignored) {}
         CompoundTag tr = tag.getCompound("vxTruces");
         for (String k : tr.getAllKeys()) m.truces.put(k, tr.getLong(k));
+        m.state.load(tag.getCompound("statecraft"));
         return m;
     }
 

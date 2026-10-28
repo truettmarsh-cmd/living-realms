@@ -147,6 +147,7 @@ public final class Simulation {
         if (s.starving) { h -= 30; why.add("-30 starving"); }
         if (s.population > d.housing) { h -= 12; why.add("-12 overcrowded"); }
         if (s.alarmUntil > 0) { h -= 5; why.add("-5 under attack"); }
+        h += Statecraft.mood(s, why);
         d.happinessTarget = Math.max(0, Math.min(100, h));
     }
 
