@@ -161,6 +161,8 @@ public final class Wars {
             try {
                 String mine = realmOf(server, m, proposer, false);
                 if (mine != null && VxBridge.wouldAcceptPeace(server.overworld(), es.vxFaction, mine)) will += 10;
+                // a faction that has sued for peace (Strategy.suesForPeace) takes white peace or modest tribute
+                if (mine != null && Realms.offersPeace(es.vxFaction, mine, server.overworld().getGameTime())) will += 25;
             } catch (RuntimeException ignored) {}
         }
         return will >= cost(t, days);

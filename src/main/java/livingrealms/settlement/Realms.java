@@ -348,6 +348,7 @@ public final class Realms {
         if (mine == null || !VxBridge.atWar(mine, faction)) return "You are not at war with them";
         ServerLevel level = player.server.overworld();
         if (m.raids.stream().anyMatch(r -> r.attacker.equals(kingdomFor(faction)) || r.defender.equals(kingdomFor(faction)))) return "Not while a raid is under way";
+        if (VxBridge.peaceLocked(level, mine, faction)) return "Too soon after fighting; Village Expansion holds the war open a little longer";
         boolean offered = offersPeace(faction, mine, level.getGameTime());
         if (VxBridge.isNpc(faction) && !offered && !VxBridge.wouldAcceptPeace(level, faction, mine)) return VxBridge.name(faction) + " refuses peace for now";
         VxBridge.makePeace(level, mine, faction, TRUCE);
