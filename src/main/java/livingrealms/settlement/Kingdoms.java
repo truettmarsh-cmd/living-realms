@@ -83,6 +83,7 @@ public final class Kingdoms {
             s.log("Captured by " + by);
         }
         normalize(m);
+        TownClaims.follow(server, m, captured);
         return captured.size();
     }
 

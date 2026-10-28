@@ -83,6 +83,8 @@ public final class Settlement {
     public String vxFaction = "";
     /** Village Expansion's street-and-lot layout for this town, when its planner is in use. */
     public final livingrealms.settlement.vx.VxLayout layout = new livingrealms.settlement.vx.VxLayout();
+    /** The Recruits claim Living Realms keeps for this town (see TownClaims), or null. */
+    @javax.annotation.Nullable public UUID claim;
     public long founded;
     public long lastDay;
 
@@ -443,6 +445,7 @@ public final class Settlement {
         if (mirror()) t.putString("vxFaction", vxFaction);
         CompoundTag lay = layout.save();
         if (lay != null) t.put("vxLayout", lay);
+        if (claim != null) t.putUUID("claim", claim);
         t.putLong("founded", founded);
         t.putLong("lastDay", lastDay);
         return t;
@@ -506,6 +509,7 @@ public final class Settlement {
         s.structureKey = t.getString("structure");
         s.vxFaction = t.getString("vxFaction");
         if (t.contains("vxLayout")) s.layout.load(t.getCompound("vxLayout"));
+        if (t.hasUUID("claim")) s.claim = t.getUUID("claim");
         s.founded = t.getLong("founded");
         s.lastDay = t.getLong("lastDay");
         return s;

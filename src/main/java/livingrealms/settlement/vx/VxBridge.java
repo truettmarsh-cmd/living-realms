@@ -4,6 +4,8 @@ import com.example.villagerecruits.assessment.FactionAssessmentManager;
 import com.example.villagerecruits.claim.VillageClaimConquestHandler;
 import com.example.villagerecruits.claim.VillageClaimIntegration;
 import com.example.villagerecruits.claim.VillageFastConquest;
+import com.example.villagerecruits.claim.PlayerClaimRules;
+import com.example.villagerecruits.data.PlayerClaimRaidData;
 import com.example.villagerecruits.config.VRConfig;
 import com.example.villagerecruits.data.VillageFactionSaveData;
 import com.example.villagerecruits.diplomacy.AssaultManager;
@@ -248,6 +250,28 @@ public final class VxBridge {
         return c != null && new ChunkPos(center).equals(c.getCenter());
     }
 
+    /**
+     * Whether the claim over this centre is a Village Expansion village: one of its own, or a centre it registered for a
+     * faction. A Living Realms town claim is not, so it is never handed to Village Expansion's conquest bookkeeping.
+     */
+    public static boolean village(ServerLevel level, BlockPos center) {
+        ServerLevel ow = level.getServer().overworld();
+        RecruitsClaim c = VillageClaimIntegration.getClaimAt(ow, center);
+        return c != null && new ChunkPos(center).equals(c.getCenter()) && PlayerClaimRules.isAddonVillage(ow, c);
+    }
+
+    /** Village Expansion's raids on plain player claims under way (PlayerClaimRaidManager): claim id to raiding faction. */
+    public static Map<UUID, String> claimRaids(ServerLevel level) {
+        Map<UUID, String> out = new HashMap<>();
+        for (PlayerClaimRaidData.Raid r : PlayerClaimRaidData.get(level.getServer().overworld()).raids) out.put(r.claimId, r.attackerFaction);
+        return out;
+    }
+
+    /** Whether Village Expansion treats this claim as a player claim: raided, weighed for war, kept 600 blocks from new villages. */
+    public static boolean playerClaim(ServerLevel level, RecruitsClaim claim) {
+        return PlayerClaimRules.isPlayerClaim(level.getServer().overworld(), claim);
+    }
+
     // ------------------------------------------------------------------ city planning
 
     /** Village Expansion's street-and-plot layout for any centre; generate() reads terrain but stores nothing in VE. */
@@ -297,6 +321,23 @@ public final class VxBridge {
     }
 
     public static UUID fakeOwner() { return VillageFactionManager.FAKE_OWNER; }
+
+    /** Self-test: VE's PlayerClaimRaidManager is raiding the claim (the record its begin() writes). */
+    public static void testClaimRaid(ServerLevel level, UUID claim, String attacker, String defender) {
+        PlayerClaimRaidData data = PlayerClaimRaidData.get(level.getServer().overworld());
+        data.raids.add(new PlayerClaimRaidData.Raid(UUID.randomUUID(), claim, UUID.randomUUID(), attacker, defender, level.getGameTime()));
+        data.setDirty();
+    }
+
+    /** Self-test: that raid succeeds the way VE's tick ends one, by deleting the claim, and the raid record goes. */
+    public static void testClaimRaidWon(ServerLevel level, UUID claim) {
+        ServerLevel ow = level.getServer().overworld();
+        PlayerClaimRaidData data = PlayerClaimRaidData.get(ow);
+        RecruitsClaim c = ClaimEvents.recruitsClaimManager.getClaim(claim);
+        if (c != null) VillageClaimIntegration.removeClaim(ow, c);
+        data.raids.removeIf(r -> r.claimId.equals(claim));
+        data.setDirty();
+    }
 
     public static boolean registered(String id) { return VillageFactionManager.getFaction(id) != null; }
 
