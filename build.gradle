@@ -37,6 +37,8 @@ minecraft {
             // ./gradlew runClient -ParchitectTest -PrunDir=<dir> : Architect view walkthrough with screenshots (see ArchitectTour)
             if (project.hasProperty('architectTest')) property 'livingrealms.architectTest', 'true'
             if (project.hasProperty('tour')) property 'livingrealms.tour', 'true'
+            // ./gradlew runClient -PwarTour -PvillageExpansion -PpackMods -PrunDir=<fresh dir> : war and siege walkthrough (see WarTour)
+            if (project.hasProperty('warTour')) property 'livingrealms.warTour', 'true'
         }
         server {
             args '--nogui'
