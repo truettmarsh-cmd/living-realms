@@ -2,6 +2,7 @@ package livingrealms.settlement.plan;
 
 import livingrealms.building.BuildingType;
 import livingrealms.building.Category;
+import livingrealms.settlement.Tier;
 
 import java.util.Locale;
 
@@ -34,8 +35,8 @@ public final class Zoning {
             case BARRACKS -> new Rule(24, far, (int) (0.7 * radius), true, true, 3, 2);
             case TOWER -> new Rule(Math.max(CORE + 4, (int) (0.75 * radius)), far, radius, false, false, 3, 1);
             case LUMBER, MINE -> new Rule(edge, far, edge, false, true, 3, 1);
-            // the first fields of a camp may sit close; after that farms keep to the outskirts
-            case FARM -> alreadyBuilt < 2 ? new Rule(CORE, far, CORE + 4, false, true, 2, 1)
+            // a camp's or hamlet's first fields may sit close; after that farms keep to the outskirts
+            case FARM -> alreadyBuilt < 2 && radius <= Tier.HAMLET.radius ? new Rule(CORE, far, CORE + 4, false, true, 2, 1)
                     : new Rule(Math.max(CORE, radius / 2), far, Math.max(CORE, radius / 2), false, true, 2, 1);
             case WALL, ROAD -> new Rule(0, far, radius, false, false, 0, 0);
         };
