@@ -1,0 +1,12 @@
+{
+  "name": "Battle Morale",
+  "icon": "minecraft:red_banner",
+  "category": "livingrealms:pack",
+  "sortnum": 5,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "With the $(l)Recruits Morale$() addon, granting a request ($(l)+10$()) or declining one ($(l)-8$()) also moves battle morale, and enough morale ends a panic.$(br2)Veterans hold longer: max battle morale is 100 plus $(l)5 per rank$() (up to 150)."
+    }
+  ]
+}

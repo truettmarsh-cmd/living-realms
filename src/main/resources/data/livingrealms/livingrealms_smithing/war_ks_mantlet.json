@@ -1,0 +1,17 @@
+{
+ "name": "Mantlet (Kingdom Sieges)",
+ "requires_mod": "kingdomsieges",
+ "order": 105,
+ "color": "#7A6A5A",
+ "research": "engineering",
+ "pieces": {
+  "war_machine": {
+   "item": "kingdomsieges:mantlet_spawner",
+   "cost": {
+    "#minecraft:planks": 24,
+    "#minecraft:logs": 4,
+    "minecraft:iron_ingot": 2
+   }
+  }
+ }
+}

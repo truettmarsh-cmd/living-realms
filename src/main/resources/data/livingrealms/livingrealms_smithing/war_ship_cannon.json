@@ -1,0 +1,17 @@
+{
+ "name": "Ship cannon (Small Ships)",
+ "requires_mod": "smallships",
+ "order": 116,
+ "color": "#4A6A8B",
+ "research": "steelmaking",
+ "pieces": {
+  "war_machine": {
+   "item": "smallships:cannon",
+   "cost": {
+    "minecraft:iron_ingot": 16,
+    "#minecraft:logs": 2,
+    "minecraft:gunpowder": 4
+   }
+  }
+ }
+}

@@ -1,0 +1,19 @@
+{
+ "name": "Catapult (Siege Weapons)",
+ "requires_mod": "siegeweapons",
+ "order": 90,
+ "color": "#8B6B4A",
+ "research": "engineering",
+ "pieces": {
+  "war_machine": {
+   "item": "siegeweapons:catapult_item",
+   "cost": {
+    "#minecraft:logs": 16,
+    "#minecraft:planks": 24,
+    "minecraft:iron_ingot": 6,
+    "minecraft:string": 8,
+    "minecraft:cobblestone": 16
+   }
+  }
+ }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "Works With Your Pack",
+  "icon": "minecraft:bookshelf",
+  "category": "livingrealms:pack",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Living Realms ties into other kingdom mods when they are installed. Nothing changes when one is missing.$(br2)The $(l)Overview$() page then shows a $(l)Pack$() strip: feudal title, ruler, siege train, Workers staff and recovered gear. Hover each for details."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Every part can be switched off in $(l)serverconfig/livingrealms-server.toml$() under $(l)compat$():$(li)feudalTitles, feudalOaths, rankTitles$(li)siegeTrains, npcSiegeTrains$(li)raiderAlarm, morale$(li)workersStaffTowns, corpseSalvage$(li)heraldryGear"
+    }
+  ]
+}

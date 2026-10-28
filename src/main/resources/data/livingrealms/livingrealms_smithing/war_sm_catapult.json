@@ -1,0 +1,19 @@
+{
+ "name": "Catapult",
+ "requires_mod": "siegemachines",
+ "order": 93,
+ "color": "#9C7A55",
+ "research": "engineering",
+ "pieces": {
+  "war_machine": {
+   "item": "siegemachines:catapult",
+   "cost": {
+    "#minecraft:planks": 100,
+    "minecraft:iron_ingot": 14,
+    "minecraft:string": 5,
+    "minecraft:leather": 6,
+    "minecraft:stick": 6
+   }
+  }
+ }
+}

@@ -1,0 +1,19 @@
+{
+ "name": "Trebuchet (Kingdom Sieges)",
+ "requires_mod": "kingdomsieges",
+ "order": 100,
+ "color": "#7A6A5A",
+ "research": "engineering",
+ "pieces": {
+  "war_machine": {
+   "item": "kingdomsieges:trebuchet_spawner",
+   "cost": {
+    "#minecraft:logs": 20,
+    "#minecraft:planks": 40,
+    "minecraft:iron_ingot": 12,
+    "minecraft:cobblestone": 32,
+    "minecraft:string": 8
+   }
+  }
+ }
+}

@@ -1,0 +1,19 @@
+{
+ "name": "Ballista",
+ "requires_mod": "siegemachines",
+ "order": 92,
+ "color": "#9C7A55",
+ "research": "engineering",
+ "pieces": {
+  "war_machine": {
+   "item": "siegemachines:ballista",
+   "cost": {
+    "#minecraft:planks": 40,
+    "minecraft:iron_ingot": 8,
+    "minecraft:string": 3,
+    "minecraft:leather": 1,
+    "minecraft:stick": 4
+   }
+  }
+ }
+}

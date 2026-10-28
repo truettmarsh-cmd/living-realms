@@ -17,7 +17,8 @@ public enum Piece {
     CROSSBOW("Crossbow", EquipmentSlot.MAINHAND, 0.10f),
     ARROWS("Arrows", EquipmentSlot.OFFHAND, 0.03f),
     DRAGON_ARMOR("Mount armour", EquipmentSlot.OFFHAND, 0.4f),
-    SPECIAL_WEAPON("Relics", EquipmentSlot.MAINHAND, 0.25f);
+    SPECIAL_WEAPON("Relics", EquipmentSlot.MAINHAND, 0.25f),
+    WAR_MACHINE("War machines", EquipmentSlot.OFFHAND, 1.5f);
 
     public final String label;
     public final EquipmentSlot slot;

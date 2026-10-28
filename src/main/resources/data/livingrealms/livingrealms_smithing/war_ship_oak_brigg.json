@@ -1,0 +1,19 @@
+{
+ "name": "Brigg (Small Ships)",
+ "requires_mod": "smallships",
+ "order": 112,
+ "color": "#4A6A8B",
+ "research": "logistics",
+ "pieces": {
+  "war_machine": {
+   "item": "smallships:oak_brigg",
+   "cost": {
+    "#minecraft:logs": 24,
+    "#minecraft:planks": 64,
+    "#minecraft:wool": 16,
+    "minecraft:string": 12,
+    "minecraft:iron_ingot": 4
+   }
+  }
+ }
+}

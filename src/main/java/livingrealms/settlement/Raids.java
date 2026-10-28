@@ -58,6 +58,8 @@ public final class Raids {
         if (!source.dim.equals(target.dim)) return "Raids require cities in the same dimension";
         if (source.center.distSqr(target.center) > (double) Config.RAID_RANGE.get() * Config.RAID_RANGE.get()) return "Target is beyond raid range";
         if (engaged(m, source) || engaged(m, target)) return "One of these kingdoms already has a raid in progress";
+        String oath = livingrealms.compat.Compat.raidBlocked(server, source, target);
+        if (oath != null) return oath;
         long now = server.overworld().getGameTime();
         if (Kingdoms.cities(m, source).stream().anyMatch(t -> t.raidCooldown > now)
                 || Kingdoms.cities(m, target).stream().anyMatch(t -> t.raidCooldown > now)) return "The kingdom is recovering from its last raid";
@@ -76,6 +78,7 @@ public final class Raids {
         int count = Math.min(12, Math.max(2, troops.size() / 2));
         troops.stream().limit(count).forEach(so -> raid.soldiers.add(so.entity));
         m.raids.add(raid);
+        livingrealms.compat.Compat.raidStarted(server, raid, source, target);
         for (Settlement s : Kingdoms.cities(m, source)) s.raidCooldown = server.overworld().getGameTime() + Config.RAID_COOLDOWN.get();
         announce(server, source, "Marching on " + target.name + " with " + count + " soldiers.");
         announce(server, target, source.name + " is raiding " + target.name + (target.capital
@@ -195,6 +198,7 @@ public final class Raids {
     static void finish(MinecraftServer server, SettlementManager m, Raid raid, String message) {
         m.raids.remove(raid);
         Settlement source = m.get(raid.source), target = m.get(raid.target);
+        livingrealms.compat.Compat.raidEnded(server, raid, source);
         for (Settlement s : new Settlement[]{source, target}) if (s != null) {
             s.raidStatus = "";
             s.raidCooldown = server.overworld().getGameTime() + Config.RAID_COOLDOWN.get();

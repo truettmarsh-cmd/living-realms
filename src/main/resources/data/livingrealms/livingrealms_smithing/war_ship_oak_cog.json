@@ -1,0 +1,19 @@
+{
+ "name": "Cog (Small Ships)",
+ "requires_mod": "smallships",
+ "order": 111,
+ "color": "#4A6A8B",
+ "research": "trade",
+ "pieces": {
+  "war_machine": {
+   "item": "smallships:oak_cog",
+   "cost": {
+    "#minecraft:logs": 16,
+    "#minecraft:planks": 40,
+    "#minecraft:wool": 8,
+    "minecraft:string": 8,
+    "minecraft:iron_ingot": 2
+   }
+  }
+ }
+}

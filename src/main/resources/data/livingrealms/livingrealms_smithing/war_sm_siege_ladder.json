@@ -1,0 +1,17 @@
+{
+ "name": "Siege ladder",
+ "requires_mod": "siegemachines",
+ "order": 98,
+ "color": "#9C7A55",
+ "research": "engineering",
+ "pieces": {
+  "war_machine": {
+   "item": "siegemachines:siege_ladder",
+   "cost": {
+    "#minecraft:planks": 24,
+    "minecraft:stick": 16,
+    "minecraft:iron_ingot": 2
+   }
+  }
+ }
+}

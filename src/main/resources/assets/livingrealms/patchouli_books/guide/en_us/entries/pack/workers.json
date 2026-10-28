@@ -1,0 +1,12 @@
+{
+  "name": "Workers in Town",
+  "icon": "minecraft:wooden_hoe",
+  "category": "livingrealms:pack",
+  "sortnum": 6,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Your $(l)Workers$()-mod farmers, fishermen, lumberjacks, miners, builders, merchants, couriers and cooks standing inside your town fill its matching jobs first. Each frees a settler, shown in the Workforce list and the Pack strip."
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "Feudal Titles",
+  "icon": "minecraft:golden_helmet",
+  "category": "livingrealms:pack",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "With $(l)Vassal & Suzerain$(), the Recruits faction you lead takes a title from your kingdom's size:$(li)$(l)King$(): 3 cities or a Capital$(li)$(l)Duke$(): 2 cities or a City$(li)$(l)Count$(): otherwise$(br2)A vassal always sits one rank below its liege."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Liege and vassal kingdoms $(l)cannot raid each other$(); release the oath first. When a vassal's city is raided, its liege is told and the liege's capital chronicle records it.$(br2)Set a title by hand and Living Realms leaves it alone. With $(l)Ranks and Titles$(), your faction's Leader title shows the same rank in the tab list unless you renamed it."
+    }
+  ]
+}

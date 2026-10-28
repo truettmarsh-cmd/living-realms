@@ -1,0 +1,17 @@
+{
+ "name": "Ribauldequin (Kingdom Sieges)",
+ "requires_mod": "kingdomsieges",
+ "order": 103,
+ "color": "#7A6A5A",
+ "research": "steelmaking",
+ "pieces": {
+  "war_machine": {
+   "item": "kingdomsieges:ribauldequin_spawner",
+   "cost": {
+    "#minecraft:logs": 6,
+    "minecraft:iron_ingot": 30,
+    "minecraft:gunpowder": 6
+   }
+  }
+ }
+}

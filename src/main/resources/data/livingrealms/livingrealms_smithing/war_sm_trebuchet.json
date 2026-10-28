@@ -1,0 +1,20 @@
+{
+ "name": "Trebuchet",
+ "requires_mod": "siegemachines",
+ "order": 94,
+ "color": "#9C7A55",
+ "research": "fortifications",
+ "pieces": {
+  "war_machine": {
+   "item": "siegemachines:trebuchet",
+   "cost": {
+    "#minecraft:planks": 180,
+    "minecraft:iron_ingot": 34,
+    "minecraft:cobblestone": 4,
+    "minecraft:string": 8,
+    "minecraft:leather": 8,
+    "minecraft:stick": 8
+   }
+  }
+ }
+}

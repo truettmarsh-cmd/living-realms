@@ -1,0 +1,20 @@
+{
+  "name": "Siege Engines",
+  "icon": "minecraft:dispenser",
+  "category": "livingrealms:pack",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "With $(l)Siege Weapons$(), $(l)Medieval Siege Machines$() or $(l)Kingdom Sieges$(), the Blacksmith gains a $(l)War machines$() tab: catapults, ballistae, trebuchets, mortars, culverins, rams, ladders and more. Most need Engineering; cannons need Steelmaking."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "When you raid, the attacking city takes $(l)one engine$() from its stockpile. It sets up outside the target, crewed and stocked with ammunition, and bombards the town centre: a Recruits $(l)Siege Engineer$() works Siege Weapons; a bowman works Siege Machines (needs Recruits Siege Compatibility)."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "When the raid ends the crew leaves; an engine that survived goes back to the stockpile.$(br2)NPC kingdoms of $(l)City$() rank bring an engine too.$(br2)Recruit Command's $(l)Promotions$() page offers Siege Engineer (Siege Weapons) and Captain (Small Ships) once those mods are installed."
+    }
+  ]
+}

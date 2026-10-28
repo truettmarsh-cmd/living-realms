@@ -1,0 +1,12 @@
+{
+  "name": "Heraldry & More",
+  "icon": "minecraft:white_banner",
+  "category": "livingrealms:pack",
+  "sortnum": 8,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Knights Heraldry$() armour and weapons join the Blacksmith's patterns and unit kits, like Epic Knights gear.$(br2)$(l)Commanders Vision$() and $(l)Recruits Extras$() already work with your town soldiers: they are your own recruits."
+    }
+  ]
+}

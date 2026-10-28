@@ -22,6 +22,7 @@ public final class View {
         t.putBoolean("ruler", p.getUUID().equals(s.owner));
         t.putInt("kingdomCities", Kingdoms.cities(manager, s).size());
         t.putString("raidStatus", s.raidStatus);
+        t.put("compat", livingrealms.compat.Compat.view(s, p));
         t.putBoolean("autoBuild", s.autoBuild);
         t.putString("autoBuildStatus", AutoBuild.status(s));
         t.putBoolean("autoResearch", s.autoResearch);

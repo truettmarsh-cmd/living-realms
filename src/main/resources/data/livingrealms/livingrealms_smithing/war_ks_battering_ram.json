@@ -1,0 +1,18 @@
+{
+ "name": "Battering ram (Kingdom Sieges)",
+ "requires_mod": "kingdomsieges",
+ "order": 104,
+ "color": "#7A6A5A",
+ "research": "engineering",
+ "pieces": {
+  "war_machine": {
+   "item": "kingdomsieges:battering_ram_spawner",
+   "cost": {
+    "#minecraft:logs": 16,
+    "#minecraft:planks": 16,
+    "minecraft:iron_ingot": 12,
+    "minecraft:leather": 6
+   }
+  }
+ }
+}

@@ -1,0 +1,19 @@
+{
+ "name": "Drakkar (Small Ships)",
+ "requires_mod": "smallships",
+ "order": 115,
+ "color": "#4A6A8B",
+ "research": "logistics",
+ "pieces": {
+  "war_machine": {
+   "item": "smallships:oak_drakkar",
+   "cost": {
+    "#minecraft:logs": 20,
+    "#minecraft:planks": 48,
+    "#minecraft:wool": 10,
+    "minecraft:string": 8,
+    "minecraft:iron_ingot": 4
+   }
+  }
+ }
+}

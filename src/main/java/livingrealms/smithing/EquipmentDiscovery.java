@@ -17,6 +17,7 @@ import java.util.*;
 public final class EquipmentDiscovery {
     public static Set<String> namespaces() {
         Set<String> ids = new HashSet<>(Set.of("magistuarmory", "iceandfire"));
+        ids.addAll(livingrealms.compat.Compat.equipmentMods());
         boolean changed;
         do {
             changed = false;

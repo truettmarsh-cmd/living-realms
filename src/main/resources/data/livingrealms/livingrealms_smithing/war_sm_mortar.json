@@ -1,0 +1,19 @@
+{
+ "name": "Mortar",
+ "requires_mod": "siegemachines",
+ "order": 95,
+ "color": "#6E6E78",
+ "research": "steelmaking",
+ "pieces": {
+  "war_machine": {
+   "item": "siegemachines:mortar",
+   "cost": {
+    "#minecraft:planks": 40,
+    "minecraft:iron_ingot": 15,
+    "minecraft:string": 1,
+    "minecraft:leather": 2,
+    "minecraft:stick": 16
+   }
+  }
+ }
+}

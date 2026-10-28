@@ -1,0 +1,12 @@
+{
+  "name": "Shipwrights",
+  "icon": "minecraft:oak_boat",
+  "category": "livingrealms:pack",
+  "sortnum": 3,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "With $(l)Small Ships$(), the War machines tab also builds cogs (Trade), briggs, galleys and drakkars (Logistics) and ship cannons (Steelmaking).$(br2)Promote a level 5 recruit to $(l)Captain$() to sail one with its crew."
+    }
+  ]
+}

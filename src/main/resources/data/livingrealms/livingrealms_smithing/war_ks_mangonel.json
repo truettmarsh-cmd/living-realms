@@ -1,0 +1,18 @@
+{
+ "name": "Mangonel (Kingdom Sieges)",
+ "requires_mod": "kingdomsieges",
+ "order": 101,
+ "color": "#7A6A5A",
+ "research": "engineering",
+ "pieces": {
+  "war_machine": {
+   "item": "kingdomsieges:mangonel_spawner",
+   "cost": {
+    "#minecraft:logs": 12,
+    "#minecraft:planks": 24,
+    "minecraft:iron_ingot": 8,
+    "minecraft:string": 8
+   }
+  }
+ }
+}

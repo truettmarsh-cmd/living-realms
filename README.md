@@ -63,6 +63,26 @@ Server config `warfare.npcRaids` enables NPC attacks (default true); `raidRange`
 - Villager Recruits 1.15+
 - Optional: Epic Knights and its addons, Ice and Fire (and its required Citadel dependency), ChoiceTheorem's Overhauled Village, Towns & Towers
 
+## Works with your pack
+
+Living Realms ties into the other kingdom mods of a Villager Recruits pack when they are installed; with any of them missing, nothing changes. The City Manager Overview shows a **Pack** strip (hover for details), and each part has a switch under `compat` in `serverconfig/livingrealms-server.toml`.
+
+| Mod | What it does in your kingdom | Switch |
+| --- | --- | --- |
+| Vassal & Suzerain | The Recruits faction you lead is titled by kingdom size: King (3 cities or a Capital), Duke (2 cities or a City), Count. A vassal sits one rank below its liege. Liege and vassal kingdoms cannot raid each other, and a liege hears when a vassal's city is raided. Titles you set by hand are left alone. | `feudalTitles`, `feudalOaths` |
+| Ranks and Titles | Your faction's Leader title (tab list) shows the same rank, unless you renamed it. | `rankTitles` |
+| Siege Weapons, Medieval Siege Machines (+ Recruits Siege Compatibility), Kingdom Sieges | The Blacksmith gets a War machines tab. A raid takes one engine from the attacking city's stockpile; it sets up outside the target with a crew and ammunition and bombards the centre (a Recruits Siege Engineer for Siege Weapons, a bowman for Siege Machines). A surviving engine returns to the stockpile. NPC kingdoms of City rank bring one too. | `siegeTrains`, `npcSiegeTrains` |
+| Small Ships | Cogs, briggs, galleys, drakkars and ship cannons on the War machines tab; Captain promotion in Recruit Command. | |
+| Siege Overhaul | Its raiders (soldiers, not monsters) ring the town alarm and the garrison engages them. | `raiderAlarm` |
+| Recruits Morale addon | Granting (+10) or declining (−8) a request also moves battle morale; veterans get +5 max battle morale per rank (up to 150). | `morale` |
+| Workers | Your Workers-mod workers inside a town fill its matching jobs (farms, lumber camps, mines, builders, markets, couriers, inns), freeing settlers. | `workersStaffTowns` |
+| Corpse | After a fight in town, unused gear on your fallen soldiers' corpses returns to the armoury and the body is laid at the town centre with its worn gear. Soldiers who fall abroad are noted with where the body lies. | `corpseSalvage` |
+| Knights Heraldry | Its armour and weapons become smithing patterns and kit choices. | `heraldryGear` |
+
+Commanders Vision and Recruits Extras need nothing extra: town soldiers are ordinary recruits you own, so they are highlighted and commanded like any other.
+
+To test with the pack, put the pack's jars in `libs/pack/` (see `build.gradle`) and run `./gradlew runServer -PcompatTest -PcompatTestDir=<dir> -PpackMods`; without `-PpackMods` the same test checks that every integration stays inactive. `-PpackMods` also works with the other test flags.
+
 ## Data packs
 
 These folders can be overridden or extended with data packs:

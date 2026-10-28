@@ -58,6 +58,7 @@ public final class Config {
         ORIGIN_ELF = b.defineInRange("elfWeight", 9, 0, 10000);
         ORIGIN_GIANT = b.defineInRange("giantWeight", 3, 0, 10000);
         b.pop();
+        livingrealms.compat.CompatConfig.define(b);
         SPEC = b.build();
     }
 

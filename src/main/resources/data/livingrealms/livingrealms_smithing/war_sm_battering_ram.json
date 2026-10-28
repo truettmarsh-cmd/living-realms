@@ -1,0 +1,18 @@
+{
+ "name": "Battering ram",
+ "requires_mod": "siegemachines",
+ "order": 97,
+ "color": "#9C7A55",
+ "research": "engineering",
+ "pieces": {
+  "war_machine": {
+   "item": "siegemachines:battering_ram",
+   "cost": {
+    "#minecraft:logs": 12,
+    "#minecraft:planks": 30,
+    "minecraft:iron_ingot": 10,
+    "minecraft:leather": 4
+   }
+  }
+ }
+}

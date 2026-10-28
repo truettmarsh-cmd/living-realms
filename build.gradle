@@ -16,6 +16,8 @@ minecraft {
         configureEach {
             workingDirectory project.file(project.findProperty('runDir') ?: 'run')
             property 'forge.logging.console.level', 'info'
+            // Some pack mods only pass DistExecutor's dev-time referent check in production mode.
+            if (project.hasProperty('packMods')) property 'production', 'true'
             args '--mixin', 'livingrealms.mixins.json'
             // Recruits ships mixins with SRG refmaps
             property 'mixin.env.remapRefMap', 'true'
@@ -45,6 +47,10 @@ minecraft {
                 workingDirectory project.file(project.property('warfareTestDir'))
                 property 'livingrealms.warfareTest', 'true'
             }
+            if (project.hasProperty('compatTest')) {
+                workingDirectory project.file(project.property('compatTestDir'))
+                property 'livingrealms.compatTest', 'true'
+            }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')
                 property 'livingrealms.militaryTest', 'true'
@@ -55,7 +61,7 @@ minecraft {
 
 repositories {
     // Recruits and Workers jars copied from the pack (libs/ is git-ignored)
-    flatDir { dir 'libs' }
+    flatDir { dirs 'libs', 'libs/pack' }
 }
 
 dependencies {
@@ -70,6 +76,17 @@ dependencies {
     if (project.hasProperty('patchouli')) runtimeOnly fg.deobf('blank:patchouli:1.0')
     if (project.hasProperty('pehkui')) runtimeOnly fg.deobf('blank:pehkui:3.8.2')
     if (project.hasProperty('workers')) runtimeOnly fg.deobf("blank:workers:2.0.3")
+    // Pack mods (libs/pack, from the modpack). Only livingrealms.compat touches them; -PpackMods also runs them.
+    def packApi = ['vassalsuzerain:1.1.0', 'ranksandtitles:1.2.0', 'recruitsmoraleaddon:1.0.0', 'corpse-forge-1.20.1:1.0.23']
+    for (coordinate in packApi) compileOnly fg.deobf('blank:' + coordinate)
+    if (project.hasProperty('packMods')) {
+        for (coordinate in packApi + ['siegeweapons-1.20.1:0.2.5', 'siege-machines-1.20.1-forge:1.39', 'recruitssiegecompat:2.1.0',
+                'smallships-forge-1.20.1:2.0.0-b1.4', 'siegeoverhaul:4.51.11', 'kingdomsieges-forge-1.20.1:1.0.0',
+                'stoneycore-forge-1.20.1:1.0.0-rev7', 'commandersvision:1.0-SNAPSHOT',
+                'recruitsaddon:1.2.1', 'workers:2.0.3', 'geckolib:4.8.4',
+                'architectury:9.2.14', 'clothconfig:11.1.136'])
+            runtimeOnly fg.deobf('blank:' + coordinate)
+    }
 }
 
 tasks.named('processResources', ProcessResources).configure {

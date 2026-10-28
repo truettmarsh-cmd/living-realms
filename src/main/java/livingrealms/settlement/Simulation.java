@@ -84,6 +84,7 @@ public final class Simulation {
         if (building) order.add(Job.BUILDER);
         order.addAll(List.of(Job.FARMER, Job.SMITH, Job.SCHOLAR, Job.LUMBERJACK, Job.MINER, Job.MERCHANT, Job.CRAFTSMAN,
                 Job.HAULER, Job.INNKEEPER, Job.PRIEST, Job.STABLEHAND, Job.BUILDER));
+        livingrealms.compat.Compat.staff(s, d);
         int free = s.population;
         for (Job j : order) {
             int want = d.slots.getOrDefault(j, 0) - d.workers.getOrDefault(j, 0);
@@ -623,7 +624,7 @@ public final class Simulation {
     static Mob nearestThreat(ServerLevel level, Settlement s, BlockPos from) {
         int r = s.radius();
         List<Mob> mobs = level.getEntitiesOfClass(Mob.class, new AABB(s.center).inflate(r, 32, r),
-                m -> m instanceof Enemy && m.isAlive() && s.contains(m.blockPosition()));
+                m -> (m instanceof Enemy || livingrealms.compat.Compat.hostile(m)) && m.isAlive() && s.contains(m.blockPosition()));
         Mob best = null;
         double bd = Double.MAX_VALUE;
         for (Mob m : mobs) {
@@ -637,7 +638,7 @@ public final class Simulation {
     public static void watch(ServerLevel level, Settlement s) {
         int r = s.radius();
         int hostiles = level.getEntitiesOfClass(Mob.class, new AABB(s.center).inflate(r, 32, r),
-                m -> m instanceof Enemy && m.isAlive() && s.contains(m.blockPosition())
+                m -> (m instanceof Enemy || livingrealms.compat.Compat.hostile(m)) && m.isAlive() && s.contains(m.blockPosition())
                         && m.distanceToSqr(s.center.getX(), s.center.getY(), s.center.getZ()) < (double) r * r * 0.5).size();
         long now = level.getGameTime();
         boolean was = s.alarmUntil > now;

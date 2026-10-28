@@ -1,0 +1,16 @@
+{
+  "name": "Fallen Soldiers",
+  "icon": "minecraft:skeleton_skull",
+  "category": "livingrealms:pack",
+  "sortnum": 7,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "With $(l)Corpse$(), Villager Recruits leaves a body holding a fallen soldier's kit. Once the fight in your town is over, $(l)unused gear$() goes back to the armoury and the body is laid at the $(l)town centre$() with whatever worn gear is left."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A soldier who falls abroad, on a raid, is noted in the chronicle with the place where the body lies."
+    }
+  ]
+}

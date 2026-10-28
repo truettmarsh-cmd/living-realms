@@ -1,0 +1,19 @@
+{
+ "name": "Culverin",
+ "requires_mod": "siegemachines",
+ "order": 96,
+ "color": "#6E6E78",
+ "research": "steelmaking",
+ "pieces": {
+  "war_machine": {
+   "item": "siegemachines:culverin",
+   "cost": {
+    "#minecraft:planks": 60,
+    "minecraft:iron_ingot": 22,
+    "minecraft:string": 1,
+    "minecraft:leather": 4,
+    "minecraft:stick": 16
+   }
+  }
+ }
+}

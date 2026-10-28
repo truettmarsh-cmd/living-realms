@@ -1,0 +1,17 @@
+{
+ "name": "Cannon (Kingdom Sieges)",
+ "requires_mod": "kingdomsieges",
+ "order": 102,
+ "color": "#7A6A5A",
+ "research": "steelmaking",
+ "pieces": {
+  "war_machine": {
+   "item": "kingdomsieges:cannon_spawner",
+   "cost": {
+    "#minecraft:logs": 6,
+    "minecraft:iron_ingot": 24,
+    "minecraft:gunpowder": 4
+   }
+  }
+ }
+}

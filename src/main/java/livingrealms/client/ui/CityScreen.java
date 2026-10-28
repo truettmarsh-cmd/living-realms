@@ -399,6 +399,7 @@ public class CityScreen extends Screen {
         ui.endScroll();
         y += rh + 6;
         if (mine() && !v().getBoolean("ai")) { autonomy(y); y += 22; }
+        y += CompatPanel.draw(ui, cx, y, cw, v().getCompound("compat"));
         // chronicle
         int lh = cy + ch - y;
         ui.card(cx, y, cw, lh);
@@ -1363,9 +1364,9 @@ public class CityScreen extends Screen {
 
     // ------------------------------------------------------------------ blacksmith
 
-    static final String[] FORGE_PIECES = {"SET", "HELMET", "CHESTPLATE", "LEGGINGS", "BOOTS", "SWORD", "AXE", "MACE", "LANCE", "SHIELD", "BOW", "CROSSBOW", "ARROWS", "DRAGON_ARMOR", "SPECIAL_WEAPON"};
+    static final String[] FORGE_PIECES = {"SET", "HELMET", "CHESTPLATE", "LEGGINGS", "BOOTS", "SWORD", "AXE", "MACE", "LANCE", "SHIELD", "BOW", "CROSSBOW", "ARROWS", "DRAGON_ARMOR", "SPECIAL_WEAPON", "WAR_MACHINE"};
     static final Item[] FORGE_ICONS = {Items.ARMOR_STAND, Items.IRON_HELMET, Items.IRON_CHESTPLATE, Items.IRON_LEGGINGS, Items.IRON_BOOTS, Items.IRON_SWORD,
-            Items.IRON_AXE, Items.IRON_SHOVEL, Items.TRIDENT, Items.SHIELD, Items.BOW, Items.CROSSBOW, Items.ARROW, Items.IRON_HORSE_ARMOR, Items.BLAZE_ROD};
+            Items.IRON_AXE, Items.IRON_SHOVEL, Items.TRIDENT, Items.SHIELD, Items.BOW, Items.CROSSBOW, Items.ARROW, Items.IRON_HORSE_ARMOR, Items.BLAZE_ROD, Items.DISPENSER};
 
     void forge() {
         milTab = 2;
@@ -1378,9 +1379,10 @@ public class CityScreen extends Screen {
         // pieces
         int lw = 92;
         ui.card(cx, top, lw, ch - 98);
-        int pieceScroll = ui.beginScroll("forge-pieces", cx + 2, top + 2, lw - 4, ch - 102, FORGE_PIECES.length * 15);
+        int shown = CompatPanel.forgePieces(FORGE_PIECES.length);
+        int pieceScroll = ui.beginScroll("forge-pieces", cx + 2, top + 2, lw - 4, ch - 102, shown * 15);
         int y = top + 4 - pieceScroll;
-        for (int i = 0; i < FORGE_PIECES.length; i++) {
+        for (int i = 0; i < shown; i++) {
             final String p = FORGE_PIECES[i];
             boolean sel = p.equals(forgePiece), on = ui.over(cx + 2, y, lw - 4, 15);
             if (sel) ui.round(cx + 3, y, lw - 6, 15, 4, 0xFF2E3542);

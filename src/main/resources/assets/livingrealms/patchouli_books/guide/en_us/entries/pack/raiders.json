@@ -1,0 +1,12 @@
+{
+  "name": "Siege Overhaul Raiders",
+  "icon": "minecraft:bell",
+  "category": "livingrealms:pack",
+  "sortnum": 4,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Siege Overhaul$()'s raiders are soldiers, not monsters. Living Realms now counts them as hostiles: three in your town ring the $(l)alarm$(), your stance rallies the garrison, and idle defenders attack the nearest raider."
+    }
+  ]
+}
