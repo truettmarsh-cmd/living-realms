@@ -20,6 +20,8 @@ public final class AiPlanner {
         if (s.tier.next() != null && s.tierBlockers().isEmpty()) {
             s.tier = s.tier.next();
         }
+        // After an attack, wealth goes to soldiers before new buildings.
+        if (Strategy.rearming(SettlementManager.get(level.getServer()), s, Simulation.AI_GUARDS[s.tier.ordinal()], level.getGameTime())) return;
         int builders = Math.max(1, s.d.workers.getOrDefault(Job.BUILDER, 0));
         long active = s.plots.stream().filter(Plot::active).count();
         if (active >= Math.max(1, builders / 2) || s.wealth < 25) return;

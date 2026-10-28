@@ -352,9 +352,8 @@ public final class Simulation {
         if (s.isAi()) {
             s.researchBank += pts * 0.5;
             if (s.activeResearch.isEmpty()) {
-                List<String> open = new ArrayList<>();
-                for (var n : ResearchTree.nodes().values()) if (s.cannotResearch(n.id()) == null) open.add(n.id());
-                if (!open.isEmpty()) s.activeResearch = open.get(new Random().nextInt(open.size()));
+                String next = Strategy.aiResearch(s);
+                if (next != null) s.activeResearch = next;
             }
         }
         if (s.activeResearch.isEmpty()) {
@@ -455,7 +454,8 @@ public final class Simulation {
 
     /** AI towns keep a guard that grows with their rank; one recruit joins per step. */
     static void aiGarrison(ServerLevel level, Settlement s) {
-        if (s.soldiers.size() >= AI_GUARDS[s.tier.ordinal()] || s.wealth < 20) return;
+        int goal = Strategy.guardGoal(SettlementManager.get(level.getServer()), s, AI_GUARDS[s.tier.ordinal()], level.getGameTime());
+        if (s.soldiers.size() >= goal || s.wealth < 20) return;
         UnitType u = s.soldiers.size() % 3 == 2 ? UnitType.BOWMAN : s.tier.number() >= 3 && s.soldiers.size() % 4 == 1 ? UnitType.SHIELDBEARER : UnitType.FOOTMAN;
         BlockPos at = musterPoint(level, s, s.soldiers.size());
         Entity e = RecruitsBridge.spawn(level, u, at, s.kingdomId(), s.name + " " + u.label);

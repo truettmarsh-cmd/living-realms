@@ -145,6 +145,16 @@ public final class VillageExpansionSelfTest {
         var view = livingrealms.net.View.of(capital, owner).getCompound("vx");
         check(view.getList("factions", 10).size() >= 1 && view.getBoolean("ruler"), "City Manager lists nearby factions");
 
+        // ---- an outmatched faction does not declare war (measured strength, not VE's empty assessment of a claimless realm)
+        Realms.NEXT_WAR.clear();
+        List<Settlement.Soldier> host = new ArrayList<>();
+        for (int i = 0; i < 40; i++) { var g = new Settlement.Soldier(); g.entity = UUID.randomUUID(); g.type = UnitType.FOOTMAN; g.name = "Host"; host.add(g); }
+        capital.soldiers.addAll(host);
+        var middling = new LegacyRandomSource(1) { @Override public double nextDouble() { return 0.2; } };
+        Realms.considerWars(server, m, middling, true);
+        check(!VxBridge.atWar(vf, realm) && !VxBridge.atWar(other, realm), "Outmatched factions keep the peace (recruits: " + VxBridge.recruitCount(vf) + ", " + VxBridge.recruitCount(other) + ")");
+        capital.soldiers.removeAll(host);
+
         // ---- they declare war on you
         Realms.NEXT_WAR.clear();
         var always = new LegacyRandomSource(1) { @Override public double nextDouble() { return 0; } };
@@ -181,6 +191,19 @@ public final class VillageExpansionSelfTest {
         capital.soldiers.remove(ds);
         defender.discard();
         for (Settlement t : m.all()) t.raidCooldown = 0;
+
+        // ---- a beaten, outmatched faction sues for peace; a winning one does not
+        check(Strategy.defeats(m, ma.kingdomId(), level.getGameTime()) >= 0.9, "The repelled raid is remembered");
+        ((net.minecraft.world.level.storage.ServerLevelData) level.getLevelData()).setGameTime(level.getGameTime() + 4000); // past VE's wartime peace lock
+        long now = level.getGameTime();
+        Realms.considerWars(server, m, middling, true);
+        check(!Realms.offersPeace(vf, realm, now), "A faction stronger than the realm fights on");
+        capital.soldiers.addAll(host);
+        Realms.considerWars(server, m, middling, true);
+        check(Realms.offersPeace(vf, realm, now) && capital.log.stream().anyMatch(l -> l.contains("sues for peace")), "Beaten faction sues for peace");
+        check(Realms.suing(m, ma, capital, now) && Raids.npcTarget(server, m, ma) == null, "No raids while suing for peace");
+        check(Realms.peace(owner, m, capital, vf) == null && !VxBridge.atWar(vf, realm) && !Realms.offersPeace(vf, realm, now), "The ruler accepts the offer");
+        capital.soldiers.removeAll(host);
 
         // ---- they take your capital, and with it every city
         Entity guard = RecruitsBridge.spawn(level, UnitType.FOOTMAN, province.center.above(), owner.getUUID(), "Guard");

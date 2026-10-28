@@ -60,6 +60,7 @@ VE also filters every recruit's target change (`RecruitTargetStickiness`, `Facti
 - At war, villages march on your cities through Living Realms' raid system, using their own recruits.
 - You declare war, make peace (VE's `aiWouldAccept` decides; a one-day truce follows) and raid villages from **Military → Realms**.
 - Raids on or by villages require war. VE-on-VE wars stay entirely VE's.
+- Living Realms feeds VE's war odds with measured strength, lets a beaten faction sue for peace, and picks raid targets by odds and value. See [kingdom-ai.md](kingdom-ai.md).
 
 **Conquest both ways.** Living Realms' rule stands: one capital, and losing it loses every city.
 - `Kingdoms.transfer` moves VE records before Living Realms ones, ordinary villages first and the capital last, so VE never splits a faction that Living Realms annexes whole:
