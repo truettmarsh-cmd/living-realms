@@ -9,6 +9,10 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
 /** What the City Manager shows, built on the server for one player. */
 public final class View {
     public static CompoundTag of(Settlement s, ServerPlayer p) {
@@ -22,6 +26,8 @@ public final class View {
         t.putBoolean("ruler", p.getUUID().equals(s.owner));
         t.putInt("kingdomCities", Kingdoms.cities(manager, s).size());
         t.putString("raidStatus", s.raidStatus);
+        CompoundTag raid = raid(manager, s);
+        if (raid != null) t.put("raid", raid);
         t.put("compat", livingrealms.compat.Compat.view(s, p));
         t.putBoolean("autoBuild", s.autoBuild);
         t.putString("autoBuildStatus", AutoBuild.status(s));
@@ -152,6 +158,41 @@ public final class View {
         livingrealms.military.SoldierRanks.describe(s, so, t);
         livingrealms.military.SoldierSpecials.describe(s, so, t);
         return t;
+    }
+
+    /** The raid this settlement fights in, for progress bars: role, both sides, hold and time-limit progress, status line. */
+    public static CompoundTag raid(SettlementManager m, Settlement s) {
+        for (Raids.Raid r : m.raids) {
+            boolean attacking = s.id.equals(r.source), defending = s.id.equals(r.target);
+            if (!attacking && !defending) continue;
+            Settlement source = m.get(r.source), target = m.get(r.target);
+            CompoundTag t = new CompoundTag();
+            t.putBoolean("attacking", attacking);
+            t.putUUID("town", s.id);
+            t.putString("source", source == null ? "?" : source.name);
+            t.putString("target", target == null ? "?" : target.name);
+            t.putInt("held", r.held);
+            t.putInt("hold", Raids.HOLD_TICKS);
+            t.putInt("elapsed", r.elapsed);
+            t.putInt("max", Raids.MAX_TICKS);
+            t.putInt("soldiers", r.soldiers.size());
+            t.putString("status", target == null ? s.raidStatus : target.raidStatus);
+            return t;
+        }
+        return null;
+    }
+
+    /** Raids involving any settlement this player owns, for the HUD while no screen is open. */
+    public static ListTag raids(SettlementManager m, ServerPlayer p) {
+        ListTag out = new ListTag();
+        Set<UUID> seen = new HashSet<>();
+        for (Raids.Raid r : m.raids) for (UUID side : new UUID[]{r.target, r.source}) {
+            Settlement s = m.get(side);
+            if (s == null || !p.getUUID().equals(s.owner) || !seen.add(side)) continue;
+            CompoundTag t = raid(m, s);
+            if (t != null) out.add(t);
+        }
+        return out;
     }
 
     private View() {}

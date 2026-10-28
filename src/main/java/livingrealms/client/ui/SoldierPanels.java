@@ -84,7 +84,7 @@ final class SoldierPanels {
         int points = SoldierSkills.availablePoints(xp, learned);
         int maxPoints = so.contains("maxPoints") ? so.getInt("maxPoints") : SoldierSkills.MAX_POINTS;
         boolean seen = so.getBoolean("seen"), progression = so.contains("xpNeeded");
-        int head = progression ? 40 : 0;
+        int head = progression ? 24 : 0;
         int footer = host.royalFooter() ? 90 : 0;
         String intro = "Kills give 25 XP; damage, alarms, raid defence and escort duty add up to 75 XP a day. Drill: 40 XP. 50 XP per point (" + maxPoints + " max); respec refunds all.";
         int extra = Math.max(0, ui.wrapHeight(intro, cw - 12) - 20);
@@ -96,7 +96,9 @@ final class SoldierPanels {
             int into = so.getInt("xpInto"), need = Math.max(1, so.getInt("xpNeeded"));
             int bw = Math.max(40, cw - 200);
             ui.bar(cx + 4, y + 15, bw, 5, into / (float) need, GOLD, GOLD_DK);
-            ui.text(ui.clip(into + " / " + need + " XP to next rank", bw), cx + 4, y + 24, FAINT);
+            String toNext = into + " / " + need + " XP to next rank";
+            ui.text(ui.clip(toNext, bw), cx + 4, y + 24, FAINT);
+            if (ui.over(cx + 4, y + 13, bw, 20)) ui.tip(toNext);
             int bx = cx + bw + 12;
             if (so.contains("drillCost")) {
                 boolean ready = so.getBoolean("drillReady");

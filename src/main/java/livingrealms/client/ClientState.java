@@ -13,6 +13,8 @@ import java.util.*;
 public final class ClientState {
     @Nullable public static CompoundTag view;
     public static List<CompoundTag> towns = new ArrayList<>();
+    /** Raids your towns are fighting, refreshed with the nearby plots; shown on the HUD. */
+    public static List<CompoundTag> raids = new ArrayList<>();
     private static final Map<String, Blueprint> BLUEPRINTS = new HashMap<>();
     private static final Set<String> REQUESTED = new HashSet<>();
 
@@ -35,6 +37,7 @@ public final class ClientState {
     public static void clear() {
         view = null;
         towns = new ArrayList<>();
+        raids = new ArrayList<>();
         BLUEPRINTS.clear();
         REQUESTED.clear();
     }
@@ -43,6 +46,9 @@ public final class ClientState {
         List<CompoundTag> l = new ArrayList<>();
         for (Tag e : t.getList("towns", Tag.TAG_COMPOUND)) l.add((CompoundTag) e);
         towns = l;
+        List<CompoundTag> r = new ArrayList<>();
+        for (Tag e : t.getList("raids", Tag.TAG_COMPOUND)) r.add((CompoundTag) e);
+        raids = r;
     }
 
     /** The town the player is standing in, if they own it. */

@@ -180,6 +180,7 @@ public final class Net {
             }
             CompoundTag out = new CompoundTag();
             out.put("towns", towns);
+            out.put("raids", View.raids(m, p));
             send(p, "plots", out);
         }
     }
