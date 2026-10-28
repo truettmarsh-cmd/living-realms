@@ -21,7 +21,7 @@ public final class RecruitsBridge {
     /** Recruits follow states: 0 wander, 1 follow owner, 2 hold here, 3 back to hold position. */
     static final int FOLLOW = 1, HOLD_POS = 3;
     /** Recruits aggro states: 0 neutral, 1 aggressive, 2 raid, 3 passive. */
-    static final int AGGRESSIVE = 1;
+    static final int AGGRESSIVE = 1, PASSIVE = 3;
 
     public static boolean isRecruit(Entity e) { return e instanceof AbstractRecruitEntity; }
 
@@ -140,17 +140,65 @@ public final class RecruitsBridge {
         clearRaidTarget(r);
     }
 
-    public static void raidOrder(Entity e, BlockPos center, @Nullable net.minecraft.world.entity.LivingEntity enemy) {
+    /**
+     * A battle order: hold this spot and fight this enemy. Recruits' melee goal outranks its hold-position goal, so melee
+     * soldiers still close in on their target; its bow and crossbow goals only steer the head, so archers shoot from the spot.
+     */
+    public static void raidOrder(Entity e, BlockPos hold, @Nullable net.minecraft.world.entity.LivingEntity enemy) {
         if (!(e instanceof AbstractRecruitEntity r)) return;
         aggressive(r);
-        holdAt(r, enemy == null ? center : enemy.blockPosition());
+        holdAt(r, hold);
         r.setTarget(enemy);
-        if (enemy == null) r.getNavigation().moveTo(center.getX() + .5, center.getY(), center.getZ() + .5, 1.0);
+        if (enemy == null) r.getNavigation().moveTo(hold.getX() + .5, hold.getY(), hold.getZ() + .5, 1.0);
+    }
+
+    /** Falls back to a rally point: passive, so it does not turn on the next enemy it passes. */
+    public static void fallBack(Entity e, BlockPos rally) {
+        if (!(e instanceof AbstractRecruitEntity r)) return;
+        r.setAggroState(PASSIVE);
+        r.setTarget(null);
+        holdAt(r, rally);
+        r.getNavigation().moveTo(rally.getX() + .5, rally.getY(), rally.getZ() + .5, 1.15);
     }
 
     public static void clearRaidTarget(Entity e) {
-        if (e instanceof AbstractRecruitEntity r) { r.setTarget(null); r.setLastHurtByMob(null); }
+        if (e instanceof AbstractRecruitEntity r) {
+            r.setTarget(null); r.setLastHurtByMob(null);
+            rejoin(r);
+        }
     }
+
+    /** Ends a fall-back: the soldier is aggressive again. Also for soldiers that were unloaded when their battle ended. */
+    public static void rejoin(Entity e) {
+        if (e instanceof AbstractRecruitEntity r && r.getPersistentData().getBoolean(BattleAI.FALLBACK)) {
+            r.getPersistentData().remove(BattleAI.FALLBACK);
+            aggressive(r);
+        }
+    }
+
+    /** Bow and crossbow soldiers (Recruits' ranged classes, or anyone holding a ranged weapon). */
+    public static boolean ranged(Entity e) {
+        if (e instanceof com.talhanation.recruits.entities.IRangedRecruit) return true;
+        if (!(e instanceof net.minecraft.world.entity.LivingEntity l)) return false;
+        WeaponProficiency w = WeaponProficiency.classify(l.getMainHandItem());
+        return w != null && w.ranged();
+    }
+
+    /** Shieldbearers, or anyone with a shield in the off hand. */
+    public static boolean shielded(Entity e) {
+        return e instanceof com.talhanation.recruits.entities.RecruitShieldmanEntity
+                || e instanceof net.minecraft.world.entity.LivingEntity l && l.getOffhandItem().getItem() instanceof net.minecraft.world.item.ShieldItem;
+    }
+
+    /** Recruits' own idea of standable ground at that column. */
+    public static BlockPos surface(net.minecraft.world.level.Level level, BlockPos pos) {
+        return com.talhanation.recruits.util.FormationUtils.getPositionOrSurface(level, pos);
+    }
+
+    @Nullable
+    public static Vec3 holdPos(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getHoldPos() : null; }
+
+    public static int aggroState(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getState() : -1; }
 
     public static int level(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getXpLevel() : 0; }
 

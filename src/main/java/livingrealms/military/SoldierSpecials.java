@@ -144,7 +144,7 @@ public final class SoldierSpecials {
             }
         }
         if (ready(so, SpecialSkill.TAUNT, time)) {
-            List<Mob> foes = level.getEntitiesOfClass(Mob.class, mob.getBoundingBox().inflate(8), m -> m instanceof Enemy && m.isAlive()
+            List<Mob> foes = level.getEntitiesOfClass(Mob.class, mob.getBoundingBox().inflate(8), m -> hostile(mob, m) && m.isAlive()
                     && m.getTarget() != null && m.getTarget() != mob && protects(s, m.getTarget()));
             if (!foes.isEmpty() && use(so, SpecialSkill.TAUNT, time)) {
                 for (Mob foe : foes.subList(0, Math.min(4, foes.size()))) {
@@ -186,7 +186,7 @@ public final class SoldierSpecials {
         if (mob.getVehicle() != null && DragonRiders.dragon(mob.getVehicle()) && d <= 32 && use(so, SpecialSkill.DRAGONFIRE_STRAFE, time)) {
             List<LivingEntity> hit = new ArrayList<>(List.of(target));
             hit.addAll(level.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(4),
-                    x -> x != target && x instanceof Enemy && x.isAlive() && !mob.isAlliedTo(x)).stream().limit(3).toList());
+                    x -> x != target && hostile(mob, x) && x.isAlive() && !mob.isAlliedTo(x)).stream().limit(3).toList());
             Vec3 from = mob.getEyePosition(), to = target.position();
             for (int i = 0; i <= 12; i++) {
                 Vec3 p = from.lerp(to, i / 12.0);
@@ -226,7 +226,7 @@ public final class SoldierSpecials {
         }
         if (!projectile && wields(SpecialSkill.CLEAVE, weapon) && ready(so, SpecialSkill.CLEAVE, time)) {
             List<LivingEntity> others = level.getEntitiesOfClass(LivingEntity.class, victim.getBoundingBox().inflate(3),
-                    x -> x != victim && x != attacker && x instanceof Enemy && x.isAlive() && !attacker.isAlliedTo(x));
+                    x -> x != victim && x != attacker && hostile(attacker, x) && x.isAlive() && !attacker.isAlliedTo(x));
             if (!others.isEmpty() && use(so, SpecialSkill.CLEAVE, time)) {
                 busy = true;
                 try { for (LivingEntity x : others.subList(0, Math.min(3, others.size()))) x.hurt(level.damageSources().mobAttack(attacker), damage * .4f); }
@@ -277,8 +277,12 @@ public final class SoldierSpecials {
         for (Settlement.Soldier so : s.soldiers) if (so.entity.equals(x.getUUID())) return true;
         return false;
     }
+    /** Monsters, and in a raid the soldiers of the other side, which are not monsters to Minecraft. */
+    public static boolean hostile(LivingEntity self, Entity other) {
+        return other instanceof Enemy || BattleAI.hostile(self, other);
+    }
     static int hostiles(LivingEntity e, double r) {
-        return e.level().getEntitiesOfClass(LivingEntity.class, e.getBoundingBox().inflate(r), x -> x instanceof Enemy && x.isAlive()).size();
+        return e.level().getEntitiesOfClass(LivingEntity.class, e.getBoundingBox().inflate(r), x -> hostile(e, x) && x.isAlive()).size();
     }
     static void fx(ServerLevel level, Entity at, ParticleOptions particle, int count, SoundEvent sound, float pitch) {
         level.sendParticles(particle, at.getX(), at.getY(.6), at.getZ(), count, .4, .4, .4, .05);

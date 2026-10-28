@@ -83,6 +83,12 @@ public final class Compat {
         try { SiegeTrains.recall(server, raid, source); } catch (Throwable t) { fail("siege", t); }
     }
 
+    /** Each second of an active raid: siege crews shift or lift their fire as the attackers close in. */
+    public static void raidTick(MinecraftServer server, Raids.Raid raid, Settlement target,
+                                java.util.List<? extends Entity> attackers, java.util.List<? extends Entity> defenders) {
+        try { SiegeTrains.aim(server, raid, target, attackers, defenders); } catch (Throwable t) { fail("siege", t); }
+    }
+
     /** Hostile soldiers the town's alarm should treat like monsters. */
     public static boolean hostile(Entity e) {
         return loaded(SIEGE_OVERHAUL) && on(CompatConfig.RAIDER_ALARM) && SiegeOverhaulCompat.raider(e);
