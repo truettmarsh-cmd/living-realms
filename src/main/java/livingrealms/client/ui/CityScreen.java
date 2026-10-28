@@ -1118,18 +1118,21 @@ public class CityScreen extends Screen {
 
     void milTabs() {
         boolean realms = realms();
-        int sw = realms ? 344 : 290;
-        ui.segments("mil", cx + cw - sw, cy + 2, sw, 16, realms ? new String[]{"Garrison", "Recruit", "Blacksmith", "Kits", "Honours", "Realms"}
+        int sw = milTabsWidth();
+        ui.segments("mil", cx + cw - sw, cy + 2, sw, 16, realms ? new String[]{"Garrison", "Recruit", "Smithy", "Kits", "Honours", "Realms"}
                 : new String[]{"Garrison", "Recruit", "Blacksmith", "Kits", "Honours"}, milTab, i -> {
             milTab = i;
             tab = i == 2 ? Tab.FORGE : Tab.MILITARY;
         });
     }
 
+    /** Room for the Military/Blacksmith tabs, leaving the page title readable. */
+    int milTabsWidth() { return Math.min(realms() ? 330 : 290, cw - (int) (ui.width("Blacksmith") * 1.4f) - 10); }
+
     void military() {
         if (milTab == 2 || milTab == 5 && !realms()) milTab = 0;
         ListTag soldiers = list("soldiers");
-        header("Military", soldiers.size() + " / " + v().getInt("garrisonCap") + " soldiers" + (list("training").isEmpty() ? "" : " · " + list("training").size() + " in training"), cw - (realms() ? 346 : 292));
+        header("Military", soldiers.size() + " / " + v().getInt("garrisonCap") + " soldiers" + (list("training").isEmpty() ? "" : " · " + list("training").size() + " in training"), cw - milTabsWidth() - 2);
         milTabs();
         switch (milTab) {
             case 1 -> recruit();
@@ -1379,7 +1382,7 @@ public class CityScreen extends Screen {
     void forge() {
         milTab = 2;
         int smiths = v().getCompound("jobs").contains("SMITH") ? v().getCompound("jobs").getIntArray("SMITH")[0] : 0;
-        header("Blacksmith", v().getInt("smithy") == 0 ? "Build a Smithy to take orders" : smiths + " smith" + (smiths == 1 ? "" : "s") + " at the forge", cw - 292);
+        header("Blacksmith", v().getInt("smithy") == 0 ? "Build a Smithy to take orders" : smiths + " smith" + (smiths == 1 ? "" : "s") + " at the forge", cw - milTabsWidth() - 2);
         milTabs();
         int top = cy + 30;
         Map<Item, Integer> stock = stock();

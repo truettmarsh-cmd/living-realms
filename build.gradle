@@ -31,6 +31,7 @@ minecraft {
             if (project.hasProperty('militaryUiTest')) property 'livingrealms.militaryUiTest', 'true'
             // ./gradlew runClient -PrecruitUiTest -PrunDir=run-recruit-ui : Recruit Command screenshots (see RecruitUiTour)
             if (project.hasProperty('recruitUiTest')) property 'livingrealms.recruitUiTest', 'true'
+            if (project.hasProperty('realmsUiTest')) property 'livingrealms.realmsUiTest', 'true'
             if (project.hasProperty('guideTest')) property 'livingrealms.guideTest', 'true'
             if (project.hasProperty('honoursUiTest')) property 'livingrealms.honoursUiTest', 'true'
             // ./gradlew runClient -ParchitectTest -PrunDir=<dir> : Architect view walkthrough with screenshots (see ArchitectTour)
