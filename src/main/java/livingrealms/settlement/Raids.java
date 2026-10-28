@@ -67,6 +67,8 @@ public final class Raids {
         if (!source.dim.equals(target.dim)) return "Raids require cities in the same dimension";
         if (source.center.distSqr(target.center) > (double) Config.RAID_RANGE.get() * Config.RAID_RANGE.get()) return "Target is beyond raid range";
         if (engaged(m, source) || engaged(m, target)) return "One of these kingdoms already has a raid in progress";
+        String peace = Statecraft.raidBlocker(server, m, source, target);
+        if (peace != null) return peace;
         String oath = livingrealms.compat.Compat.raidBlocked(server, source, target);
         if (oath != null) return oath;
         long now = server.overworld().getGameTime();
@@ -88,6 +90,7 @@ public final class Raids {
         troops.stream().limit(count).forEach(so -> raid.soldiers.add(so.entity));
         m.raids.add(raid);
         Strategy.raidStarted(m, raid, server.overworld().getGameTime());
+        Statecraft.raidStarted(server, m, raid, source, target);
         livingrealms.compat.Compat.raidStarted(server, raid, source, target);
         Realms.onRaid(server, m, source, target);
         for (Settlement s : Kingdoms.cities(m, source)) s.raidCooldown = server.overworld().getGameTime() + Config.RAID_COOLDOWN.get();
@@ -260,6 +263,7 @@ public final class Raids {
         m.raids.remove(raid);
         BattleAI.release(key(raid));
         Strategy.raidEnded(m, raid, server.overworld().getGameTime());
+        Statecraft.raidEnded(server, m, raid, raid.held >= HOLD_TICKS);
         Settlement source = m.get(raid.source), target = m.get(raid.target);
         livingrealms.compat.Compat.raidEnded(server, raid, source);
         for (Settlement s : new Settlement[]{source, target}) if (s != null) {

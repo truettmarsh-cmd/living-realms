@@ -39,6 +39,8 @@ public final class VillageExpansionSelfTest {
         String report;
         try {
             if (Vx.present()) withMod(event.getServer().overworld()); else without(event.getServer().overworld());
+            checks += StatecraftSelfTest.run(event.getServer().overworld());
+            if (Vx.present()) checks += StatecraftSelfTest.withVillageExpansion(event.getServer().overworld());
             report = "PASS: " + checks + " village expansion assertions (" + (Vx.present() ? "Village Expansion loaded" : "Village Expansion absent") + ")";
         } catch (Throwable error) { report = "FAIL: " + error; LivingRealms.LOG.error("VILLAGE EXPANSION TEST FAILED", error); }
         LivingRealms.LOG.info("VILLAGE EXPANSION TEST {}", report);

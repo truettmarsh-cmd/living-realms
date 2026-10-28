@@ -63,6 +63,7 @@ public final class Kingdoms {
         Strategy.citiesLost(m, target.kingdomId(), captured.size(), server.overworld().getGameTime());
         Map<Settlement, String> losers = Realms.before(server, m, winner, captured);
         for (Settlement s : captured) {
+            Statecraft.Prior prior = Statecraft.prior(m, s);
             s.owner = winner.owner;
             s.ownerName = winner.ownerName;
             s.kingdom = winner.kingdomId();
@@ -82,6 +83,7 @@ public final class Kingdoms {
                 }
             }
             s.log("Captured by " + by);
+            Statecraft.transferred(server, m, winner, s, prior);
         }
         normalize(m);
         return captured.size();

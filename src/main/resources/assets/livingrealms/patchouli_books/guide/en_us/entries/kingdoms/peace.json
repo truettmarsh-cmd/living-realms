@@ -1,0 +1,20 @@
+{
+  "name": "Peace Terms",
+  "icon": "minecraft:writable_book",
+  "category": "livingrealms:kingdoms",
+  "sortnum": 4,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "On the $(l)Kingdom$() page, choose terms for each war:$(li)$(l)White peace$(): both keep what they hold$(li)$(l)Tribute$(): they pay you emeralds each day for 5 days$(li)$(l)Cede city$(): they hand over their city nearest your capital (never their capital)$(li)$(l)Pay tribute$(): you pay them, to buy peace when losing"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Then pick a $(l)truce$() of 1, 3 or 7 days and $(l)Propose$(). The page says whether they would accept.$(br2)NPC kingdoms accept when your war score and their exhaustion are high enough; harsher terms and longer truces ask for more. Village Expansion factions also weigh their own peace odds, and allow no peace for a few minutes after an attack."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Against another player, $(l)Offer peace$(): they Accept or Reject on their Kingdom page within a day.$(br2)During a truce no raid can start either way. With Village Expansion, the treaty is recorded in its diplomacy too, so its villages stop marching and a ceded village moves with its claim."
+    }
+  ]
+}

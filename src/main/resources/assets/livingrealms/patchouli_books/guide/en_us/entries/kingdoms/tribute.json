@@ -1,0 +1,16 @@
+{
+  "name": "Tribute",
+  "icon": "minecraft:emerald",
+  "category": "livingrealms:kingdoms",
+  "sortnum": 5,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Tribute is paid once a day for 5 days: $(l)4 + 2 emeralds per city$() of the payer (at most 24).$(br2)You pay from your stockpiles, capital first; NPC towns pay from their treasury; Village Expansion villages levy theirs. Your tribute arrives in your capital's stockpile."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "While tribute flows the two kingdoms cannot raid each other.$(br2)A day with $(l)nothing paid$() is a default: the tribute ends and the truce is broken, so war may follow. Keep emeralds in stock when you owe tribute."
+    }
+  ]
+}

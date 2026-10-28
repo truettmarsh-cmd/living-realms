@@ -31,6 +31,7 @@ public final class WarfareSelfTest {
         String report;
         try {
             run(event.getServer().overworld());
+            checks += StatecraftSelfTest.run(event.getServer().overworld());
             report = "PASS: " + checks + " warfare assertions";
             LivingRealms.LOG.info("WARFARE SELF TEST {}", report);
         } catch (Throwable error) {
