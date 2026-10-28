@@ -52,7 +52,8 @@ public final class CityPlanningTour {
             if(ticks==50)shot="planning-map.png";
             if(ticks==60) {
                 float scale=field(screen,"mapScale"),x=field(screen,"mapOriginX"),y=field(screen,"mapOriginY");
-                screen.mouseClicked(x+(20.25-CityMapOrigin.x())*scale,y+(-9.75-CityMapOrigin.z())*scale,0);
+                float fit=field(screen,"fit"); // the screen may lay out at a finer scale than the GUI's
+                screen.mouseClicked((x+(20.25-CityMapOrigin.x())*scale)*fit,(y+(-9.75-CityMapOrigin.z())*scale)*fit,0);
             }
             if(ticks==90) {
                 var server=mc.getSingleplayerServer();server.execute(()->{

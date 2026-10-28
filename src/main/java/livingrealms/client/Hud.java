@@ -80,7 +80,7 @@ public final class Hud {
         String status = r.getString("status");
         // the server's line repeats the hold count once the centre is taken; say what it means instead
         if (status.isEmpty() || status.startsWith("City center occupied"))
-            status = held > 0 ? (attacking ? "Defenders cleared: hold the centre to take the city" : "Defenders down: retake the centre before the minute is up")
+            status = held > 0 ? (attacking ? "Defenders cleared: hold the centre" : "Defenders down: retake the centre")
                     : r.getInt("soldiers") + " soldiers marching";
         ui.text(ui.clip(status, w - 22), x + 14, y + 29, Imm.FAINT);
         return h;
