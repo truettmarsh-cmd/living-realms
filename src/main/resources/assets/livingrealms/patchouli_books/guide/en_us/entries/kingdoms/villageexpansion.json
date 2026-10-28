@@ -18,7 +18,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(l)Auto build$() follows Village Expansion's city planner: streets from the centre and lots zoned for houses, workshops, barracks, farms, mines and forges. Villagers put Living Realms buildings on matching lots and lay the street in front.$(br2)Your own plans still come first."
+      "text": "$(l)Auto build$() follows Village Expansion's city planner: its streets from the centre and its lots. Villagers pick a lot in the right district (noisy trades and fields away from the centre), turn the building's door to the street and lay the street in front.$(br2)Your own plans still come first."
     }
   ]
 }
