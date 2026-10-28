@@ -53,6 +53,8 @@ Living Realms builds on **Villager Recruits: Village Expansion** (`village_recru
 
 Living Realms soldiers join the realm's team, which is how Recruits and VE targeting tell friend from foe. Raids between kingdoms therefore set ENEMY relations.
 
+VE also filters every recruit's target change (`RecruitTargetStickiness`, `FactionTargeting.isEnemy`): a soldier with no faction, or one aiming at a non-enemy, keeps no target. Living Realms therefore registers its raid and alarm orders as group assignments (`noteGroupAssignment`). The Siege Overhaul raider hook in `compat` also marks the raiders' team as hostile to the realm.
+
 **War.**
 - VE factions declare war on nearby player kingdoms with VE's own odds for player claims (`Realms.considerWars`), because Living Realms cities hold no claims for VE's assessment to see.
 - At war, villages march on your cities through Living Realms' raid system, using their own recruits.

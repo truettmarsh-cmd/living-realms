@@ -34,7 +34,7 @@ final class SiegeOverhaulCompat {
             LivingEntity cur = mob.getTarget();
             if (cur != null && cur.isAlive()) continue;
             Mob near = raiders.stream().filter(x -> x.distanceToSqr(mob) < 40 * 40).min(Comparator.comparingDouble(x -> x.distanceToSqr(mob))).orElse(null);
-            if (near != null) { mob.setTarget(near); n++; }
+            if (near != null) { livingrealms.settlement.Realms.engage(level.getServer(), s, mob, near); mob.setTarget(near); n++; }
         }
         return n;
     }

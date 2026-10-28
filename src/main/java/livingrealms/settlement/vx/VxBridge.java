@@ -181,6 +181,16 @@ public final class VxBridge {
         AssaultManager.recordAttack(a, b, level.getGameTime());
     }
 
+    public static void assign(Entity soldier, net.minecraft.world.entity.LivingEntity enemy) {
+        if (soldier instanceof com.talhanation.recruits.entities.AbstractRecruitEntity r)
+            com.example.villagerecruits.events.RecruitTargetStickiness.noteGroupAssignment(r, enemy);
+    }
+
+    /** Enemies without a declaration of war, for raiders and other armed bands. */
+    public static void hostile(ServerLevel level, String a, String b) {
+        VRDiplomacy.setSymmetric(FactionEvents.recruitsDiplomacyManager, a, b, DiplomacyStatus.ENEMY, level);
+    }
+
     public static void makePeace(ServerLevel level, String a, String b, long freezeTicks) {
         VRDiplomacy.setSymmetric(FactionEvents.recruitsDiplomacyManager, a, b, DiplomacyStatus.NEUTRAL, level);
         VillageAutoDiplomacy.freezePair(a, b, level.getGameTime() + freezeTicks);

@@ -166,8 +166,16 @@ public final class Raids {
             if (!target.mirror()) RecruitsBridge.allegiance(defender, target.kingdomId());
             Realms.enlist(server, m, target, defender);
         }
-        for (LivingEntity attacker : attackers) RecruitsBridge.raidOrder(attacker, target.center, nearest(attacker, defenders));
-        for (LivingEntity defender : defenders) if (RecruitsBridge.isRecruit(defender)) RecruitsBridge.raidOrder(defender, target.center, nearest(defender, attackers));
+        for (LivingEntity attacker : attackers) {
+            LivingEntity foe = nearest(attacker, defenders);
+            Realms.assign(attacker, foe);
+            RecruitsBridge.raidOrder(attacker, target.center, foe);
+        }
+        for (LivingEntity defender : defenders) if (RecruitsBridge.isRecruit(defender)) {
+            LivingEntity foe = nearest(defender, attackers);
+            Realms.assign(defender, foe);
+            RecruitsBridge.raidOrder(defender, target.center, foe);
+        }
         boolean atCenter = attackers.stream().anyMatch(e -> e.blockPosition().distSqr(target.center) <= 12 * 12);
         raid.held = defenders.isEmpty() && atCenter ? raid.held + 20 : 0;
         status(source, target, defenders.isEmpty() && atCenter ? "City center occupied: " + raid.held / 20 + "/60 seconds"

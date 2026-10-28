@@ -204,6 +204,22 @@ public final class Realms {
         if (id != null) VxBridge.enlist(server.overworld(), e, id);
     }
 
+    /** With Village Expansion's faction targeting, a town soldier may only engage an enemy faction: make the attacker's team one. */
+    public static void engage(MinecraftServer server, Settlement s, Entity defender, Entity enemy) {
+        if (!on() || s.mirror()) return;
+        SettlementManager m = SettlementManager.get(server);
+        String mine = realm(server, m, s), theirs = VxBridge.team(enemy);
+        if (mine == null) return;
+        VxBridge.enlist(server.overworld(), defender, mine);
+        if (theirs != null && !theirs.equals(mine) && !VxBridge.atWar(mine, theirs)) VxBridge.hostile(server.overworld(), mine, theirs);
+        assign(defender, enemy);
+    }
+
+    /** An ordered target, which Village Expansion's target stickiness then respects instead of re-picking. */
+    public static void assign(Entity soldier, @Nullable Entity enemy) {
+        if (on() && enemy instanceof LivingEntity living) VxBridge.assign(soldier, living);
+    }
+
     /** Why a raid involving a Village Expansion village cannot start, or null. */
     @Nullable
     static String raidBlocker(MinecraftServer server, SettlementManager m, Settlement source, Settlement target) {
