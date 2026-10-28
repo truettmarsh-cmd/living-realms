@@ -81,7 +81,7 @@ dependencies {
     compileOnly fg.deobf("blank:village_recruits:1.0.7.93TC-205")
     if (project.hasProperty('villageExpansion')) {
         runtimeOnly fg.deobf("blank:village_recruits:1.0.7.93TC-205")
-        if (!project.hasProperty('workers')) runtimeOnly fg.deobf("blank:workers:2.0.3")
+        if (!project.hasProperty('workers') && !project.hasProperty('packMods')) runtimeOnly fg.deobf("blank:workers:2.0.3")
     }
     if (project.hasProperty('patchouli')) runtimeOnly fg.deobf('blank:patchouli:1.0')
     if (project.hasProperty('pehkui')) runtimeOnly fg.deobf('blank:pehkui:3.8.2')

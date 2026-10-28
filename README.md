@@ -2,7 +2,7 @@
 
 A Forge 1.20.1 add-on for [Villager Recruits](https://www.curseforge.com/minecraft/mc-mods/villager-recruits). Towns grow on their own, you can found and plan your own city, and its villagers build it block by block, research technology, forge equipment and raise an army.
 
-Living Realms is an original mod. It does not include or modify code from Recruits, Workers or Living Villages. It calls Recruits' public entity API and reads other mods' village structure files at runtime. A small optional Ice and Fire compatibility mixin seats owned recruit riders at the dragon's native saddle position instead of treating them as captured prey.
+Living Realms is an original mod. It does not include or modify code from Recruits, Workers or Village Expansion. It calls Recruits' public entity API, Village Expansion's faction, diplomacy and city-plan classes when that mod is installed, and reads other mods' village structure files at runtime. A small optional Ice and Fire compatibility mixin seats owned recruit riders at the dragon's native saddle position instead of treating them as captured prey.
 
 ## New in 0.4.0
 
@@ -61,7 +61,7 @@ Server config `warfare.npcRaids` enables NPC attacks (default true); `raidRange`
 
 - Minecraft 1.20.1, Forge 47+
 - Villager Recruits 1.15+
-- Optional: Epic Knights and its addons, Ice and Fire (and its required Citadel dependency), ChoiceTheorem's Overhauled Village, Towns & Towers
+- Optional: Villager Recruits: Village Expansion, Epic Knights and its addons, Ice and Fire (and its required Citadel dependency), ChoiceTheorem's Overhauled Village, Towns & Towers
 
 ## Works with your pack
 
@@ -82,6 +82,18 @@ Living Realms ties into the other kingdom mods of a Villager Recruits pack when 
 Commanders Vision and Recruits Extras need nothing extra: town soldiers are ordinary recruits you own, so they are highlighted and commanded like any other.
 
 To test with the pack, put the pack's jars in `libs/pack/` (see `build.gradle`) and run `./gradlew runServer -PcompatTest -PcompatTestDir=<dir> -PpackMods`; without `-PpackMods` the same test checks that every integration stays inactive. `-PpackMods` also works with the other test flags.
+
+## Village Expansion
+
+With **Villager Recruits: Village Expansion** installed, its villages are the NPC kingdoms, and Living Realms stops turning generated villages into its own AI towns. This is switched by `villageExpansion.enabled` (default true). Without the mod, or with the switch off, nothing changes. Design notes are in [docs/village-expansion.md](docs/village-expansion.md).
+
+- **Their villages.** Each Village Expansion village shows up as a city you can open in the City Manager. Living Realms never simulates, builds on or garrisons it; Village Expansion runs it.
+- **Your realm.** Your kingdom fights under a Recruits faction: your own, or one created for you and led by you. It takes part in Village Expansion's diplomacy as a real faction. **Military → Realms** lists the factions within raid range: their status (at war, neutral or allied), their villages and soldiers, and buttons to **Declare war**, **Make peace** (they must agree; a one-day truce follows) and **Raid**.
+- **War.** Nearby factions may declare war on you with Village Expansion's own odds. At war, their villages march on your cities with their own recruits, and you can raid their villages.
+- **Conquest.** Capture follows Living Realms' rules: defeat the defenders, then hold the centre for 60 seconds. A village you take becomes your city, with its claim, garrison and plan moved over in Village Expansion too. Take their capital and every village of the faction joins you. Lose your capital and every city of yours becomes one of their villages. Recruits sieges that Village Expansion resolves follow the same rule.
+- **City planning.** Auto build uses Village Expansion's city planner for your towns. Streets run out from the centre, with lots zoned for houses, workshops, barracks, farms, mines and forges. Villagers put Living Realms buildings on matching lots and queue the street in front. The layout grows with your population. Your own plans still come first, and the City Map, Architect view and manual queue work as before.
+
+Test with `./gradlew runServer -PvillageExpansionTest -PvillageExpansionTestDir=<dir> -PvillageExpansion`. It needs `village_recruits-*.jar` in `libs/pack/`. Without `-PvillageExpansion`, the same test checks that the integration stays inactive.
 
 ## Data packs
 

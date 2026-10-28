@@ -1,0 +1,24 @@
+{
+  "name": "Village Expansion",
+  "icon": "minecraft:white_banner",
+  "category": "livingrealms:kingdoms",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "With $(l)Villager Recruits: Village Expansion$() installed, its villages are the NPC kingdoms. You can open each one like a city, but Living Realms never runs or rebuilds them. Your kingdom joins its diplomacy as a $(l)realm$(), a Recruits faction you lead."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Military → Realms$() lists the factions within raid range: at war, neutral or allied, with their villages and soldiers.$(br2)Nearby factions may $(l)declare war$() on you, and their villages then march on your cities. $(l)Declare war$() yourself to raid theirs. $(l)Make peace$() needs their consent and brings a one-day truce."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Raids work as usual: defeat the garrison and hold the centre for 60 seconds. A village you take becomes your city, claim and all; take their $(l)capital$() and every village of the faction joins you.$(br2)Lose your capital and all your cities become theirs. Recruits sieges of claimed villages count too."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Auto build$() follows Village Expansion's city planner: streets from the centre and lots zoned for houses, workshops, barracks, farms, mines and forges. Villagers put Living Realms buildings on matching lots and lay the street in front.$(br2)Your own plans still come first."
+    }
+  ]
+}
