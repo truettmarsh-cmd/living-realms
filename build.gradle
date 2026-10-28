@@ -51,6 +51,10 @@ minecraft {
                 workingDirectory project.file(project.property('compatTestDir'))
                 property 'livingrealms.compatTest', 'true'
             }
+            if (project.hasProperty('villageExpansionTest')) {
+                workingDirectory project.file(project.property('villageExpansionTestDir'))
+                property 'livingrealms.villageExpansionTest', 'true'
+            }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')
                 property 'livingrealms.militaryTest', 'true'
@@ -72,6 +76,12 @@ dependencies {
     if (project.hasProperty('integrations')) {
         for (coordinate in ['epicknights:10.15', 'epicknightsaddon:2.6', 'antiquelegacy:1.13', 'architectury:9.2.14', 'clothconfig:11.1.136', 'iceandfire:2.1.13', 'citadel:2.6.3'])
             runtimeOnly fg.deobf('blank:' + coordinate)
+    }
+    // Village Expansion (village_recruits) owns NPC villages when present. Its classes are only touched from livingrealms.settlement.vx.
+    compileOnly fg.deobf("blank:village_recruits:1.0.7.93TC-205")
+    if (project.hasProperty('villageExpansion')) {
+        runtimeOnly fg.deobf("blank:village_recruits:1.0.7.93TC-205")
+        if (!project.hasProperty('workers')) runtimeOnly fg.deobf("blank:workers:2.0.3")
     }
     if (project.hasProperty('patchouli')) runtimeOnly fg.deobf('blank:patchouli:1.0')
     if (project.hasProperty('pehkui')) runtimeOnly fg.deobf('blank:pehkui:3.8.2')

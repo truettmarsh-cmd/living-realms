@@ -51,17 +51,27 @@ public final class Kingdoms {
     /** Only invoked by a completed server-side raid, never by a client 'victory' claim. */
     static int conquer(MinecraftServer server, SettlementManager m, Settlement attacker, Settlement target) {
         if (same(attacker, target)) return 0;
-        List<Settlement> captured = target.capital ? cities(m, target) : List.of(target);
+        return transfer(server, m, attacker, target, attacker.isAi() ? attacker.name + "'s kingdom" : attacker.ownerName);
+    }
+
+    /** Hands the target to the winner's kingdom; a capital takes every city of its kingdom with it. */
+    static int transfer(MinecraftServer server, SettlementManager m, Settlement winner, Settlement target, String by) {
+        if (same(winner, target)) return 0;
+        List<Settlement> captured = target.capital ? new ArrayList<>(cities(m, target)) : new ArrayList<>(List.of(target));
+        // Village Expansion records change first: ordinary cities before the capital, so it never splits the losing faction.
+        captured.sort(Comparator.comparing((Settlement s) -> s.capital));
+        Map<Settlement, String> losers = Realms.before(server, m, winner, captured);
         for (Settlement s : captured) {
-            s.owner = attacker.owner;
-            s.ownerName = attacker.ownerName;
-            s.kingdom = attacker.kingdomId();
+            s.owner = winner.owner;
+            s.ownerName = winner.ownerName;
+            s.kingdom = winner.kingdomId();
             s.capital = false; // The winner keeps its existing capital.
             s.manualAlarm = false;
             s.alarmUntil = 0;
             s.stance = livingrealms.military.Stance.GARRISON;
             s.raidCooldown = server.overworld().getGameTime() + livingrealms.Config.RAID_COOLDOWN.get();
-            for (var soldier : s.soldiers) {
+            Realms.handOver(server, m, winner, s, losers.get(s));
+            if (!s.mirror()) for (var soldier : s.soldiers) {
                 soldier.royalGuard = false;
                 Entity e = SoldierProgression.findEntity(server, soldier.entity);
                 if (e != null) {
@@ -70,7 +80,7 @@ public final class Kingdoms {
                     RecruitsBridge.allegiance(e, s.kingdomId());
                 }
             }
-            s.log("Captured by " + (attacker.isAi() ? attacker.name + "'s kingdom" : attacker.ownerName));
+            s.log("Captured by " + by);
         }
         normalize(m);
         return captured.size();

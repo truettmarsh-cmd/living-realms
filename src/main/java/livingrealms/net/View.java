@@ -40,7 +40,8 @@ public final class View {
         t.putBoolean("canRaid", Raids.playerSource(p.server, manager, p.getUUID(), s) != null);
         t.putBoolean("canMoveCapital", p.getUUID().equals(s.owner) && !s.capital && !Raids.engaged(manager, s)
                 && Kingdoms.cities(manager, s).stream().noneMatch(c -> c.capitalMovedAt > p.server.overworld().getGameTime()));
-        t.putString("owner", s.isAi() ? "" : s.ownerName);
+        t.putString("owner", s.isAi() && !s.mirror() ? "" : s.ownerName);
+        if (Realms.on()) t.put("vx", Realms.view(p, manager, s));
         t.putBoolean("mine", p.getUUID().equals(s.owner) || p.hasPermissions(2));
         t.putBoolean("ai", s.isAi());
         t.putString("style", s.style);

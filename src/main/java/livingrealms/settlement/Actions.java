@@ -43,6 +43,23 @@ public final class Actions {
             if (error != null) tell(player, error);
             return;
         }
+        if (action.equals("vxRaid")) {
+            Settlement village = d.hasUUID("village") ? m.get(d.getUUID("village")) : null;
+            String error = village == null || !village.mirror() ? "No such village" : Raids.playerStart(player, m, village);
+            if (error != null) tell(player, error);
+            return;
+        }
+        if (action.equals("vxWar") || action.equals("vxPeace")) {
+            String f = d.getString("faction");
+            String error = action.equals("vxWar") ? Realms.declare(player, m, s, f) : Realms.peace(player, m, s, f);
+            if (error != null) tell(player, error);
+            s.dirty = true;
+            return;
+        }
+        if (s.mirror()) {
+            tell(player, s.name + " is run by Village Expansion. You can look, raid it in war, or capture it.");
+            return;
+        }
         boolean owner = player.getUUID().equals(s.owner) || player.hasPermissions(2);
         if (!owner) {
             tell(player, "This is " + (s.isAi() ? "an independent town" : s.ownerName + "'s town") + ". You can look, not command.");

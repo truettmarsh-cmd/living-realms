@@ -75,6 +75,7 @@ public final class Autonomy {
         ServerPlayer owner = level.getServer().getPlayerList().getPlayer(s.owner);
         if (owner != null && owner.level() == level && s.contains(owner.blockPosition())) back(owner, s);
         if (underAttack(level, s)) return;
+        if (s.autoBuild) Realms.plan(level, s);
         if (s.autoTier) tier(s);
         if (s.autoResearch) research(s);
         if (s.autoTrain) train(s);

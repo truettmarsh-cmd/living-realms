@@ -18,6 +18,9 @@ public final class SettlementManager extends SavedData {
     private final Map<UUID, Settlement> byId = new LinkedHashMap<>();
     public final List<Raids.Raid> raids = new ArrayList<>();
     public long nextRaidCheck;
+    /** Village Expansion: each player kingdom's Recruits faction, and truces (faction pair -> game time) after making peace. */
+    public final Map<UUID, String> realms = new HashMap<>();
+    public final Map<String, Long> truces = new HashMap<>();
 
     public static SettlementManager get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(SettlementManager::load, SettlementManager::new, "livingrealms_settlements");
@@ -85,6 +88,16 @@ public final class SettlementManager extends SavedData {
         raids.forEach(r -> battles.add(r.save()));
         tag.put("raids", battles);
         tag.putLong("nextRaidCheck", nextRaidCheck);
+        if (!realms.isEmpty()) {
+            CompoundTag r = new CompoundTag();
+            realms.forEach((k, v) -> r.putString(k.toString(), v));
+            tag.put("vxRealms", r);
+        }
+        if (!truces.isEmpty()) {
+            CompoundTag r = new CompoundTag();
+            truces.forEach(r::putLong);
+            tag.put("vxTruces", r);
+        }
         return tag;
     }
 
@@ -97,6 +110,10 @@ public final class SettlementManager extends SavedData {
         for (Tag t : tag.getList("raids", Tag.TAG_COMPOUND)) m.raids.add(Raids.Raid.load((CompoundTag) t));
         Kingdoms.normalize(m);
         m.nextRaidCheck = tag.getLong("nextRaidCheck");
+        CompoundTag r = tag.getCompound("vxRealms");
+        for (String k : r.getAllKeys()) try { m.realms.put(UUID.fromString(k), r.getString(k)); } catch (IllegalArgumentException ignored) {}
+        CompoundTag tr = tag.getCompound("vxTruces");
+        for (String k : tr.getAllKeys()) m.truces.put(k, tr.getLong(k));
         return m;
     }
 

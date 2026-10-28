@@ -15,6 +15,7 @@ public final class Config {
     public static final ForgeConfigSpec.BooleanValue AI_GARRISONS;
     public static final ForgeConfigSpec.BooleanValue NPC_RAIDS;
     public static final ForgeConfigSpec.IntValue RAID_RANGE, RAID_COOLDOWN;
+    public static final ForgeConfigSpec.BooleanValue VILLAGE_EXPANSION;
 
     public static final ForgeConfigSpec.BooleanValue ORIGIN_NATIVE_SPAWNS;
     public static final ForgeConfigSpec.IntValue ORIGIN_HUMAN, ORIGIN_DWARF, ORIGIN_ELF, ORIGIN_GIANT;
@@ -43,6 +44,10 @@ public final class Config {
         NPC_RAIDS = b.comment("NPC kingdoms can raid nearby rival kingdoms, including online players. Raids use existing soldiers.").define("npcRaids", true);
         RAID_RANGE = b.comment("Maximum distance between attacking and defending city centers. Armies travel through loaded terrain.").defineInRange("raidRange", 1024, 64, 4096);
         RAID_COOLDOWN = b.comment("Ticks between raids; also the grace period for newly discovered NPC kingdoms.").defineInRange("raidCooldown", 24000, 1200, 2400000);
+        b.pop();
+        b.push("villageExpansion");
+        VILLAGE_EXPANSION = b.comment("With Villager Recruits: Village Expansion installed, its village factions own the NPC villages, your kingdom joins its diplomacy and wars, and its city planner lays out your towns. No effect without it.")
+                .define("enabled", true);
         b.pop();
         b.push("misc");
         MAX_VISIBLE_TOWNSFOLK = b.comment("Townsfolk shown walking around a settlement (besides builders). The rest of the population is simulated.")

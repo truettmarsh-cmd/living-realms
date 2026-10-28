@@ -46,6 +46,7 @@ public final class ServerEvents {
         }
         if (tick % 20 == 0) {
             for (Settlement s : m.all()) {
+                if (s.mirror()) continue;
                 ServerLevel level = server.getLevel(s.dim);
                 if (level == null || !level.hasChunkAt(s.center)) continue;
                 Simulation.fast(level, s);
@@ -53,9 +54,11 @@ public final class ServerEvents {
                 if (tick % 100 == 0) Simulation.garrison(level, s, false);
             }
         }
+        if (livingrealms.settlement.vx.Vx.active()) Realms.tick(server, m, tick);
         if (tick % 20 == 0) Raids.tick(server, m);
         if (tick % Config.SIM_INTERVAL.get() == 0) {
             for (Settlement s : m.all()) {
+                if (s.mirror()) continue;
                 try {
                     Simulation.step(server, s);
                 } catch (Exception ex) {
@@ -70,7 +73,7 @@ public final class ServerEvents {
     @SubscribeEvent
     public static void onChunkLoad(ChunkEvent.Load e) {
         if (!(e.getLevel() instanceof ServerLevel level) || !(e.getChunk() instanceof LevelChunk chunk)) return;
-        if (!Config.AI_VILLAGES.get() || chunk.getAllStarts().isEmpty()) return;
+        if (!Config.AI_VILLAGES.get() || chunk.getAllStarts().isEmpty() || livingrealms.settlement.vx.Vx.active()) return;
         long key = chunk.getPos().toLong() ^ ((long) level.dimension().location().hashCode() << 40);
         if (!SEEN.add(key)) return;
         PENDING.add(new Pending(level.dimension(), chunk.getPos()));
@@ -78,6 +81,8 @@ public final class ServerEvents {
 
     /** A generated village becomes an AI settlement the first time its starting chunk loads. */
     static void discover(ServerLevel level, SettlementManager m, ChunkPos pos) {
+        // Village Expansion owns generated villages; they appear here as mirrors (Realms), never as a second settlement.
+        if (livingrealms.settlement.vx.Vx.active()) return;
         LevelChunk chunk = level.getChunkSource().getChunkNow(pos.x, pos.z);
         if (chunk == null) return;
         var registry = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
@@ -130,6 +135,11 @@ public final class ServerEvents {
     public static void onEntityLoad(net.minecraftforge.event.entity.EntityJoinLevelEvent e) {
         if (!(e.getLevel() instanceof ServerLevel level)) return;
         var record = livingrealms.military.SoldierProgression.record(level.getServer(), e.getEntity());
-        if (record != null) livingrealms.military.RecruitsBridge.allegiance(e.getEntity(), record.settlement().kingdomId());
+        if (record == null || record.settlement().mirror()) return;
+        livingrealms.military.RecruitsBridge.allegiance(e.getEntity(), record.settlement().kingdomId());
+        if (livingrealms.settlement.vx.Vx.active()) {
+            var m = SettlementManager.get(level.getServer());
+            if (record.settlement().isAi() || m.realms.containsKey(record.settlement().owner)) Realms.enlist(level.getServer(), m, record.settlement(), e.getEntity());
+        }
     }
 }

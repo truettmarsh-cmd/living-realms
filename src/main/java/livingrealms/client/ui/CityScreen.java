@@ -268,7 +268,7 @@ public class CityScreen extends Screen {
         double happy = v().getDouble("happy");
         ui.text("Mood", x, fy + 18, MUTED);
         ui.bar(x + 30, fy + 19, w - 30, 6, (float) happy / 100f, moodColor(happy), moodColor(happy));
-        ui.text(v().getBoolean("ai") ? "Independent town" : "Lord " + v().getString("owner"), x, fy + 30, FAINT);
+        ui.text(ui.clip(!v().getBoolean("ai") ? "Lord " + v().getString("owner") : v().getString("owner").isEmpty() ? "Independent town" : "Held by " + v().getString("owner"), w), x, fy + 30, FAINT);
     }
 
     void switchTab(Tab t) {
@@ -302,7 +302,7 @@ public class CityScreen extends Screen {
 
     void overview() {
         String style = BuildingCatalog.pretty(new ResourceLocation(v().getString("style").isEmpty() ? "minecraft:plains" : v().getString("style")).getPath());
-        header(v().getString("name"), Tier.of(v().getInt("tier")).label + " · " + style + (v().getBoolean("ai") ? " · independent" : " · held by " + v().getString("owner")));
+        header(v().getString("name"), Tier.of(v().getInt("tier")).label + " · " + style + (v().getBoolean("ai") && v().getString("owner").isEmpty() ? " · independent" : " · held by " + v().getString("owner")));
         int warY = cy + 30;
         ui.text((v().getBoolean("capital") ? "KINGDOM CAPITAL" : "Kingdom city") + " · " + v().getInt("kingdomCities") + " cities", cx, warY, GOLD);
         if (ui.over(cx, warY, cw - 112, 13)) ui.tip("Each kingdom has one capital, even before Capital rank.",
@@ -317,6 +317,8 @@ public class CityScreen extends Screen {
                 v().getBoolean("ruler") ? "Unavailable during raids or within a day of moving it."
                 : "Defeat local defenders, then hold the center for 60 seconds. Both cities and armies must stay loaded.");
         String raid = v().getString("raidStatus");
+        CompoundTag vx = v().getCompound("vx");
+        if (raid.isEmpty() && vx.getBoolean("mirror")) raid = "A Village Expansion village of " + vx.getString("factionName") + " · " + vx.getString("status");
         ui.text(ui.clip(raid.isEmpty() ? "Capital loss transfers the kingdom; other losses transfer one city." : raid, mine() ? cw - 120 : cw), cx, warY + 18, raid.isEmpty() ? MUTED : ORANGE);
         if (mine()) {
             ui.button("autoBuild", cx + cw - 112, warY + 16, 112, 16, "Auto build: " + (v().getBoolean("autoBuild") ? "ON" : "OFF"),
@@ -1112,22 +1114,28 @@ public class CityScreen extends Screen {
 
     // ------------------------------------------------------------------ military
 
+    static boolean realms() { return v().getCompound("vx").contains("factions"); }
+
     void milTabs() {
-        ui.segments("mil", cx + cw - 290, cy + 2, 290, 16, new String[]{"Garrison", "Recruit", "Blacksmith", "Kits", "Honours"}, milTab, i -> {
+        boolean realms = realms();
+        int sw = realms ? 344 : 290;
+        ui.segments("mil", cx + cw - sw, cy + 2, sw, 16, realms ? new String[]{"Garrison", "Recruit", "Blacksmith", "Kits", "Honours", "Realms"}
+                : new String[]{"Garrison", "Recruit", "Blacksmith", "Kits", "Honours"}, milTab, i -> {
             milTab = i;
             tab = i == 2 ? Tab.FORGE : Tab.MILITARY;
         });
     }
 
     void military() {
-        if (milTab == 2) milTab = 0;
+        if (milTab == 2 || milTab == 5 && !realms()) milTab = 0;
         ListTag soldiers = list("soldiers");
-        header("Military", soldiers.size() + " / " + v().getInt("garrisonCap") + " soldiers" + (list("training").isEmpty() ? "" : " · " + list("training").size() + " in training"), cw - 292);
+        header("Military", soldiers.size() + " / " + v().getInt("garrisonCap") + " soldiers" + (list("training").isEmpty() ? "" : " · " + list("training").size() + " in training"), cw - (realms() ? 346 : 292));
         milTabs();
         switch (milTab) {
             case 1 -> recruit();
             case 3 -> kits();
             case 4 -> HonoursPanel.draw(ui, cx, cy + 30, cw, ch - 30, v(), mine(), this::act);
+            case 5 -> RealmsPanel.draw(ui, cx, cy + 30, cw, ch - 30, v().getCompound("vx"), this::act);
             default -> garrison();
         }
     }

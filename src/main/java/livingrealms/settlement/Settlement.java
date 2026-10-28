@@ -79,6 +79,10 @@ public final class Settlement {
 
     public final Deque<String> log = new ArrayDeque<>();
     public String structureKey = "";
+    /** Set on a mirror of a Village Expansion village: the faction that owns it. Village Expansion runs mirrors, not Living Realms. */
+    public String vxFaction = "";
+    /** Village Expansion's street-and-lot layout for this town, when its planner is in use. */
+    public final livingrealms.settlement.vx.VxLayout layout = new livingrealms.settlement.vx.VxLayout();
     public long founded;
     public long lastDay;
 
@@ -248,6 +252,8 @@ public final class Settlement {
     // ------------------------------------------------------------------ helpers
 
     public boolean isAi() { return owner == null; }
+
+    public boolean mirror() { return !vxFaction.isEmpty(); }
 
     public UUID kingdomId() { return owner == null ? kingdom : owner; }
 
@@ -434,6 +440,9 @@ public final class Settlement {
         log.forEach(s -> lg.add(StringTag.valueOf(s)));
         t.put("log", lg);
         t.putString("structure", structureKey);
+        if (mirror()) t.putString("vxFaction", vxFaction);
+        CompoundTag lay = layout.save();
+        if (lay != null) t.put("vxLayout", lay);
         t.putLong("founded", founded);
         t.putLong("lastDay", lastDay);
         return t;
@@ -495,6 +504,8 @@ public final class Settlement {
         s.manualAlarm = t.getBoolean("manualAlarm");
         t.getList("log", Tag.TAG_STRING).forEach(e -> s.log.addLast(e.getAsString()));
         s.structureKey = t.getString("structure");
+        s.vxFaction = t.getString("vxFaction");
+        if (t.contains("vxLayout")) s.layout.load(t.getCompound("vxLayout"));
         s.founded = t.getLong("founded");
         s.lastDay = t.getLong("lastDay");
         return s;

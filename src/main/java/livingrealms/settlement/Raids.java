@@ -55,6 +55,8 @@ public final class Raids {
 
     public static String canStart(MinecraftServer server, SettlementManager m, Settlement source, Settlement target) {
         if (source == null || target == null || Kingdoms.same(source, target)) return "Choose a city belonging to another kingdom";
+        String realms = Realms.raidBlocker(server, m, source, target);
+        if (realms != null) return realms;
         if (!source.dim.equals(target.dim)) return "Raids require cities in the same dimension";
         if (source.center.distSqr(target.center) > (double) Config.RAID_RANGE.get() * Config.RAID_RANGE.get()) return "Target is beyond raid range";
         if (engaged(m, source) || engaged(m, target)) return "One of these kingdoms already has a raid in progress";
@@ -79,6 +81,7 @@ public final class Raids {
         troops.stream().limit(count).forEach(so -> raid.soldiers.add(so.entity));
         m.raids.add(raid);
         livingrealms.compat.Compat.raidStarted(server, raid, source, target);
+        Realms.onRaid(server, m, source, target);
         for (Settlement s : Kingdoms.cities(m, source)) s.raidCooldown = server.overworld().getGameTime() + Config.RAID_COOLDOWN.get();
         announce(server, source, "Marching on " + target.name + " with " + count + " soldiers.");
         announce(server, target, source.name + " is raiding " + target.name + (target.capital
@@ -99,7 +102,8 @@ public final class Raids {
     }
 
     static Settlement npcTarget(MinecraftServer server, SettlementManager m, Settlement source) {
-        return m.all().stream().filter(t -> canStart(server, m, source, t) == null)
+        return m.all().stream().filter(t -> source.mirror() ? !t.isAi() : !t.mirror())
+                .filter(t -> canStart(server, m, source, t) == null)
                 .filter(t -> t.isAi() || server.getPlayerList().getPlayer(t.owner) != null)
                 .min(Comparator.comparingDouble(t -> t.center.distSqr(source.center))).orElse(null);
     }
@@ -111,6 +115,7 @@ public final class Raids {
         m.nextRaidCheck = now + 1200;
         for (Settlement s : m.all()) {
             if (!s.isAi() || engaged(m, s) || server.overworld().getGameTime() - s.founded < Config.RAID_COOLDOWN.get()) continue;
+            if (s.mirror() && !Realms.mayMarch()) continue;
             Settlement target = npcTarget(server, m, s);
             if (target != null) start(server, m, s, target);
         }
@@ -152,14 +157,17 @@ public final class Raids {
         raid.elapsed += 20;
         if (raid.elapsed >= MAX_TICKS) { finish(server, m, raid, "Raid repelled: attackers failed to take the city in time"); return; }
         target.alarmUntil = level.getGameTime() + 100;
+        // Sides first (owner, and the Recruits team Village Expansion reads), then orders, so each side sees the other as an enemy.
         for (LivingEntity attacker : attackers) {
-            RecruitsBridge.allegiance(attacker, source.kingdomId());
-            RecruitsBridge.raidOrder(attacker, target.center, nearest(attacker, defenders));
+            if (!source.mirror()) RecruitsBridge.allegiance(attacker, source.kingdomId());
+            Realms.enlist(server, m, source, attacker);
         }
         for (LivingEntity defender : defenders) if (RecruitsBridge.isRecruit(defender)) {
-            RecruitsBridge.allegiance(defender, target.kingdomId());
-            RecruitsBridge.raidOrder(defender, target.center, nearest(defender, attackers));
+            if (!target.mirror()) RecruitsBridge.allegiance(defender, target.kingdomId());
+            Realms.enlist(server, m, target, defender);
         }
+        for (LivingEntity attacker : attackers) RecruitsBridge.raidOrder(attacker, target.center, nearest(attacker, defenders));
+        for (LivingEntity defender : defenders) if (RecruitsBridge.isRecruit(defender)) RecruitsBridge.raidOrder(defender, target.center, nearest(defender, attackers));
         boolean atCenter = attackers.stream().anyMatch(e -> e.blockPosition().distSqr(target.center) <= 12 * 12);
         raid.held = defenders.isEmpty() && atCenter ? raid.held + 20 : 0;
         status(source, target, defenders.isEmpty() && atCenter ? "City center occupied: " + raid.held / 20 + "/60 seconds"
@@ -186,7 +194,7 @@ public final class Raids {
         for (Settlement s : List.of(source, target)) if (!message.equals(s.raidStatus)) { s.raidStatus = message; s.dirty = true; }
     }
 
-    private static void announce(MinecraftServer server, Settlement s, String message) {
+    static void announce(MinecraftServer server, Settlement s, String message) {
         s.log(message);
         if (!s.isAi()) s.away.note(s.away.raids, message);
         if (s.owner != null) {
