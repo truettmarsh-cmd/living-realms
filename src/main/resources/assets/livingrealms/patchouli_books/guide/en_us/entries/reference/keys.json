@@ -7,6 +7,10 @@
     {
       "type": "patchouli:text",
       "text": "All keys can be changed in $(l)Options → Controls$():$(li)$(k:livingrealms.open) City Manager$(li)$(k:livingrealms.recruit) command the recruit you look at$(li)$(k:livingrealms.rotate) rotate a building$(li)$(k:livingrealms.architect) Architect view$(br2)$(l)Shift + right-click$() a recruit: Recruit Command."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "In the City Manager and Recruit Command, the $(l)hotbar keys$() (1-8) jump to a page; $(l)Tab$() and $(l)Shift + Tab$() step through the pages. $(l)Ctrl + F$() (Cmd on a Mac) searches a list.$(br2)The Garrison list sorts by rank, name, health or unit, and shows all, home, away or hurt soldiers."
     }
   ]
 }
