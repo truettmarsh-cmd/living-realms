@@ -114,4 +114,32 @@ public final class CityPlanningSelfTest {
             check(!AutoBuild.clear(level,probe,empty,net.minecraft.world.level.block.Rotation.NONE),"Automatic siting checks upper containers across the full height");
         } finally { m.remove(s); }
     }
+
+    /** Test and tour support: grows a player town with automatic building, finishing each project at once. Returns plots placed. */
+    public static int grow(ServerLevel level, Settlement s, int projects) {
+        s.research.addAll(livingrealms.research.ResearchTree.nodes().keySet());
+        s.autoBuild = true;
+        int placed = 0;
+        for (int i = 0; i < projects * 4 && placed < projects; i++) {
+            for (BuildingType t : BuildingCatalog.types().values()) {
+                Blueprint b = BuildingCatalog.blueprint(t.blueprintKey(1, s.style));
+                if (b != null) b.bill().forEach((item, n) -> { if (s.stock.count(item) < n + 200) s.stock.force(item, n + 400); });
+            }
+            s.stock.force(Blueprint.costItem(Construction.foundationBlock(s)), 5000);
+            Simulation.recompute(s);
+            s.population = Math.max(1, s.d.housing - (i % 3 == 0 ? 0 : 6));
+            Realms.plan(level, s);
+            long before = s.plots.stream().filter(p -> !p.typeId.equals("road")).count();
+            AutoBuild.think(level, s);
+            for (Plot p : new ArrayList<>(s.plots)) {
+                if (!AutoBuild.pending(p)) continue;
+                if (p.state == Plot.State.PLANNED) p.state = Plot.State.BUILDING;
+                for (int k = 0; k < p.totalSteps() + 200; k++) if (Construction.work(level, s, p) != Construction.Result.PLACED) break;
+                Simulation.finish(level, s, p);
+            }
+            placed += (int) (s.plots.stream().filter(p -> !p.typeId.equals("road")).count() - before);
+        }
+        Simulation.recompute(s);
+        return placed;
+    }
 }
