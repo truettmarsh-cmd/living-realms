@@ -86,8 +86,9 @@ public final class Planning {
             long dx = c[0] - s.center.getX(), dz = c[1] - s.center.getZ();
             if (dx * dx + dz * dz > (long) r * r) return "Outside the town's land";
         }
-        // roads never block: buildings replace road blocks under them, and roads skip buildings
+        // roads never block (they skip buildings), but buildings keep off laid streets
         if (p.typeId.equals("road")) return null;
+        if (!p.typeId.equals(CapitalCastles.ID) && onRoad(s, box)) return "Blocks a street";
         for (Plot o : s.plots) {
             if (o == self || o.state == Plot.State.DEMOLISHING || o.typeId.equals("road")) continue;
             BoundingBox ob = o.box();
@@ -164,6 +165,23 @@ public final class Planning {
         return null;
     }
 
+    /** True if any paved column of a road project lies inside the footprint. */
+    static boolean onRoad(Settlement s, BoundingBox box) {
+        for (Plot o : s.plots) {
+            if (!o.typeId.equals("road") || o.state == Plot.State.DEMOLISHING) continue;
+            BoundingBox rb = o.box();
+            if (rb.maxX() < box.minX() || rb.minX() > box.maxX() || rb.maxZ() < box.minZ() || rb.minZ() > box.maxZ()) continue;
+            Blueprint bp = o.blueprint();
+            if (bp == null) continue;
+            for (int i = 0; i < bp.size(); i++) {
+                if (bp.state(i).isAir()) continue;
+                int x = o.origin.getX() + bp.lx(i), z = o.origin.getZ() + bp.lz(i);
+                if (x >= box.minX() && x <= box.maxX() && z >= box.minZ() && z <= box.maxZ()) return true;
+            }
+        }
+        return false;
+    }
+
     static boolean insideBuilding(Settlement s, int x, int z) {
         for (Plot o : s.plots) {
             if (o.typeId.equals("road")) continue;
@@ -184,13 +202,17 @@ public final class Planning {
             String key = t.blueprintKey(p.level + 1, s.style);
             Blueprint bp = BuildingCatalog.blueprint(key);
             if (bp == null) return "Blueprint missing";
+            // the front wall stays on its street and the building stays centred along it
+            Blueprint cur = p.blueprint();
+            BlockPos grown = cur == null ? p.origin : livingrealms.settlement.plan.TownPlan.grownOrigin(p.origin, p.rotation, cur, bp);
             Plot probe = new Plot();
             probe.typeId = p.typeId;
             probe.blueprintKey = key;
-            probe.origin = p.origin;
+            probe.origin = grown;
             probe.rotation = p.rotation;
             String err = checkSite(s, probe, p);
             if (err != null) return err;
+            p.origin = grown;
             p.blueprintKey = key;
             p.automatic = false;
             p.state = Plot.State.UPGRADING;

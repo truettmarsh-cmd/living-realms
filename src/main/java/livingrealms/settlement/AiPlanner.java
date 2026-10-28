@@ -1,7 +1,9 @@
 package livingrealms.settlement;
 
 import livingrealms.building.*;
+import livingrealms.settlement.plan.*;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Rotation;
@@ -20,27 +22,91 @@ public final class AiPlanner {
         if (s.tier.next() != null && s.tierBlockers().isEmpty()) {
             s.tier = s.tier.next();
         }
+        AutoBuild.payDebts(level, s, false);
         int builders = Math.max(1, s.d.workers.getOrDefault(Job.BUILDER, 0));
         long active = s.plots.stream().filter(Plot::active).count();
         if (active >= Math.max(1, builders / 2) || s.wealth < 25) return;
         Category want = decide(level.random, s);
         BuildingType t = chooseType(level.random, s, want);
         if (t == null) return;
+        Blueprint bp = BuildingCatalog.blueprint(t.blueprintKey(1, s.style));
+        if (bp == null) return;
+        // a lot along the town's streets, in the district its trade belongs to, door to the street
+        TownPlan plan = s.plan();
+        TownPlan.Placement at = plan.place(new WorldTerrain(level), s, t);
+        if (at != null && Planning.plan(level, s, t, at.origin(), at.rot(), true) == null) {
+            plan.frontage.put(s.plots.get(s.plots.size() - 1).id, at.street());
+            AutoBuild.pave(level, s, plan.connect(at.street(), at.along(), s.radius()), false);
+            return;
+        }
         for (int attempt = 0; attempt < 3; attempt++) {
-            Rotation rot = Rotation.values()[level.random.nextInt(4)];
-            Blueprint bp = BuildingCatalog.blueprint(t.blueprintKey(1, s.style));
-            if (bp == null) return;
-            BlockPos origin = findSite(level, s, bp.width(rot), bp.depth(rot));
+            BlockPos origin = zonedSite(level, s, t, bp);
             if (origin == null) continue;
+            Rotation rot = towardCentre(s, bp, origin);
             if (Planning.plan(level, s, t, origin, rot, true) == null) {
-                Plot p = s.plots.get(s.plots.size() - 1);
-                BlockPos c = p.center();
-                if (c.distSqr(s.center) > 100) {
-                    BlockPos from = new BlockPos(c.getX(), 0, p.box().maxZ() + 1);
-                    Planning.road(level, s, from, s.center, 2, Procedural.styleFamily(s.style).equals("desert") ? "gravel" : "path");
-                }
+                accessRoad(level, s, s.plots.get(s.plots.size() - 1), false);
                 return;
             }
+        }
+    }
+
+    /** An open site in the building's district, square enough for any rotation. */
+    @Nullable
+    static BlockPos zonedSite(ServerLevel level, Settlement s, BuildingType t, Blueprint bp) {
+        int m = Math.max(bp.sx, bp.sz);
+        int count = (int) s.plots.stream().filter(p -> { BuildingType o = BuildingCatalog.get(p.typeId); return o != null && o.category == t.category; }).count();
+        Zoning.Rule rule = Zoning.rule(t, s.radius(), count);
+        BlockPos at = findSite(level, s, m, m, s.capital && s.tier.number() >= 5, rule.min());
+        if (at == null) return null;
+        Rotation rot = towardCentre(s, bp, at);
+        int w = bp.width(rot), d = bp.depth(rot);
+        // centre the turned building on the square
+        return new BlockPos(at.getX() + (m - w) / 2, at.getY(), at.getZ() + (m - d) / 2);
+    }
+
+    /** The rotation that turns the front door toward the town centre. */
+    static Rotation towardCentre(Settlement s, Blueprint bp, BlockPos at) {
+        int m = Math.max(bp.sx, bp.sz);
+        int dx = s.center.getX() - (at.getX() + m / 2), dz = s.center.getZ() - (at.getZ() + m / 2);
+        Direction side = Math.abs(dx) >= Math.abs(dz) ? (dx >= 0 ? Direction.EAST : Direction.WEST) : (dz >= 0 ? Direction.SOUTH : Direction.NORTH);
+        return bp.facing(side);
+    }
+
+    /** A path straight out of the front door, then on to the nearest road (or the centre). */
+    static void accessRoad(ServerLevel level, Settlement s, Plot p, boolean automatic) {
+        Blueprint bp = p.blueprint();
+        if (bp == null) return;
+        Direction front = bp.front(p.rotation);
+        BlockPos door = bp.doorWorld(p.origin, p.rotation);
+        var box = p.box();
+        BlockPos out = switch (front) {
+            case NORTH -> new BlockPos(door.getX(), door.getY(), box.minZ() - 2);
+            case SOUTH -> new BlockPos(door.getX(), door.getY(), box.maxZ() + 2);
+            case WEST -> new BlockPos(box.minX() - 2, door.getY(), door.getZ());
+            default -> new BlockPos(box.maxX() + 2, door.getY(), door.getZ());
+        };
+        if (out.distSqr(s.center) <= 100) return;
+        BlockPos to = s.center;
+        double best = Double.MAX_VALUE;
+        for (Plot r : s.plots) {
+            if (!r.typeId.equals("road")) continue;
+            Blueprint rb = r.blueprint();
+            if (rb == null) continue;
+            for (int i = 0; i < rb.size(); i += 3) {
+                if (rb.state(i).isAir()) continue;
+                BlockPos q = new BlockPos(r.origin.getX() + rb.lx(i), out.getY(), r.origin.getZ() + rb.lz(i));
+                double dd = out.distSqr(q);
+                if (dd < best) { best = dd; to = q; }
+            }
+        }
+        boolean desert = Procedural.styleFamily(s.style).equals("desert");
+        String material = RoadClass.LANE.material(s.tier, desert);
+        BlockPos step = out.relative(front.getOpposite(), 2);
+        for (BlockPos[] leg : new BlockPos[][]{{step, out}, {out, to}}) {
+            if (leg[0].distSqr(leg[1]) < 1 || Planning.road(level, s, leg[0], leg[1], 2, material) != null) continue;
+            Plot road = s.plots.get(s.plots.size() - 1);
+            road.automatic = automatic;
+            road.priority = automatic ? -2 : -1;
         }
     }
 
@@ -90,11 +156,17 @@ public final class AiPlanner {
     }
 
     public static BlockPos findSite(ServerLevel level, Settlement s, int w, int d, boolean reserveCastle) {
+        return findSite(level, s, w, d, reserveCastle, 10);
+    }
+
+    /** Sites from {@code minDist} outward; the market place and its castle ring stay free. */
+    public static BlockPos findSite(ServerLevel level, Settlement s, int w, int d, boolean reserveCastle, int minDist) {
         RandomSource r = level.random;
         int radius = (int) (s.radius() * 0.8) - Math.max(w, d);
-        if (radius < 8) radius = 8;
+        int from = Math.max(Zoning.CORE + Math.max(w, d) / 2 + 2, minDist);
+        if (radius < from) radius = Math.min(from + 8, s.radius() - Math.max(w, d) / 2 - 1);
         for (int i = 0; i < 48; i++) {
-            double dist = 10 + (radius - 10) * (i / 48.0);
+            double dist = from + (radius - from) * (i / 48.0);
             double a = r.nextDouble() * Math.PI * 2;
             int x = s.center.getX() + (int) (Math.cos(a) * dist) - w / 2, z = s.center.getZ() + (int) (Math.sin(a) * dist) - d / 2;
             if (!level.hasChunksAt(x - 2, z - 2, x + w + 2, z + d + 2)) continue;
@@ -107,6 +179,7 @@ public final class AiPlanner {
             if (!level.getBlockState(new BlockPos(x + w / 2, y, z + d / 2)).getFluidState().isEmpty()) continue;
             if (reserveCastle && CapitalCastles.reserved(s, x - 2, z - 2, x + w + 1, z + d + 1)) continue;
             if (overlaps(s, x - 2, z - 2, x + w + 1, z + d + 1)) continue;
+            if (s.plan().onStreet(new net.minecraft.world.level.levelgen.structure.BoundingBox(x, 0, z, x + w - 1, 0, z + d - 1), 1)) continue;
             if (!open(level, x, y, z, w, d)) continue;
             return new BlockPos(x, y, z);
         }

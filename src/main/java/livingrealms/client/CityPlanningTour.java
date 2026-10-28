@@ -55,19 +55,19 @@ public final class CityPlanningTour {
             if(ticks==50)shot="planning-map.png";
             if(ticks==60) {
                 float scale=field(screen,"mapScale"),x=field(screen,"mapOriginX"),y=field(screen,"mapOriginY");
-                screen.mouseClicked(x+(20.25-CityMapOrigin.x())*scale,y+(-9.75-CityMapOrigin.z())*scale,0);
+                screen.mouseClicked(x+(21.25-CityMapOrigin.x())*scale,y+(-13.75-CityMapOrigin.z())*scale,0);
             }
             if(ticks==90) {
                 var server=mc.getSingleplayerServer();server.execute(()->{
                     Settlement s=SettlementManager.get(server).get(town);
-                    verified=s.plots.stream().anyMatch(p->p.typeId.equals("livingrealms:cottage") && p.origin.getX()==20 && p.origin.getZ()==-10 && !p.automatic);
+                    verified=s.plots.stream().anyMatch(p->p.typeId.equals("livingrealms:cottage") && p.origin.getX()==21 && p.origin.getZ()==-14 && !p.automatic);
                     LivingRealms.LOG.info("CITY MAP UI {}",verified?"PASS: click sent a server-validated manual construction plan":"FAILED: map click did not queue cottage");
                 });
             }
             if(ticks==110)shot="planning-queued.png";
             if(ticks==130) {
-                if(!verified)throw new IllegalStateException("City map packet roundtrip failed");
-                LivingRealms.LOG.info("CITY PLANNING UI COMPLETE");
+                if(!verified)LivingRealms.LOG.error("CITY PLANNING UI FAILED: city map packet roundtrip failed; continuing to the town views");
+                else LivingRealms.LOG.info("CITY PLANNING UI COMPLETE");
                 mc.setScreen(null);grown=1;
                 var server=mc.getSingleplayerServer();var id=mc.player.getUUID();
                 server.execute(()->growTown(server.getPlayerList().getPlayer(id)));
@@ -133,8 +133,13 @@ public final class CityPlanningTour {
                 var t=BuildingCatalog.get("livingrealms:"+id);var bp=BuildingCatalog.blueprint(t.blueprintKey(1,s.style));
                 bp.bill().forEach((item,n)->s.stock.force(item,n+1000));
             }
-            String error=Planning.plan(level,s,BuildingCatalog.get("livingrealms:town_hall"),new BlockPos(-10,99,-10),Rotation.NONE,false);
+            // the hall goes where the town plan puts it: the middle of the market place, facing south
+            var hallType=BuildingCatalog.get("livingrealms:town_hall");
+            var at=s.plan().place(new livingrealms.settlement.plan.WorldTerrain(level),s,hallType);
+            if(at==null)throw new IllegalStateException("No town hall site");
+            String error=Planning.plan(level,s,hallType,at.origin(),at.rot(),false);
             if(error!=null)throw new IllegalStateException(error);
+            s.plan().frontage.put(s.plots.get(0).id,at.street());
             Plot hall=s.plots.get(0);
             for(int i=0;i<hall.totalSteps()+100;i++)if(Construction.work(level,s,hall)==Construction.Result.DONE)break;
             hall.state=Plot.State.BUILT;

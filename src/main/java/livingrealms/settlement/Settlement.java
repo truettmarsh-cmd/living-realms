@@ -83,6 +83,8 @@ public final class Settlement {
     public String vxFaction = "";
     /** Village Expansion's street-and-lot layout for this town, when its planner is in use. */
     public final livingrealms.settlement.vx.VxLayout layout = new livingrealms.settlement.vx.VxLayout();
+    /** Living Realms' own street plan (market place, high streets, ring streets), made on first use. */
+    @Nullable public livingrealms.settlement.plan.TownPlan townPlan;
     public long founded;
     public long lastDay;
 
@@ -267,6 +269,13 @@ public final class Settlement {
 
     public int radius() { return tier.radius; }
 
+    /** The town's street plan, laid out round its centre the first time it is needed. */
+    public livingrealms.settlement.plan.TownPlan plan() {
+        if (townPlan == null || !townPlan.center.equals(center))
+            townPlan = new livingrealms.settlement.plan.TownPlan(center, id.getMostSignificantBits() ^ center.asLong());
+        return townPlan;
+    }
+
     public boolean contains(BlockPos pos) {
         long dx = pos.getX() - center.getX(), dz = pos.getZ() - center.getZ();
         return dx * dx + dz * dz <= (long) radius() * radius();
@@ -443,6 +452,7 @@ public final class Settlement {
         if (mirror()) t.putString("vxFaction", vxFaction);
         CompoundTag lay = layout.save();
         if (lay != null) t.put("vxLayout", lay);
+        if (townPlan != null) t.put("townPlan", townPlan.save());
         t.putLong("founded", founded);
         t.putLong("lastDay", lastDay);
         return t;
@@ -506,6 +516,7 @@ public final class Settlement {
         s.structureKey = t.getString("structure");
         s.vxFaction = t.getString("vxFaction");
         if (t.contains("vxLayout")) s.layout.load(t.getCompound("vxLayout"));
+        if (t.contains("townPlan")) s.townPlan = livingrealms.settlement.plan.TownPlan.load(t.getCompound("townPlan"));
         s.founded = t.getLong("founded");
         s.lastDay = t.getLong("lastDay");
         return s;

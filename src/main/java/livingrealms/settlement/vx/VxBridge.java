@@ -263,7 +263,7 @@ public final class VxBridge {
             s.x = p.anchor.getX(); s.z = p.anchor.getZ(); s.w = p.width; s.d = p.depth;
             s.kind = kind(p.structureKey, p.productionSubtype);
             var road = plan.roadOf(p);
-            if (road != null && road.a != null && road.b != null) { s.roadA = road.a.asLong(); s.roadB = road.b.asLong(); }
+            if (road != null && road.a != null && road.b != null) { s.roadA = road.a.asLong(); s.roadB = road.b.asLong(); s.primary = road.primary; }
             VxLayout.Slot was = old.get(BlockPos.asLong(s.x, 0, s.z));
             s.used = was != null && was.used;
             out.slots.add(s);
