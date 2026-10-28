@@ -86,6 +86,7 @@ public final class Kingdoms {
             Statecraft.transferred(server, m, winner, s, prior);
         }
         normalize(m);
+        TownClaims.follow(server, m, captured);
         return captured.size();
     }
 

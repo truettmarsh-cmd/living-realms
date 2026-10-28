@@ -373,7 +373,8 @@ public final class Realms {
                 String lose = realm(server, m, s);
                 losers.put(s, lose);
                 if (lose == null || lose.equals(win) || !s.dim.equals(Level.OVERWORLD)) continue;
-                String holder = VxBridge.claimed(level, s.center) ? VxBridge.ownerAt(level, s.center) : null;
+                // Only a Village Expansion village goes through its conquest; a town's own claim (TownClaims) follows Living Realms.
+                String holder = VxBridge.village(level, s.center) ? VxBridge.ownerAt(level, s.center) : null;
                 if (holder != null) { if (!holder.equals(win)) VxBridge.conquer(level, s.center, win, holder); }
                 else if (winner.mirror()) VxBridge.annex(level, s.center, win);
             }

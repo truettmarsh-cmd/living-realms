@@ -80,6 +80,7 @@ public final class VillageExpansionSelfTest {
         check(level.getScoreboard().getPlayerTeam("lr_" + owner.getUUID().toString().replace("-", "").substring(0, 10)) == null, "No Recruits faction created");
         check(Raids.npcTarget(server, m, npc) == null || !Raids.npcTarget(server, m, npc).mirror(), "NPC raids unchanged");
         m.remove(s); m.remove(npc);
+        claims(level, false);
     }
 
     static void withMod(ServerLevel level) {
@@ -303,6 +304,111 @@ public final class VillageExpansionSelfTest {
             check(anyMirror != null && Realms.dormant(anyMirror) && Raids.canStart(server, m, seat, anyMirror) != null, "Dormant mirrors cannot be raided");
             check(!livingrealms.net.View.of(seat, owner).contains("vx"), "Diplomacy panel hidden while off");
         } finally { Config.VILLAGE_EXPANSION.set(true); }
+        claims(level, true);
+    }
+
+    /** Town claims (TownClaims): founded with the charter, grown with the town, kept through VE claim raids, moved by conquest. */
+    static void claims(ServerLevel level, boolean ve) {
+        MinecraftServer server = level.getServer();
+        var m = SettlementManager.get(server);
+        var mgr = com.talhanation.recruits.ClaimEvents.recruitsClaimManager;
+        var ruler = FakePlayerFactory.get(level, new GameProfile(UUID.randomUUID(), "ClaimRuler"));
+        var rival = FakePlayerFactory.get(level, new GameProfile(UUID.randomUUID(), "RivalRuler"));
+        RULERS.put(ruler.getUUID(), ruler.getScoreboardName());
+        RULERS.put(rival.getUUID(), rival.getScoreboardName());
+        check(Config.TOWN_CLAIMS.get() && mgr != null, "townClaims.enabled defaults to true; Recruits claims available");
+        BlockPos home = ve ? new BlockPos(20000, 100, 20000) : new BlockPos(12000, 100, 12000);
+        String village = null;
+        if (ve) {
+            flat(level, home.offset(0, 0, 300), 64);
+            village = VxBridge.testVillage(level, "village_20000_100_20300", home.offset(0, 0, 300));
+            check(VxBridge.claimed(level, home.offset(0, 0, 300)), "Village Expansion village 300 blocks away holds its claim");
+        }
+
+        // ---- the charter founds a town: VE's 7x7 founding claim, owned by the realm's faction
+        Settlement s = town(m, ruler.getUUID(), "Claimton", home);
+        TownClaims.found(server, m, s);
+        var c = TownClaims.claim(s);
+        check(c != null, "Founding creates the town's claim" + (ve ? " (even 300 blocks from a village)" : ""));
+        String realm = TownClaims.faction(server, m, s);
+        check(realm != null && realm.equals(c.getOwnerFactionStringID()), "Claim belongs to the realm's faction: " + c.getOwnerFactionStringID());
+        check(ve ? VxBridge.registered(realm) : realm.startsWith("lr_"), "Realm faction " + realm);
+        check(new net.minecraft.world.level.ChunkPos(home).equals(c.getCenter()) && c.getClaimedChunks().size() == 49, "Camp claim is Village Expansion's 7x7 chunks: " + c.getClaimedChunks().size());
+        check("Claimton".equals(c.getName()) && ruler.getUUID().equals(c.getPlayerInfo().getUUID()), "Claim named after the town, held by the ruler");
+        check(c.isBlockBreakingAllowed() && c.isBlockPlacementAllowed() && c.isBlockInteractionAllowed(), "Town land stays open to building");
+        if (ve) check(VxBridge.playerClaim(level, c) && !VxBridge.village(level, home), "Village Expansion sees a player claim, not a village");
+        int camp = c.getClaimedChunks().size();
+
+        // ---- the claim grows with the town
+        s.tier = Tier.HAMLET;
+        TownClaims.update(server, m, s);
+        int hamlet = TownClaims.claim(s).getClaimedChunks().size();
+        s.tier = Tier.VILLAGE;
+        TownClaims.update(server, m, s);
+        c = TownClaims.claim(s);
+        int grown = c.getClaimedChunks().size();
+        check(camp < hamlet && hamlet < grown && c.containsChunk(new net.minecraft.world.level.ChunkPos(home.offset(70, 0, 0))), "Claim grows on tier-up: " + camp + " -> " + hamlet + " -> " + grown);
+        check(c.getClaimedChunks().stream().allMatch(p -> {
+            double x = p.getMiddleBlockX() - home.getX(), z = p.getMiddleBlockZ() - home.getZ();
+            return x * x + z * z <= (s.radius() + 8.0) * (s.radius() + 8) || Math.abs(p.x - (home.getX() >> 4)) <= 3 && Math.abs(p.z - (home.getZ() >> 4)) <= 3;
+        }), "Claim follows the town's land");
+        s.name = "Claimford";
+        TownClaims.update(server, m, s);
+        check("Claimford".equals(TownClaims.claim(s).getName()), "Renaming the town renames its claim");
+
+        // ---- save and load
+        check(s.claim.equals(Settlement.load(s.save()).claim) && s.claim.equals(SettlementManager.load(m.save(new CompoundTag())).get(s.id).claim), "Claim id survives save/load");
+        mgr.load(level); // what a restart (and Village Expansion after removing any claim) does: reload from Recruits' save data
+        c = TownClaims.claim(s);
+        check(c != null && c.getClaimedChunks().size() == grown && realm.equals(c.getOwnerFactionStringID()), "Claim survives a reload of Recruits' claims");
+
+        // ---- a Village Expansion claim raid cannot delete the town
+        if (ve) {
+            UUID old = s.claim;
+            VxBridge.testClaimRaid(level, old, village, realm);
+            TownClaims.watchRaids(server, m);
+            check(village.equals(TownClaims.RAIDED.get(s.id)) && s.alarmUntil > level.getGameTime(), "Town hears of the claim raid and sounds the alarm");
+            VxBridge.testClaimRaidWon(level, old);
+            check(mgr.getClaim(old) == null, "Village Expansion's successful raid deleted the claim");
+            TownClaims.watchRaids(server, m);
+            TownClaims.update(server, m, s);
+            c = TownClaims.claim(s);
+            check(m.get(s.id) == s && ruler.getUUID().equals(s.owner) && !s.mirror(), "Town survives the claim raid, still the ruler's");
+            check(c != null && !old.equals(s.claim) && realm.equals(c.getOwnerFactionStringID()) && c.getClaimedChunks().size() == grown, "Claim restored, same land and owner");
+            check(s.log.stream().anyMatch(l -> l.contains("sacked")) && !TownClaims.RAIDED.containsKey(s.id), "Ruler told the raid could not take the town");
+        }
+
+        // ---- conquest moves the claim
+        Settlement rivalTown = town(m, rival.getUUID(), "Rivalton", home.offset(-3000, 0, 0));
+        check(Kingdoms.conquer(server, m, rivalTown, s) == 1 && rival.getUUID().equals(s.owner), "Rival takes the town");
+        c = TownClaims.claim(s);
+        String rivalRealm = TownClaims.faction(server, m, rivalTown);
+        check(c != null && rivalRealm != null && !rivalRealm.equals(realm) && rivalRealm.equals(c.getOwnerFactionStringID()), "Claim moves to the conqueror's realm");
+        check(rival.getUUID().equals(c.getPlayerInfo().getUUID()) && c.getClaimedChunks().size() == grown, "Claim keeps its land under the new ruler");
+        if (ve) {
+            Realms.sync(server, m);
+            Settlement mv = m.at(net.minecraft.world.level.Level.OVERWORLD, home.offset(0, 0, 300));
+            check(mv != null && mv.mirror() && village.equals(mv.vxFaction), "Raiding village mirrored");
+            check(m.all().stream().noneMatch(t -> t.mirror() && t.center.getX() == home.getX() && t.center.getZ() == home.getZ() && t != s), "A town claim is never mistaken for a village");
+            check(Kingdoms.conquer(server, m, mv, s) == 1 && s.mirror(), "Village takes the town");
+            check(TownClaims.claim(s) != null && village.equals(TownClaims.claim(s).getOwnerFactionStringID()) && VxBridge.village(level, home)
+                    && VxBridge.centers(village).stream().anyMatch(p -> p.getX() == home.getX() && p.getZ() == home.getZ()), "Claim goes to the village faction as one of its centres");
+            check(VxBridge.fakeOwner().equals(TownClaims.claim(s).getPlayerInfo().getUUID()), "Held by the village like its other claims");
+        }
+
+        // ---- the switch
+        Settlement spare = town(m, ruler.getUUID(), "Spare", home.offset(0, 0, -1500));
+        TownClaims.found(server, m, spare);
+        UUID spareClaim = spare.claim;
+        check(spareClaim != null && mgr.getClaim(spareClaim) != null, "Second town claimed");
+        Config.TOWN_CLAIMS.set(false);
+        try {
+            TownClaims.tick(server, m);
+            check(spare.claim == null && mgr.getClaim(spareClaim) == null, "Switched off: town claims removed");
+            Settlement off = town(m, ruler.getUUID(), "Unclaimed", home.offset(1500, 0, -1500));
+            TownClaims.found(server, m, off);
+            check(off.claim == null, "Switched off: founding claims nothing");
+        } finally { Config.TOWN_CLAIMS.set(true); }
     }
 
     private VillageExpansionSelfTest() {}

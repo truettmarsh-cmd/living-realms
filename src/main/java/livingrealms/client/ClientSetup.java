@@ -25,6 +25,9 @@ public final class ClientSetup {
     /** Enters and leaves the Architect view; unbound by default. Raise and lower only act inside it. */
     public static final KeyMapping ARCHITECT = new KeyMapping("key.livingrealms.architect", KeyConflictContext.IN_GAME,
             InputConstants.UNKNOWN, "key.categories.livingrealms");
+    /** Shows or hides the town border ring; unbound by default. */
+    public static final KeyMapping RING = new KeyMapping("key.livingrealms.ring", KeyConflictContext.IN_GAME,
+            InputConstants.UNKNOWN, "key.categories.livingrealms");
     public static final KeyMapping RAISE = new KeyMapping("key.livingrealms.raise", KeyConflictContext.GUI,
             InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_EQUAL), "key.categories.livingrealms");
     public static final KeyMapping LOWER = new KeyMapping("key.livingrealms.lower", KeyConflictContext.GUI,
@@ -43,6 +46,7 @@ public final class ClientSetup {
         e.register(ARCHITECT);
         e.register(RAISE);
         e.register(LOWER);
+        e.register(RING);
     }
 
     @SubscribeEvent

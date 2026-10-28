@@ -97,6 +97,7 @@ public class CharterBlock extends BaseEntityBlock {
         m.add(s);
         Simulation.recompute(s);
         link(sl, pos, s);
+        livingrealms.settlement.TownClaims.found(sl.getServer(), m, s);
         if (!player.getInventory().contains(new ItemStack(Registry.PLANNER.get()))) player.getInventory().add(new ItemStack(Registry.PLANNER.get()));
         player.displayClientMessage(Component.literal("You founded " + s.name + "! Use the Architect's Plans to place the Town Hall.").withStyle(ChatFormatting.GOLD), false);
         Net.openManager(player, s);
