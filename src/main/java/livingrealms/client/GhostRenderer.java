@@ -51,7 +51,7 @@ public final class GhostRenderer {
                 p.putLong("o", o.asLong());
                 if (o.distSqr(eye) < 96 * 96) near.add(p);
             }
-            if (planning) border(ps, buffers, town);
+            if (planning && !TownRing.shown()) border(ps, buffers, town);
         }
         near.sort((a, b) -> Double.compare(BlockPos.of(a.getLong("o")).distSqr(eye), BlockPos.of(b.getLong("o")).distSqr(eye)));
         int shown = 0;

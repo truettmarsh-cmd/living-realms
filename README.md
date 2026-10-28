@@ -41,6 +41,12 @@ In **City Manager → Build**, choose a building and select **City Map**. The fo
 
 Your queued projects always come first. Adding a manual project pauses an automatic project, including work already assigned to a builder and offscreen construction payments. Automatic work resumes after your queue finishes. Turning **Auto build** off pauses existing automatic projects and prevents new ones, while your manual queue continues. Settings and project priority persist through saves. Manual plans can still be queued before all their materials are stocked; autonomous planning waits until the full building and foundation bill is affordable.
 
+## Your town's land
+
+Placing the town charter claims the land around it. A soft band of light on the ground marks the town's border while you are in or near the town, or anywhere close while you hold the charter or the Architect's Plans. When the town ranks up, the band sweeps outward to the new border and the new rank is announced. The **Show / hide town borders** key (unbound by default) turns the band off and on.
+
+The town also holds a Recruits claim, owned by your realm's faction, which appears on the Recruits world map. It starts as Village Expansion's 7×7-chunk village claim and grows with the town's land on every rank. Conquest moves it to the new owner. With Village Expansion installed, a village's claim raid can sack the town's land, but it cannot take the town: the claim is restored. Only Living Realms raids and sieges take towns. `townClaims.enabled` (default true) switches town claims off. See [docs/village-expansion.md](docs/village-expansion.md).
+
 ## Kingdoms, capitals and conquest
 
 All cities owned by the same player form one kingdom. Independent NPC towns start as separate kingdoms and can expand through conquest. Each kingdom has exactly one designated capital, starting with its first town; this designation is separate from the town's development rank. Only that settlement can reach Capital rank or commission a Capital Castle. City Manager → Overview shows the capital and kingdom city count. **Make capital** moves the designation, with a one-Minecraft-day cooldown and no moves during a raid. A former Capital-rank settlement returns to City rank, retaining its buildings, stockpile and research.

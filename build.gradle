@@ -37,6 +37,8 @@ minecraft {
             // ./gradlew runClient -ParchitectTest -PrunDir=<dir> : Architect view walkthrough with screenshots (see ArchitectTour)
             if (project.hasProperty('architectTest')) property 'livingrealms.architectTest', 'true'
             if (project.hasProperty('tour')) property 'livingrealms.tour', 'true'
+            // ./gradlew runClient -PtownRingTour -PrunDir=<dir> [-PvillageExpansion] : town ring and map claim, before and after a rank-up (see TownRingTour)
+            if (project.hasProperty('townRingTour')) property 'livingrealms.townRingTour', 'true'
         }
         server {
             args '--nogui'
