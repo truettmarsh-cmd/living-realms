@@ -164,6 +164,7 @@ public final class Net {
                 t.putString("style", s.style);
                 t.putLong("center", s.center.asLong());
                 t.putInt("radius", s.radius());
+                t.putInt("tier", s.tier.number());
                 t.putBoolean("mine", p.getUUID().equals(s.owner));
                 t.putBoolean("ai", s.isAi());
                 ListTag plots = new ListTag();
@@ -180,6 +181,7 @@ public final class Net {
             }
             CompoundTag out = new CompoundTag();
             out.put("towns", towns);
+            out.put("raids", View.raids(m, p));
             send(p, "plots", out);
         }
     }

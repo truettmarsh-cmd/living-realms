@@ -12,5 +12,6 @@
   "key.livingrealms.raise": "Raise building (Architect view)",
   "key.livingrealms.lower": "Lower building (Architect view)",
   "key.livingrealms.recruit": "Recruit Command (look at your recruit)",
-  "key.livingrealms.recruit.none": "Look at one of your recruits to command it"
+  "key.livingrealms.recruit.none": "Look at one of your recruits to command it",
+  "key.livingrealms.ring": "Show / hide town borders"
 }

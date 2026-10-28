@@ -201,6 +201,20 @@ public final class CompatSelfTest {
                 check(crew instanceof BowmanEntity b && b.getShouldStrategicFire() && target.center.equals(b.StrategicFirePos())
                         && source.kingdomId().equals(b.getOwnerUUID()), "Bowman crew aims the trebuchet at the target centre");
                 check(RecruitsBridge.countInPack(crew, SiegeTrains.item("siegemachines:giant_stone")) == 16, "Crew carries ammunition");
+                // Fire control: attackers at the centre lift the fire onto clear defenders, or stop it.
+                Entity ours = RecruitsBridge.spawn(level, UnitType.FOOTMAN, target.center, a, "Siege test attacker");
+                Entity theirs = RecruitsBridge.spawn(level, UnitType.FOOTMAN, target.center.offset(0, 0, 20), null, "Siege test defender");
+                try {
+                    SiegeTrains.aim(server, raid, target, List.of(ours), List.of(theirs));
+                    BowmanEntity b = (BowmanEntity) crew;
+                    check(b.getShouldStrategicFire() && theirs.blockPosition().equals(b.StrategicFirePos())
+                            && logged(target, "shifts its fire"), "With attackers at the centre the crew shifts fire onto clear defenders");
+                    SiegeTrains.aim(server, raid, target, List.of(ours), List.of());
+                    check(!b.getShouldStrategicFire() && logged(target, "holds its fire"), "With nothing safe to hit the crew holds its fire");
+                    ours.teleportTo(target.center.getX() - 40, target.center.getY(), target.center.getZ());
+                    SiegeTrains.aim(server, raid, target, List.of(ours), List.of(theirs));
+                    check(b.getShouldStrategicFire() && target.center.equals(b.StrategicFirePos()), "Once the centre is clear again the crew shells it");
+                } finally { ours.discard(); theirs.discard(); }
                 check(engine.distanceToSqr(target.center.getX(), engine.getY(), target.center.getZ()) < 60 * 60
                         && engine.getX() < target.center.getX(), "Set up outside the centre, on the attacker's side");
                 check(SiegeTrains.recall(server, raid, source) == 1 && source.stock.count(SiegeTrains.item("siegemachines:trebuchet")) == 1

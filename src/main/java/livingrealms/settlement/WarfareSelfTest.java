@@ -31,6 +31,7 @@ public final class WarfareSelfTest {
         String report;
         try {
             run(event.getServer().overworld());
+            checks += StatecraftSelfTest.run(event.getServer().overworld());
             report = "PASS: " + checks + " warfare assertions";
             LivingRealms.LOG.info("WARFARE SELF TEST {}", report);
         } catch (Throwable error) {
@@ -90,7 +91,47 @@ public final class WarfareSelfTest {
         var reload = SettlementManager.load(m.save(new CompoundTag()));
         check(reload.get(province.id).capital && Kingdoms.same(reload.get(colony.id), reload.get(invader.id)), "Conquest and capital survive reload");
 
+        strategy();
         physical(level, owner, other);
+        tactics(level, owner);
+    }
+
+    /** Kingdom-level judgement (Strategy): odds, memory, peace, research. */
+    private static void strategy() {
+        check(Math.abs(Strategy.warChance(0.7, true, 0, false) - 0.55) < 1e-9 && Math.abs(Strategy.warChance(0.5, false, 0, false) - 0.18) < 1e-9
+                && Strategy.warChance(1, true, 0, false) == 0.85, "War odds equal Village Expansion's when the faction is at least even");
+        check(Strategy.warChance(0.2, true, 0, false) < Strategy.warChance(0.5, true, 0, false) / 2 && Strategy.warChance(Strategy.ratio(0, 12), true, 0, false) < 0.06,
+                "A weaker faction is far less eager for war");
+        check(Math.abs(Strategy.warChance(0.6, true, 1, false) - Strategy.warChance(0.6, true, 0, false) / 2) < 1e-9
+                && Math.abs(Strategy.warChance(0.6, true, 0, true) - Strategy.warChance(0.6, true, 0, false) / 2) < 1e-9, "War weariness and a second front halve the odds");
+        check(Strategy.ratio(0, 0) == 0.5 && Strategy.ratio(10, 2) > 0.7, "Strength ratio on Village Expansion's scale");
+        check(Strategy.suesForPeace(0.2, 0) && Strategy.suesForPeace(0.35, 1) && !Strategy.suesForPeace(0.35, 0.5) && !Strategy.suesForPeace(0.6, 3),
+                "Peace is sought when outmatched and bloodied, not when winning");
+        check(Strategy.odds(2, 8) < Strategy.HOPELESS && Strategy.odds(2, 2) >= Strategy.HOPELESS, "Hopeless raids recognised");
+        check(Strategy.musterNeeded(0) == 3 && Strategy.musterNeeded(1.5) == 6 && Strategy.musterNeeded(9) == 9, "A beaten kingdom needs more soldiers before marching");
+        var vet = new Settlement.Soldier(); vet.level = 10; vet.health = 20; vet.maxHealth = 20;
+        var hurt = new Settlement.Soldier(); hurt.health = 5; hurt.maxHealth = 20;
+        check(Math.abs(Strategy.power(vet) - 1.5) < 1e-9 && Strategy.power(hurt) == 0.25 && Strategy.power(new Settlement.Soldier()) == 1, "Veterans count more, the wounded less");
+
+        var m = new SettlementManager();
+        UUID a = UUID.randomUUID(), b = UUID.randomUUID();
+        var raid = new Raids.Raid(); raid.attacker = a; raid.defender = b; raid.source = UUID.randomUUID(); raid.target = UUID.randomUUID();
+        Strategy.raidStarted(m, raid, 1000);
+        Strategy.raidEnded(m, raid, 1000);
+        check(Strategy.defeats(m, a, 1000) == 1.5 && m.memory.get(b).victories == 1 && m.memory.get(a).repelledBy.get(b) == 1000, "A destroyed expedition is remembered as a heavy defeat");
+        check(Math.abs(Strategy.defeats(m, a, 1000 + Strategy.DAY) - 0.75) < 1e-9, "Defeats fade by half a day");
+        var town = new Settlement(); town.kingdom = b;
+        check(Strategy.threatened(m, town, 2000) && Strategy.guardGoal(m, town, 5, 2000) == 7 && Strategy.guardGoal(m, town, 12, 2000) == 18,
+                "An attacked town goes on a war footing");
+        check(!Strategy.threatened(m, town, 1000 + Strategy.FOOTING + 1) && Strategy.guardGoal(m, town, 5, 1000 + Strategy.FOOTING + 1) == 5, "The war footing ends after two days");
+        var back = SettlementManager.load(m.save(new CompoundTag()));
+        check(back.memory.size() == 2 && Strategy.defeats(back, a, 1000) == 1.5 && back.memory.get(b).attacked == 1000, "War memory survives reload");
+        check(!new SettlementManager().save(new CompoundTag()).contains("warMemory"), "No war memory, no save change");
+
+        var ai = new Settlement(); ai.tier = Tier.HAMLET; ai.population = 6; ai.d.buildings = 5;
+        check("carpentry".equals(Strategy.aiResearch(ai)), "NPC town researches towards its next rank: " + Strategy.aiResearch(ai));
+        ai.research.add("carpentry");
+        check("masonry".equals(Strategy.aiResearch(ai)), "NPC town follows the rank's research chain: " + Strategy.aiResearch(ai));
     }
 
     private static void physical(ServerLevel level, net.minecraft.server.level.ServerPlayer owner, net.minecraft.server.level.ServerPlayer stranger) {
@@ -111,10 +152,17 @@ public final class WarfareSelfTest {
             Entity defender = soldier(level, target, target.center); entities.add(defender);
             Entity survivor = soldier(level, province, province.center); entities.add(survivor);
             province.soldiers.get(0).royalGuard = true;
+            // A nearer NPC fortress is too strong for a two-soldier expedition: the weaker, farther player capital is chosen.
+            Settlement fortress = town(m, null, "NPC Fortress", 1900); towns.add(fortress); level.getChunkAt(fortress.center);
+            for (int i = 0; i < 8; i++) { var g = new Settlement.Soldier(); g.entity = UUID.randomUUID(); g.type = UnitType.FOOTMAN; g.name = "Fortress guard"; fortress.soldiers.add(g); }
+            check(Raids.canStart(server, m, source, fortress) == null, "Fortress is a legal target: " + Raids.canStart(server, m, source, fortress));
             online(server, owner, true);
-            check(Raids.npcTarget(server,m,source) == target, "NPC target selection includes an online player's capital");
+            check(Raids.npcTarget(server,m,source) == target, "NPC target selection includes an online player's capital, past a nearer fortress");
             online(server, owner, false);
-            check(Raids.npcTarget(server,m,source) == null, "NPC does not initiate raids against offline players");
+            check(Raids.npcTarget(server,m,source) == null, "NPC does not initiate raids against offline players, nor hopeless ones");
+            fortress.soldiers.subList(1, 8).clear();
+            check(Raids.npcTarget(server,m,source) == fortress, "A weakly held NPC town is raided");
+            m.remove(fortress); towns.remove(fortress);
             check(Raids.playerStart(stranger,m,target) != null && m.raids.isEmpty(), "Stranger cannot dispatch another kingdom's troops");
             source.founded = -48000;
             online(server, owner, true);
@@ -131,6 +179,24 @@ public final class WarfareSelfTest {
             Raids.tickRaid(server,m,raid);
             Entity attacker = level.getEntity(raid.soldiers.iterator().next());
             check(((Mob) attacker).getTarget() == defender && ((Mob) defender).getTarget() != null, "NPC attackers and town guards receive real mutual combat targets");
+            check(BattleAI.hostile(attacker, defender) && SoldierSpecials.hostile((LivingEntity) attacker, defender)
+                    && raid.soldiers.stream().noneMatch(id -> !id.equals(attacker.getUUID()) && BattleAI.hostile(attacker, level.getEntity(id))),
+                    "Raid soldiers count the other side, and only the other side, as hostile for specials and perks");
+            check(target.raidStatus.contains("holding the centre") && target.log.stream().anyMatch(l -> l.contains("close ranks")),
+                    "Outnumbered defenders close ranks at the centre and the city hears of it");
+            var hurt = (LivingEntity) raid.soldiers.stream().map(level::getEntity).filter(e -> e != attacker).findFirst().orElseThrow();
+            hurt.setHealth(hurt.getMaxHealth() * .2f);
+            Raids.tickRaid(server,m,raid);
+            check(hurt.getPersistentData().getBoolean(BattleAI.FALLBACK) && ((Mob) hurt).getTarget() == null && RecruitsBridge.aggroState(hurt) == 3
+                    && raid.soldiers.contains(hurt.getUUID()) && target.raidStatus.contains("1 falling back"),
+                    "A badly wounded attacker falls back, passive, and still belongs to the raid");
+            hurt.setHealth(hurt.getMaxHealth() * .5f);
+            Raids.tickRaid(server,m,raid);
+            check(hurt.getPersistentData().getBoolean(BattleAI.FALLBACK), "A wounded soldier keeps falling back until 60% health");
+            hurt.setHealth(hurt.getMaxHealth());
+            Raids.tickRaid(server,m,raid);
+            check(!hurt.getPersistentData().getBoolean(BattleAI.FALLBACK) && ((Mob) hurt).getTarget() == defender && RecruitsBridge.aggroState(hurt) == 1,
+                    "Healed, it rejoins the fight");
             float hp = ((LivingEntity) defender).getHealth();
             ((Mob) attacker).doHurtTarget(defender);
             check(((LivingEntity) defender).getHealth() < hp, "Raid recruit deals real damage to defender");
@@ -149,6 +215,7 @@ public final class WarfareSelfTest {
             check(restored.raids.size()==1 && restored.raids.get(0).held==600 && restored.raids.get(0).soldiers.equals(raid.soldiers), "Raid progress and troop identity survive save/reload");
             for (int i=0;i<30;i++) Raids.tickRaid(server,m,raid);
             check(m.raids.isEmpty() && target.owner == null && province.owner == null && Kingdoms.same(source, province), "Physical NPC victory captures player's capital and all cities");
+            check(!BattleAI.fighting(attacker), "A finished battle releases its soldiers");
             check(source.capital && !target.capital && !province.capital, "Captured capital demoted; winner keeps one seat");
             check(RecruitsBridge.owner(survivor).equals(source.kingdomId()) && !province.soldiers.get(0).royalGuard,
                     "Surviving provincial guard changes owner and loses personal escort status");
@@ -163,11 +230,134 @@ public final class WarfareSelfTest {
             for (UUID id : List.copyOf(loss.soldiers)) ((LivingEntity)level.getEntity(id)).hurt(level.damageSources().genericKill(),10000);
             Raids.tickRaid(server,m,loss);
             check(m.raids.isEmpty() && enemy.owner.equals(stranger.getUUID()), "Defeated NPC army does not conquer target");
+            // Regroup: the beaten kingdom does not march with a token force.
+            long now = server.overworld().getGameTime();
+            check(Strategy.defeats(m, source.kingdomId(), now) >= 1.4 && m.memory.get(source.kingdomId()).repelledBy.containsKey(enemy.kingdomId()), "Defeat remembered");
+            check(Strategy.threatened(m, enemy, now), "Raided town is on a war footing");
+            for (int i = 0; i < 2; i++) entities.add(soldier(level, source, source.center.offset(i, 0, 1)));
+            for (Settlement s : Kingdoms.cities(m,source)) s.raidCooldown=0;
+            enemy.raidCooldown = 0;
+            online(server, stranger, true);
+            int ready = Raids.available(level, source).size();
+            check(ready >= 3 && ready < Strategy.musterNeeded(Strategy.defeats(m, source.kingdomId(), now)) && Raids.npcTarget(server, m, source) == enemy, "Enough for a raid, not enough to regroup: " + ready);
+            m.nextRaidCheck = 0;
+            Raids.tick(server, m);
+            check(m.raids.isEmpty(), "Beaten NPC kingdom regroups instead of marching again");
+            m.memory.remove(source.kingdomId());
+            m.nextRaidCheck = 0;
+            Raids.tick(server, m);
+            check(m.raids.size() == 1 && m.raids.get(0).target.equals(enemy.id), "Once recovered it marches");
         } finally {
             online(server, owner, false);
+            online(server, stranger, false);
             m.raids.removeIf(r -> towns.stream().anyMatch(t -> t.id.equals(r.source) || t.id.equals(r.target)));
             entities.forEach(Entity::discard); towns.forEach(m::remove);
         }
+    }
+
+    /** Battle AI rules on real recruits (docs/battle-ai.md). */
+    private static void tactics(ServerLevel level, net.minecraft.server.level.ServerPlayer owner) {
+        var server = level.getServer(); var m = SettlementManager.get(server);
+        List<Entity> spawned = new ArrayList<>(); List<Settlement> towns = new ArrayList<>();
+        try {
+            BlockPos o = new BlockPos(4096, 100, 2048);
+            for (int x = -40; x <= 40; x++) for (int z = -40; z <= 40; z++) {
+                level.setBlock(o.offset(x, -1, z), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 2);
+                for (int y = 0; y < 4; y++) level.setBlock(o.offset(x, y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+            }
+            UUID blue = UUID.randomUUID(), red = UUID.randomUUID();
+            BlockPos rally = o.offset(-30, 0, 0);
+            LivingEntity archer = spawn(level, spawned, UnitType.BOWMAN, o, blue, Items.BOW);
+            LivingEntity close = spawn(level, spawned, UnitType.FOOTMAN, o.offset(3, 0, 0), red, Items.IRON_SWORD);
+            var plan = BattleAI.plan(new BattleAI.Side(List.of(archer), List.of(close), o.offset(20, 0, 0), rally, false, null));
+            var order = plan.of(archer);
+            check(order.target() == close && order.stance() == BattleAI.Stance.SKIRMISH && dist(order.hold(), close) >= BattleAI.ARCHER_MIN,
+                    "An archer engaged at close range steps back to bow range and keeps shooting");
+            close.teleportTo(o.getX() + 15.5, o.getY(), o.getZ() + .5);
+            order = BattleAI.plan(new BattleAI.Side(List.of(archer), List.of(close), o, rally, false, null)).of(archer);
+            check(order.hold().equals(archer.blockPosition()), "An archer already at bow range holds its ground");
+
+            LivingEntity shield = spawn(level, spawned, UnitType.SHIELDBEARER, o.offset(0, 0, 10), blue, Items.IRON_SWORD);
+            LivingEntity foot = spawn(level, spawned, UnitType.FOOTMAN, o.offset(0, 0, 10), blue, Items.IRON_SWORD);
+            close.teleportTo(o.getX() + 4.5, o.getY(), o.getZ() + .5);
+            LivingEntity near = spawn(level, spawned, UnitType.FOOTMAN, o.offset(0, 0, 12), red, Items.IRON_SWORD);
+            plan = BattleAI.plan(new BattleAI.Side(List.of(archer, shield), List.of(close, near), o, rally, false, null));
+            check(plan.of(shield).target() == close && plan.of(shield).stance() == BattleAI.Stance.SCREEN,
+                    "A shieldbearer goes for the enemy at the archers before a nearer one");
+            plan = BattleAI.plan(new BattleAI.Side(List.of(archer, foot), List.of(close, near), o, rally, false, null));
+            check(plan.of(foot).target() == near, "A footman takes the nearest enemy when no archer is in real danger");
+
+            LivingEntity f2 = spawn(level, spawned, UnitType.FOOTMAN, o.offset(0, 0, 10), blue, Items.IRON_SWORD);
+            LivingEntity f3 = spawn(level, spawned, UnitType.FOOTMAN, o.offset(0, 0, 10), blue, Items.IRON_SWORD);
+            LivingEntity other = spawn(level, spawned, UnitType.FOOTMAN, o.offset(0, 0, 8), red, Items.IRON_SWORD);
+            plan = BattleAI.plan(new BattleAI.Side(List.of(foot, f2, f3), List.of(near, other), o, rally, false, null));
+            var finalPlan = plan;
+            long onNear = List.of(foot, f2, f3).stream().filter(e -> finalPlan.of(e).target() == near).count();
+            check(onNear >= 1 && onNear <= BattleAI.MELEE_PER_FOE, "Melee soldiers spread over the enemy line instead of piling on one foe");
+            other.teleportTo(o.getX() + .5, o.getY(), o.getZ() + 15.5);
+            other.setHealth(other.getMaxHealth() * .2f);
+            order = BattleAI.plan(new BattleAI.Side(List.of(foot), List.of(near, other), o, rally, false, null)).of(foot);
+            check(order.target() == other, "A soldier finishes a badly wounded enemy over a fresh one about as close");
+            other.setHealth(other.getMaxHealth());
+
+            other.teleportTo(o.getX() + .5, o.getY(), o.getZ() + 20.5);
+            owner.moveTo(o.getX() + .5, o.getY(), o.getZ() + 24.5);
+            order = BattleAI.plan(new BattleAI.Side(List.of(foot), List.of(near, other), o, rally, true, owner)).of(foot);
+            check(order.target() == other, "Defenders go first for an enemy at their ruler");
+
+            foot.setHealth(foot.getMaxHealth() * .2f);
+            plan = BattleAI.plan(new BattleAI.Side(List.of(foot, f2, f3, shield), List.of(near), o, rally, false, null));
+            check(plan.of(foot).stance() == BattleAI.Stance.FALL_BACK && plan.of(foot).target() == null && plan.of(foot).hold().equals(rally)
+                    && plan.fallingBack() == 1, "A badly wounded soldier falls back to the rally point");
+            check(BattleAI.plan(new BattleAI.Side(List.of(foot), List.of(near), o, rally, false, null)).of(foot).stance() != BattleAI.Stance.FALL_BACK,
+                    "The last soldier standing makes a last stand");
+            check(BattleAI.plan(new BattleAI.Side(List.of(foot, f2, f3, shield), List.of(), o, rally, false, null)).fallingBack() == 0,
+                    "Nobody falls back with no enemy in sight");
+            for (LivingEntity e : List.of(f2, f3, shield)) e.setHealth(e.getMaxHealth() * .2f);
+            check(BattleAI.plan(new BattleAI.Side(List.of(foot, f2, f3, shield), List.of(near), o, rally, false, null)).fallingBack() == 2,
+                    "At most half a side falls back at once");
+            for (LivingEntity e : List.of(foot, f2, f3, shield)) e.setHealth(e.getMaxHealth());
+
+            BlockPos centre = o.offset(0, 0, -20);
+            LivingEntity guard = spawn(level, spawned, UnitType.FOOTMAN, centre, blue, Items.IRON_SWORD);
+            plan = BattleAI.plan(new BattleAI.Side(List.of(guard), List.of(near, other, close), centre, centre, true, null));
+            check(plan.regrouping() && plan.of(guard).stance() == BattleAI.Stance.REGROUP && plan.of(guard).target() == null
+                    && dist(plan.of(guard).hold(), centre) <= BattleAI.REGROUP_RING + 1, "Outnumbered defenders hold the centre instead of charging out");
+            close.teleportTo(centre.getX() + 4.5, centre.getY(), centre.getZ() + .5);
+            plan = BattleAI.plan(new BattleAI.Side(List.of(guard), List.of(near, other, close), centre, centre, true, null));
+            check(plan.of(guard).target() == close, "A regrouped defender still fights an enemy that reaches the centre");
+
+            check(centre.equals(BattleAI.firePoint(centre, List.of(near), List.of(guard))), "Siege engines shell the centre while it is clear of attackers");
+            check(BattleAI.firePoint(centre, List.of(close), List.of(guard)) == null, "Siege engines cease fire rather than hit their own troops");
+            check(near.blockPosition().equals(BattleAI.firePoint(centre, List.of(close), List.of(guard, near))),
+                    "Siege engines shift fire to defenders clear of the attackers");
+
+            // A Royal Guard protecting its ruler counts raid soldiers as threats, not only monsters.
+            Settlement home = town(m, owner.getUUID(), "Guard test", 4096); towns.add(home);
+            Entity royal = soldier(level, home, o.offset(0, 0, 17)); spawned.add(royal);
+            home.soldiers.get(0).royalGuard = true;
+            online(server, owner, true);
+            BattleAI.enlist("guard-test", List.of(other), List.of(royal, owner));
+            check(SoldierProgression.escort(home, home.soldiers.get(0), royal) && ((Mob) royal).getTarget() == other,
+                    "A Royal Guard engages an enemy soldier closing on its ruler");
+            BattleAI.release("guard-test");
+            check(!BattleAI.hostile(royal, other), "Released battles no longer make soldiers hostile");
+        } finally {
+            online(server, owner, false);
+            spawned.forEach(Entity::discard); towns.forEach(m::remove);
+        }
+    }
+
+    private static double dist(BlockPos p, Entity e) { return Math.sqrt(e.distanceToSqr(p.getX() + .5, p.getY(), p.getZ() + .5)); }
+    private static double dist(BlockPos a, BlockPos b) { return Math.sqrt(a.distSqr(b)); }
+
+    private static LivingEntity spawn(ServerLevel level, List<Entity> spawned, UnitType type, BlockPos at, UUID owner, Item weapon) {
+        Entity e = RecruitsBridge.spawn(level, type, at, owner, "Tactics test " + type);
+        if (!(e instanceof LivingEntity l)) throw new IllegalStateException("Recruit spawn failed: " + type);
+        spawned.add(e);
+        RecruitsBridge.setSlot(e, EquipmentSlot.MAINHAND, new ItemStack(weapon));
+        if (type == UnitType.SHIELDBEARER) RecruitsBridge.setSlot(e, EquipmentSlot.OFFHAND, new ItemStack(Items.SHIELD));
+        return l;
     }
 
     private static void online(net.minecraft.server.MinecraftServer server, net.minecraft.server.level.ServerPlayer player, boolean present) {

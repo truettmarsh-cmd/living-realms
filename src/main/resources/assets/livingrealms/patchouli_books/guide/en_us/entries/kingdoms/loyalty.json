@@ -1,0 +1,24 @@
+{
+  "name": "Loyalty & Rebellion",
+  "icon": "minecraft:golden_helmet",
+  "category": "livingrealms:kingdoms",
+  "sortnum": 6,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "A city you $(l)conquer$() or are ceded starts at $(l)loyalty 30$(). Each day it moves:$(li)+4 settling in$(li)+1 per soldier stationed (up to +6), or -3 without a garrison$(li)mood: happy people help, unhappy ones hurt$(li)taxes: none +3, normal -2, high -5$(li)-6 starving, +1 per chapel level (up to +3)"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(li)-1 to -4 far from your capital (or in another dimension)$(li)-4 while its former lords fight you$(li)up to -4 from war exhaustion$(br2)$(l)Largesse$() spends 24 emeralds from the city's stockpile for +12 loyalty, once a day."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Below $(l)40$() the city is in $(l)unrest$(): its mood drops. Below $(l)10$() for half a day it $(l)rebels$(): it returns to its former kingdom if that still stands (a Village Expansion village returns to its faction), or declares itself a $(l)Free City$(). Its garrison goes with it and it is at war with you."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "At $(l)90$() the city is loyal for good. Cities you founded never rebel, nor does your capital.$(br2)See every conquered city's loyalty on the $(l)Kingdom$() page."
+    }
+  ]
+}

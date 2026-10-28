@@ -21,6 +21,10 @@ public final class SettlementManager extends SavedData {
     /** Village Expansion: each player kingdom's Recruits faction, and truces (faction pair -> game time) after making peace. */
     public final Map<UUID, String> realms = new HashMap<>();
     public final Map<String, Long> truces = new HashMap<>();
+    /** What each kingdom remembers of recent battles (Strategy). */
+    public final Map<UUID, Strategy.Memory> memory = new HashMap<>();
+    /** Wars, truces, tribute and the loyalty of conquered cities (Statecraft). */
+    public final Statecraft state = new Statecraft();
 
     public static SettlementManager get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(SettlementManager::load, SettlementManager::new, "livingrealms_settlements");
@@ -98,6 +102,12 @@ public final class SettlementManager extends SavedData {
             truces.forEach(r::putLong);
             tag.put("vxTruces", r);
         }
+        if (!memory.isEmpty()) {
+            CompoundTag r = new CompoundTag();
+            memory.forEach((k, v) -> r.put(k.toString(), v.save()));
+            tag.put("warMemory", r);
+        }
+        if (!state.isEmpty()) tag.put("statecraft", state.save());
         return tag;
     }
 
@@ -114,6 +124,9 @@ public final class SettlementManager extends SavedData {
         for (String k : r.getAllKeys()) try { m.realms.put(UUID.fromString(k), r.getString(k)); } catch (IllegalArgumentException ignored) {}
         CompoundTag tr = tag.getCompound("vxTruces");
         for (String k : tr.getAllKeys()) m.truces.put(k, tr.getLong(k));
+        CompoundTag mem = tag.getCompound("warMemory");
+        for (String k : mem.getAllKeys()) try { m.memory.put(UUID.fromString(k), Strategy.Memory.load(mem.getCompound(k))); } catch (IllegalArgumentException ignored) {}
+        m.state.load(tag.getCompound("statecraft"));
         return m;
     }
 

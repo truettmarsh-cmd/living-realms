@@ -50,10 +50,10 @@ public final class SoldierProgression {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void killedHostile(LivingDeathEvent event) {
-        if (event.isCanceled() || !(event.getEntity() instanceof Enemy)
-                || !(event.getEntity().level() instanceof ServerLevel level)) return;
+        if (event.isCanceled() || !(event.getEntity().level() instanceof ServerLevel level)) return;
         Entity killer = event.getSource().getEntity();
-        if (killer == null) return;
+        // Monsters, and enemy soldiers in a raid: a kill in battle earns XP and fires on-kill perks too.
+        if (killer == null || !(event.getEntity() instanceof Enemy || BattleAI.hostile(killer, event.getEntity()))) return;
         Record r = record(level.getServer(), killer);
         if (r == null || !killer.isAlive()) return;
         SoldierRanks.grant(r.settlement, r.soldier, killer, SoldierSkills.XP_PER_KILL, false, level.getServer().overworld().getGameTime());
@@ -65,9 +65,9 @@ public final class SoldierProgression {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void damagedHostile(LivingHurtEvent event) {
         LivingEntity target = event.getEntity();
-        if (event.isCanceled() || !(target instanceof Enemy) || !(target.level() instanceof ServerLevel level)) return;
+        if (event.isCanceled() || !(target.level() instanceof ServerLevel level)) return;
         Entity attacker = event.getSource().getEntity();
-        if (attacker == null || attacker == target || !attacker.isAlive() || !RecruitsBridge.isRecruit(attacker)) return;
+        if (attacker == null || !(target instanceof Enemy || BattleAI.hostile(attacker, target)) || attacker == target || !attacker.isAlive() || !RecruitsBridge.isRecruit(attacker)) return;
         Record r = record(level.getServer(), attacker);
         if (r == null) return;
         r.soldier.damageBank += Math.min(Math.min(event.getAmount(), target.getHealth()), SoldierRanks.DAMAGE_PER_XP * SoldierRanks.MAX_HIT_XP);
@@ -88,6 +88,7 @@ public final class SoldierProgression {
                 continue;
             }
             RecruitsBridge.allegiance(e, s.kingdomId());
+            if (!BattleAI.fighting(e)) RecruitsBridge.rejoin(e);
             WeaponProficiency.initialise(so);
             int previous = so.legendaryLevelChecked;
             for (LegendaryPerk perk : LegendaryPerk.levelUp(so, RecruitsBridge.level(e), le.getRandom()))
@@ -131,7 +132,7 @@ public final class SoldierProgression {
             if (threat == null) {
                 double nearest = 12 * 12;
                 for (Mob candidate : owner.level().getEntitiesOfClass(Mob.class, owner.getBoundingBox().inflate(12),
-                        mob -> mob instanceof Enemy && mob.isAlive() && !guard.isAlliedTo(mob))) {
+                        mob -> SoldierSpecials.hostile(guard, mob) && mob.isAlive() && !guard.isAlliedTo(mob))) {
                     double d = candidate.distanceToSqr(owner);
                     if (d < nearest) { nearest = d; threat = candidate; }
                 }

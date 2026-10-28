@@ -11,6 +11,10 @@
     {
       "type": "patchouli:text",
       "text": "NPC kingdoms raid too, including you. A warning tells you which city is attacked and whether your capital is at stake.$(br2)Raids pause while armies are unloaded; no chunks are force-loaded. Surviving soldiers change sides on conquest; Royal Guard status is cleared."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "While one of your cities attacks or is attacked, a bar at the top of the screen follows the raid: how long the centre has been held of the 60 seconds, and the time left before the attack fails. The city's $(l)Overview$() shows the same."
     }
   ]
 }

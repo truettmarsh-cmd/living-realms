@@ -17,6 +17,8 @@ public final class VxLayout {
         public int x, z, w, d;
         public String kind = "house";
         public long roadA, roadB;
+        /** The street is one of VE's main (primary) streets. */
+        public boolean primary;
         /** A Living Realms plot now stands on it. */
         public boolean used;
 
@@ -26,6 +28,7 @@ public final class VxLayout {
             t.putString("k", kind);
             t.putLong("ra", roadA); t.putLong("rb", roadB);
             t.putBoolean("u", used);
+            if (primary) t.putBoolean("p", true);
             return t;
         }
 
@@ -36,6 +39,7 @@ public final class VxLayout {
             s.kind = t.getString("k");
             s.roadA = t.getLong("ra"); s.roadB = t.getLong("rb");
             s.used = t.getBoolean("u");
+            s.primary = t.getBoolean("p");
             return s;
         }
 

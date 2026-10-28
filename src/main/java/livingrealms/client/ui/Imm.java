@@ -31,6 +31,10 @@ public final class Imm {
     record Scroll(String id, int x, int y, int w, int h) {}
 
     public GuiGraphics g;
+    /** GUI units per layout unit: below 1 while a screen lays itself out at a finer GUI scale (see {@link #fit}). */
+    public float scale = 1;
+    /** Off: screens always use the player's GUI scale (the screenshot tours use this to check the smallest layouts). */
+    public static boolean fitEnabled = true;
     public Font font;
     public int mx, my;
     public float partial;
@@ -80,6 +84,7 @@ public final class Imm {
             Scroll s = scrolls.get(i);
             if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) {
                 float max = scrollMax.getOrDefault(s.id, 0f);
+                if (max <= 0) continue; // nothing to scroll here: let an enclosing region have it
                 scroll.put(s.id, Mth.clamp(scroll.getOrDefault(s.id, 0f) - (float) delta * 18, 0, max));
                 return true;
             }
@@ -211,7 +216,8 @@ public final class Imm {
 
     public void tip(String... lines) {
         List<FormattedCharSequence> l = new ArrayList<>();
-        for (String s : lines) l.addAll(font.split(Component.literal(s), 220));
+        for (String s : lines) if (s != null && !s.isEmpty()) l.addAll(font.split(Component.literal(s), 220));
+        if (l.isEmpty()) return;
         tooltip = l;
     }
 
@@ -279,7 +285,7 @@ public final class Imm {
             float hv = hover(id + i, on);
             if (i == selected) round(sx + 1, y + 1, sw - 2, h - 2, 4, 0xFF3A4250, 0xFF313845);
             else if (hv > 0) round(sx + 1, y + 1, sw - 2, h - 2, 4, (int) (hv * 0x20) << 24 | 0xFFFFFF);
-            center(labels[i], sx + sw / 2, y + (h - 8) / 2, i == selected ? GOLD : MUTED);
+            center(clip(labels[i], sw - 4), sx + sw / 2, y + (h - 8) / 2, i == selected ? GOLD : MUTED);
             final int idx = i;
             area(sx, y, sw, h, () -> action.accept(idx));
         }
@@ -316,13 +322,34 @@ public final class Imm {
         int[] c = clip.peek();
         if (c != null) { x0 = Math.max(x0, c[0]); y0 = Math.max(y0, c[1]); x1 = Math.min(x1, c[2]); y1 = Math.min(y1, c[3]); }
         clip.push(new int[]{x0, y0, x1, y1});
-        g.enableScissor(x0, y0, Math.max(x0, x1), Math.max(y0, y1));
+        scissor(clip.peek());
     }
 
     public void popClip() {
         clip.pop();
-        // GuiGraphics keeps its own scissor stack and restores the parent on pop; re-enabling here leaked a scissor into the next frame
-        g.disableScissor();
+        if (clip.isEmpty()) RenderSystem.disableScissor();
+        else scissor(clip.peek());
+    }
+
+    /** Scissor in window pixels, so clipping stays right when the screen is drawn at a finer scale than the GUI's. */
+    private void scissor(int[] c) {
+        var win = Minecraft.getInstance().getWindow();
+        double k = scale * win.getGuiScale();
+        int x0 = (int) Math.round(c[0] * k), y0 = (int) Math.round(c[1] * k), x1 = (int) Math.round(c[2] * k), y1 = (int) Math.round(c[3] * k);
+        RenderSystem.enableScissor(x0, win.getHeight() - Math.max(y0, y1), Math.max(0, x1 - x0), Math.max(0, y1 - y0));
+    }
+
+    /**
+     * The scale a screen should draw at so a layout of at least {@code minW} × {@code minH} fits: 1 when the player's GUI
+     * scale leaves room, otherwise the ratio of the largest smaller whole GUI scale that does (never below 2, so text
+     * stays crisp and readable). Whole scales keep every font pixel on whole window pixels.
+     */
+    public static float fit(int minW, int minH) {
+        if (!fitEnabled) return 1;
+        var win = Minecraft.getInstance().getWindow();
+        int gs = Math.max(1, (int) Math.round(win.getGuiScale())), s = gs;
+        while (s > 2 && (win.getWidth() / s < minW || win.getHeight() / s < minH)) s--;
+        return s / (float) gs;
     }
 
     // ------------------------------------------------------------------ colour

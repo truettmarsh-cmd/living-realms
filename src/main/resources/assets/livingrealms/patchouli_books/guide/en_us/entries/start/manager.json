@@ -10,7 +10,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "$(li)$(l)Stockpile$(): the town's shared stores$(li)$(l)Research$(): the technology tree$(li)$(l)Military$(): training, kits, garrison, stances and the alarm$(li)$(l)Blacksmith$(): equipment orders$(br2)Everything you change here is checked by the server, so nothing breaks if you click too fast."
+      "text": "$(li)$(l)Stockpile$(): the town's shared stores$(li)$(l)Research$(): the technology tree$(li)$(l)Military$(): training, kits, garrison, stances and the alarm$(li)$(l)Blacksmith$(): equipment orders$(li)$(l)Kingdom$(): wars, peace and loyalty$(br2)Everything you change here is checked by the server, so nothing breaks if you click too fast."
     }
   ]
 }

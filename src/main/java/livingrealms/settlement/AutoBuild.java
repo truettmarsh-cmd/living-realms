@@ -2,10 +2,13 @@ package livingrealms.settlement;
 
 import livingrealms.building.*;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Rotation;
+import livingrealms.settlement.plan.*;
 import livingrealms.settlement.vx.VxLayout;
+import livingrealms.settlement.vx.VxPlan;
 import java.util.*;
 
 /** Player plans always take precedence over villagers' own paid building projects. */
@@ -28,21 +31,47 @@ public final class AutoBuild {
     public static void think(ServerLevel level, Settlement s) {
         if (s.isAi() || !s.autoBuild || Autonomy.underAttack(level, s)) return;
         boolean home = level.hasChunkAt(s.center);
-        if (home) survey(level, s);
+        if (home) { survey(level, s); payDebts(level, s, true); }
         if (s.plots.stream().anyMatch(AutoBuild::pending)) return;
         if (!home) { away(s, level.random); return; }
         List<BuildingType> candidates = candidates(s, level.random);
-        if (Realms.on() && !s.layout.isEmpty() && fromLayout(level, s, candidates)) return;
+        boolean ve = Realms.on() && !s.layout.isEmpty();
+        if (ve && fromLayout(level, s, candidates)) return;
+        TownPlan plan = s.plan();
+        Terrain terrain = new WorldTerrain(level);
         int sitesTried = 0;
+        // Village Expansion's streets and ours would cross: with its layout, only its lots or the open-site fallback
+        if (!ve) for (BuildingType t : candidates) {
+            if (s.cannotBuild(t) != null) continue;
+            Blueprint bp = BuildingCatalog.blueprint(t.blueprintKey(1, s.style));
+            if (bp == null || !affordable(s, bp, new long[0])) continue;
+            if (++sitesTried > 8) break;
+            TownPlan.Placement at = plan.place(terrain, s, t);
+            if (at == null) continue;
+            long[] foundation = Construction.foundation(level, bp, at.origin().below(t.sink), at.rot());
+            if (!affordable(s, bp, foundation)) continue;
+            if (Planning.plan(level, s, t, at.origin(), at.rot(), false) == null) {
+                Plot p = s.plots.get(s.plots.size() - 1);
+                p.automatic = true;
+                p.priority = -2;
+                plan.frontage.put(p.id, at.street());
+                s.log("Villagers chose to build " + t.name + " while your queue was empty");
+                if (t.category == Category.CIVIC) pave(level, s, plan.founding(s.radius()), true);
+                pave(level, s, plan.connect(at.street(), at.along(), s.radius()), true);
+                return;
+            }
+        }
+        // no lot along the streets fits: an open site in the right district, door turned toward the town centre
+        sitesTried = 0;
         for (BuildingType t : candidates) {
             if (s.cannotBuild(t) != null) continue;
             Blueprint bp = BuildingCatalog.blueprint(t.blueprintKey(1, s.style));
             if (bp == null || !affordable(s, bp, new long[0])) continue;
             if (++sitesTried > 8) return;
             for (int attempt = 0; attempt < 3; attempt++) {
-                Rotation rot = Rotation.values()[level.random.nextInt(4)];
-                BlockPos at = AiPlanner.findSite(level, s, bp.width(rot), bp.depth(rot), s.capital && s.tier.number() >= 5);
+                BlockPos at = AiPlanner.zonedSite(level, s, t, bp);
                 if (at == null) continue;
+                Rotation rot = AiPlanner.towardCentre(s, bp, at);
                 BlockPos origin = at.below(t.sink);
                 if (!clear(level, origin, bp, rot)) continue;
                 long[] foundation = Construction.foundation(level, bp, origin, rot);
@@ -52,61 +81,93 @@ public final class AutoBuild {
                     p.automatic = true;
                     p.priority = -2;
                     s.log("Villagers chose to build " + t.name + " while your queue was empty");
+                    AiPlanner.accessRoad(level, s, p, true);
                     return;
                 }
             }
         }
     }
 
-    /** Village Expansion's street plan comes first: a lot zoned for this kind of building, then the street in front of it. */
+    /** Lays street lengths as road projects (automatic ones for player towns). Without a loaded world they are owed. */
+    public static void pave(ServerLevel level, Settlement s, List<TownPlan.Paving> pavings, boolean automatic) {
+        TownPlan plan = s.plan();
+        boolean desert = Procedural.styleFamily(s.style).equals("desert");
+        for (TownPlan.Paving pv : pavings) {
+            Street st = pv.street();
+            if (pv.to() <= pv.from()) { plan.paved(pv); continue; }
+            BlockPos a = new BlockPos(st.x(pv.from()), s.center.getY(), st.z(pv.from())), b = new BlockPos(st.x(pv.to()), s.center.getY(), st.z(pv.to()));
+            if (level == null || !level.hasChunksAt(Math.min(a.getX(), b.getX()) - 3, Math.min(a.getZ(), b.getZ()) - 3, Math.max(a.getX(), b.getX()) + 3, Math.max(a.getZ(), b.getZ()) + 3)) {
+                plan.owed.merge(st.id, pv.to(), Math::max);
+                continue;
+            }
+            String err = Planning.road(level, s, a, b, st.cls.width, st.cls.material(s.tier, desert));
+            if (err == null) {
+                Plot road = s.plots.get(s.plots.size() - 1);
+                road.automatic = automatic;
+                road.ai = s.isAi();
+                road.priority = automatic ? -2 : -1;
+            }
+            plan.paved(pv);
+        }
+    }
+
+    /** Streets owed by buildings planned while nobody was near, paved once the ground is loaded. */
+    static void payDebts(ServerLevel level, Settlement s, boolean automatic) {
+        if (s.townPlan == null || s.townPlan.owed.isEmpty()) return;
+        TownPlan plan = s.townPlan;
+        Map<Integer, Integer> owed = new HashMap<>(plan.owed);
+        plan.owed.clear();
+        owed.forEach((id, along) -> pave(level, s, plan.connect(id, along, s.radius()), automatic));
+    }
+
+    /** Village Expansion's street plan comes first: a lot in the right district, the building facing its street, then the street. */
     static boolean fromLayout(ServerLevel level, Settlement s, List<BuildingType> candidates) {
         boolean castle = s.capital && s.tier.number() >= 5;
         for (BuildingType t : candidates) {
             if (s.cannotBuild(t) != null) continue;
             Blueprint bp = BuildingCatalog.blueprint(t.blueprintKey(1, s.style));
             if (bp == null || !affordable(s, bp, new long[0])) continue;
-            for (VxLayout.Slot slot : s.layout.slots) {
-                if (slot.used || t.category != Category.CIVIC && !VxLayout.accepts(slot.kind).contains(t.category)) continue;
-                for (Rotation rot : facing(slot)) {
-                    int w = bp.width(rot), d = bp.depth(rot);
-                    if (w > slot.w + 4 || d > slot.d + 4) continue;
-                    int x = slot.x - w / 2, z = slot.z - d / 2;
-                    if (!level.hasChunksAt(x - 1, z - 1, x + w + 1, z + d + 1)) continue;
-                    BlockPos corner = new BlockPos(x, s.center.getY(), z), far = new BlockPos(x + w - 1, s.center.getY(), z + d - 1);
-                    if (!s.contains(corner) || !s.contains(far) || !s.contains(new BlockPos(x, 0, z + d - 1)) || !s.contains(new BlockPos(x + w - 1, 0, z))) continue;
-                    if (AiPlanner.overlaps(s, x - 1, z - 1, x + w, z + d) || castle && CapitalCastles.reserved(s, x - 1, z - 1, x + w, z + d)) continue;
-                    BlockPos at = new BlockPos(x, Construction.ground(level, x + w / 2, z + d / 2), z);
-                    BlockPos origin = at.below(t.sink);
-                    if (!clear(level, origin, bp, rot)) continue;
-                    long[] foundation = Construction.foundation(level, bp, origin, rot);
-                    if (!affordable(s, bp, foundation) || Planning.plan(level, s, t, at, rot, false) != null) continue;
-                    Plot p = s.plots.get(s.plots.size() - 1);
-                    p.automatic = true;
-                    p.priority = -2;
-                    for (VxLayout.Slot o : s.layout.slots)
-                        if (Math.abs(o.x - slot.x) * 2 < o.w + w && Math.abs(o.z - slot.z) * 2 < o.d + d) o.used = true;
-                    s.log("Villagers chose to build " + t.name + " on a planned " + slot.kind + " lot");
-                    street(level, s, slot);
-                    return true;
-                }
+            for (VxLayout.Slot slot : VxPlan.ranked(s, t)) {
+                VxPlan.Fit fit = VxPlan.fit(s, slot, bp);
+                if (fit == null) continue;
+                int x = fit.x(), z = fit.z(), w = bp.width(fit.rot()), d = bp.depth(fit.rot());
+                if (!level.hasChunksAt(x - 1, z - 1, x + w + 1, z + d + 1)) continue;
+                BlockPos corner = new BlockPos(x, s.center.getY(), z), far = new BlockPos(x + w - 1, s.center.getY(), z + d - 1);
+                if (!s.contains(corner) || !s.contains(far) || !s.contains(new BlockPos(x, 0, z + d - 1)) || !s.contains(new BlockPos(x + w - 1, 0, z))) continue;
+                if (AiPlanner.overlaps(s, x - 1, z - 1, x + w, z + d) || castle && CapitalCastles.reserved(s, x - 1, z - 1, x + w, z + d)) continue;
+                BlockPos at = new BlockPos(x, Construction.ground(level, x + w / 2, z + d / 2), z);
+                BlockPos origin = at.below(t.sink);
+                if (!clear(level, origin, bp, fit.rot())) continue;
+                long[] foundation = Construction.foundation(level, bp, origin, fit.rot());
+                if (!affordable(s, bp, foundation) || Planning.plan(level, s, t, at, fit.rot(), false) != null) continue;
+                Plot p = s.plots.get(s.plots.size() - 1);
+                p.automatic = true;
+                p.priority = -2;
+                for (VxLayout.Slot o : s.layout.slots)
+                    if (Math.abs(o.x - slot.x) * 2 < o.w + w && Math.abs(o.z - slot.z) * 2 < o.d + d) o.used = true;
+                slot.used = true;
+                s.log("Villagers chose to build " + t.name + " on a planned " + slot.kind + " lot");
+                street(level, s, slot);
+                return true;
             }
         }
         return false;
     }
 
-    /** Rotations with the long side along the street first. */
-    static List<Rotation> facing(VxLayout.Slot slot) {
-        boolean alongX = slot.hasRoad() && Math.abs(slot.roadA().getX() - slot.roadB().getX()) >= Math.abs(slot.roadA().getZ() - slot.roadB().getZ());
-        return alongX ? List.of(Rotation.NONE, Rotation.CLOCKWISE_180, Rotation.CLOCKWISE_90, Rotation.COUNTERCLOCKWISE_90)
-                : List.of(Rotation.CLOCKWISE_90, Rotation.COUNTERCLOCKWISE_90, Rotation.NONE, Rotation.CLOCKWISE_180);
-    }
-
-    /** Lays the lot's street as an automatic road project, once. */
+    /** Lays the lot's street as an automatic road project, once: main streets get the better paving. */
     static void street(ServerLevel level, Settlement s, VxLayout.Slot slot) {
         if (!slot.hasRoad() || !s.layout.paved.add(slot.roadA ^ (slot.roadB * 31))) return;
         BlockPos a = slot.roadA(), b = slot.roadB();
-        if (!s.contains(a) || !s.contains(b)) return;
-        String material = Procedural.styleFamily(s.style).equals("desert") ? "gravel" : "path";
+        // pave the part inside the town's land: walk each end in until it is
+        if (!s.contains(a)) { BlockPos t = a; a = b; b = t; }
+        if (!s.contains(a)) return;
+        BlockPos far = b;
+        int n = Math.max(Math.abs(far.getX() - a.getX()), Math.abs(far.getZ() - a.getZ()));
+        for (int i = n; i > 0 && !s.contains(b); i--)
+            b = new BlockPos(a.getX() + (int) Math.round((far.getX() - a.getX()) * i / (double) n), far.getY(), a.getZ() + (int) Math.round((far.getZ() - a.getZ()) * i / (double) n));
+        if (a.distSqr(b) < 4) return;
+        boolean desert = Procedural.styleFamily(s.style).equals("desert");
+        String material = (slot.primary ? RoadClass.HIGH : RoadClass.STREET).material(s.tier, desert);
         if (Planning.road(level, s, a, b, 3, material) == null) {
             Plot road = s.plots.get(s.plots.size() - 1);
             road.automatic = true;
@@ -114,52 +175,60 @@ public final class AutoBuild {
         }
     }
 
-    /** While loaded, keeps a few clear squares on file (one new or rechecked per step) for planning while nobody is near. */
+    /** While loaded, keeps a few lots along the streets on file (one new or rechecked per step) for planning while nobody is near. */
     static void survey(ServerLevel level, Settlement s) {
-        boolean castle = s.capital && s.tier.number() >= 5;
-        if (!s.sites.isEmpty()) {
-            BlockPos at = s.sites.remove(0);
-            if (level.hasChunksAt(at.getX(), at.getZ(), at.getX() + SITE, at.getZ() + SITE)) {
-                if (usable(s, at) && clearBox(level, at, SITE, SITE, SITE_HEIGHT)) s.sites.add(at);
-            } else s.sites.add(at);
+        if (Realms.on() && !s.layout.isEmpty()) return;
+        TownPlan plan = s.plan();
+        s.sites.clear();
+        if (!plan.sites.isEmpty()) {
+            TownPlan.Site site = plan.sites.remove(0);
+            BlockPos at = site.corner();
+            if (level.hasChunksAt(at.getX(), at.getZ(), at.getX() + site.size(), at.getZ() + site.size())) {
+                if (!AiPlanner.overlaps(s, at.getX() - 2, at.getZ() - 2, at.getX() + site.size() + 1, at.getZ() + site.size() + 1)
+                        && clearBox(level, at, site.size(), site.size(), SITE_HEIGHT)) plan.sites.add(site);
+            } else plan.sites.add(site);
         }
-        if (s.sites.size() >= MAX_SITES) return;
-        BlockPos at = AiPlanner.findSite(level, s, SITE, SITE, castle);
-        if (at != null && usable(s, at) && clearBox(level, at, SITE, SITE, SITE_HEIGHT)) s.sites.add(at);
+        if (plan.sites.size() >= MAX_SITES) return;
+        TownPlan.Site site = plan.survey(new WorldTerrain(level), s, SITE, plan.sites.size() % 2 == 1);
+        if (site != null && clearBox(level, site.corner(), SITE, SITE, SITE_HEIGHT)) plan.sites.add(site);
     }
 
-    /** Inside the land, clear of plots, other surveyed sites and the future castle. */
-    static boolean usable(Settlement s, BlockPos at) {
-        int x0 = at.getX(), z0 = at.getZ(), x1 = x0 + SITE - 1, z1 = z0 + SITE - 1;
-        if (!s.contains(at) || !s.contains(new BlockPos(x1, at.getY(), z1)) || !s.contains(new BlockPos(x0, at.getY(), z1)) || !s.contains(new BlockPos(x1, at.getY(), z0))) return false;
-        if (AiPlanner.overlaps(s, x0 - 2, z0 - 2, x1 + 2, z1 + 2)) return false;
-        if (s.capital && s.tier.number() >= 5 && CapitalCastles.reserved(s, x0 - 2, z0 - 2, x1 + 2, z1 + 2)) return false;
-        for (BlockPos o : s.sites) if (o != at && x0 <= o.getX() + SITE + 1 && x1 + 2 >= o.getX() && z0 <= o.getZ() + SITE + 1 && z1 + 2 >= o.getZ()) return false;
-        return true;
-    }
-
-    /** Plans on a surveyed site without reading terrain; the foundation is measured when the site loads. */
+    /** Plans on a surveyed lot without reading terrain: its district, facing its street; the foundation and street follow when it loads. */
     static void away(Settlement s, net.minecraft.util.RandomSource random) {
-        if (s.sites.isEmpty()) return;
+        TownPlan plan = s.plan();
+        // sites surveyed before towns had a street plan: square, door toward the centre, no street of their own
+        for (BlockPos at : s.sites) {
+            int dx = s.center.getX() - (at.getX() + SITE / 2), dz = s.center.getZ() - (at.getZ() + SITE / 2);
+            Direction front = Math.abs(dx) >= Math.abs(dz) ? (dx >= 0 ? Direction.EAST : Direction.WEST) : (dz >= 0 ? Direction.SOUTH : Direction.NORTH);
+            plan.sites.add(new TownPlan.Site(at, SITE, front, -1, 0));
+        }
+        s.sites.clear();
+        if (plan.sites.isEmpty()) return;
         for (BuildingType t : candidates(s, random)) {
             if (t.sink != 0 || s.cannotBuild(t) != null) continue;
             Blueprint bp = BuildingCatalog.blueprint(t.blueprintKey(1, s.style));
             if (bp == null || bp.sy > SITE_HEIGHT) continue;
-            Rotation rot = null;
-            for (Rotation r : Rotation.values()) if (bp.width(r) <= SITE && bp.depth(r) <= SITE) { rot = r; break; }
-            if (rot == null || !affordable(s, bp, new long[bp.width(rot) * bp.depth(rot) / 4])) continue;
-            for (BlockPos at : new ArrayList<>(s.sites)) {
-                s.sites.remove(at);
-                if (!usable(s, at)) continue;
-                if (Planning.plan(null, s, t, at, rot, false) == null) {
+            int count = (int) s.plots.stream().filter(p -> { BuildingType o = BuildingCatalog.get(p.typeId); return o != null && o.category == t.category; }).count();
+            Zoning.Rule rule = Zoning.rule(t, s.radius(), count);
+            for (TownPlan.Site site : new ArrayList<>(plan.sites)) {
+                Rotation rot = bp.facing(site.front());
+                if (bp.width(rot) > site.size() || bp.depth(rot) > site.size()) break;
+                double d = plan.distance(site);
+                if (site.street() >= 0 && (d < rule.min() || d > rule.max())) continue;
+                if (!affordable(s, bp, new long[bp.width(rot) * bp.depth(rot) / 4])) break;
+                if (Planning.plan(null, s, t, TownPlan.onSite(site, bp, rot), rot, false) == null) {
+                    plan.sites.remove(site);
                     Plot p = s.plots.get(s.plots.size() - 1);
                     p.automatic = true;
                     p.priority = -2;
+                    if (site.street() >= 0) {
+                        plan.frontage.put(p.id, site.street());
+                        plan.owed.merge(site.street(), site.along(), Math::max);
+                    }
                     s.log("Villagers chose to build " + t.name + " while you were away");
                     return;
                 }
             }
-            return;
         }
     }
 
@@ -189,7 +258,7 @@ public final class AutoBuild {
     }
 
     /** Check every block, including containers and upper floors; do not flatten player-built structures. */
-    static boolean clear(ServerLevel level, BlockPos origin, Blueprint bp, Rotation rot) {
+    public static boolean clear(ServerLevel level, BlockPos origin, Blueprint bp, Rotation rot) {
         return clearBox(level, origin, bp.width(rot), bp.depth(rot), bp.sy);
     }
 

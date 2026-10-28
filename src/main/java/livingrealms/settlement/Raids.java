@@ -1,9 +1,11 @@
 package livingrealms.settlement;
 
 import livingrealms.Config;
+import livingrealms.military.BattleAI;
 import livingrealms.military.RecruitsBridge;
 import livingrealms.military.SoldierRanks;
 import livingrealms.military.UnitType;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -11,7 +13,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import java.util.*;
 
 /** Persistent, physical battles. Missing/unloaded soldiers are never counted as defeated. */
@@ -22,6 +27,8 @@ public final class Raids {
         public UUID source, target, attacker, defender;
         public final Set<UUID> soldiers = new LinkedHashSet<>();
         public int held, elapsed;
+        /** Whether the defenders were closing ranks last second; only for announcing the change. */
+        boolean regrouped;
         public CompoundTag save() {
             CompoundTag t = new CompoundTag();
             t.putUUID("source", source); t.putUUID("target", target);
@@ -60,6 +67,8 @@ public final class Raids {
         if (!source.dim.equals(target.dim)) return "Raids require cities in the same dimension";
         if (source.center.distSqr(target.center) > (double) Config.RAID_RANGE.get() * Config.RAID_RANGE.get()) return "Target is beyond raid range";
         if (engaged(m, source) || engaged(m, target)) return "One of these kingdoms already has a raid in progress";
+        String peace = Statecraft.raidBlocker(server, m, source, target);
+        if (peace != null) return peace;
         String oath = livingrealms.compat.Compat.raidBlocked(server, source, target);
         if (oath != null) return oath;
         long now = server.overworld().getGameTime();
@@ -80,6 +89,8 @@ public final class Raids {
         int count = Math.min(12, Math.max(2, troops.size() / 2));
         troops.stream().limit(count).forEach(so -> raid.soldiers.add(so.entity));
         m.raids.add(raid);
+        Strategy.raidStarted(m, raid, server.overworld().getGameTime());
+        Statecraft.raidStarted(server, m, raid, source, target);
         livingrealms.compat.Compat.raidStarted(server, raid, source, target);
         Realms.onRaid(server, m, source, target);
         for (Settlement s : Kingdoms.cities(m, source)) s.raidCooldown = server.overworld().getGameTime() + Config.RAID_COOLDOWN.get();
@@ -101,11 +112,25 @@ public final class Raids {
         return start(player.server, m, source, target);
     }
 
+    /** The raid an NPC kingdom wants most: winnable, valuable and near (Strategy.raidScore); none when every raid in reach is hopeless. */
     static Settlement npcTarget(MinecraftServer server, SettlementManager m, Settlement source) {
-        return m.all().stream().filter(t -> source.mirror() ? !t.isAi() : !t.mirror())
-                .filter(t -> canStart(server, m, source, t) == null)
-                .filter(t -> t.isAi() || server.getPlayerList().getPlayer(t.owner) != null)
-                .min(Comparator.comparingDouble(t -> t.center.distSqr(source.center))).orElse(null);
+        ServerLevel level = server.getLevel(source.dim);
+        if (level == null) return null;
+        double attack = Strategy.expedition(available(level, source));
+        long now = server.overworld().getGameTime();
+        Settlement best = null;
+        double bestScore = 0;
+        for (Settlement t : m.all()) {
+            if (source.mirror() ? t.isAi() : t.mirror()) continue;
+            if (!t.isAi() && server.getPlayerList().getPlayer(t.owner) == null) continue;
+            if (canStart(server, m, source, t) != null || Realms.suing(m, source, t, now)) continue;
+            double score = Strategy.raidScore(server, m, source, t, attack, now);
+            if (score > bestScore || score == bestScore && score > 0 && t.center.distSqr(source.center) < best.center.distSqr(source.center)) {
+                bestScore = score;
+                best = t;
+            }
+        }
+        return best;
     }
 
     public static void tick(MinecraftServer server, SettlementManager m) {
@@ -116,6 +141,10 @@ public final class Raids {
         for (Settlement s : m.all()) {
             if (!s.isAi() || engaged(m, s) || server.overworld().getGameTime() - s.founded < Config.RAID_COOLDOWN.get()) continue;
             if (s.mirror() && !Realms.mayMarch()) continue;
+            ServerLevel level = server.getLevel(s.dim);
+            if (level == null || !level.hasChunkAt(s.center)) continue;
+            // A beaten kingdom regroups before it marches again.
+            if (available(level, s).size() < Strategy.musterNeeded(Strategy.defeats(m, s.kingdomId(), now))) continue;
             Settlement target = npcTarget(server, m, s);
             if (target != null) start(server, m, s, target);
         }
@@ -166,20 +195,26 @@ public final class Raids {
             if (!target.mirror()) RecruitsBridge.allegiance(defender, target.kingdomId());
             Realms.enlist(server, m, target, defender);
         }
-        for (LivingEntity attacker : attackers) {
-            LivingEntity foe = nearest(attacker, defenders);
-            Realms.assign(attacker, foe);
-            RecruitsBridge.raidOrder(attacker, target.center, foe);
-        }
-        for (LivingEntity defender : defenders) if (RecruitsBridge.isRecruit(defender)) {
-            LivingEntity foe = nearest(defender, attackers);
-            Realms.assign(defender, foe);
-            RecruitsBridge.raidOrder(defender, target.center, foe);
-        }
+        // Per-soldier orders come from the battle AI (docs/battle-ai.md). Royal Guards keep escorting their ruler.
+        Set<UUID> guards = new HashSet<>();
+        for (Settlement town : Kingdoms.cities(m, target)) for (var so : town.soldiers) if (so.royalGuard) guards.add(so.entity);
+        LivingEntity ruler = defenders.stream().filter(d -> d instanceof ServerPlayer).findFirst().orElse(null);
+        BattleAI.enlist(key(raid), attackers, defenders);
+        Vec3 front = BattleAI.centroid(attackers, Vec3.atCenterOf(source.center));
+        double reach = Math.min(target.radius() + 8, 56);
+        var attack = BattleAI.plan(new BattleAI.Side(attackers, defenders, target.center, BattleAI.toward(target.center, source.center, reach), false, null));
+        List<LivingEntity> holding = defenders.stream().filter(d -> RecruitsBridge.isRecruit(d) && !guards.contains(d.getUUID())).toList();
+        var defence = BattleAI.plan(new BattleAI.Side(holding, attackers, target.center, BattleAI.rally(target.center, front, 8), true, ruler));
+        for (var plan : List.of(attack, defence)) plan.orders().forEach((soldier, order) -> command(level, soldier, order));
+        if (defence.regrouping() && !raid.regrouped) announce(server, target, "Outnumbered, the defenders of " + target.name + " close ranks at the centre.");
+        raid.regrouped = defence.regrouping();
+        livingrealms.compat.Compat.raidTick(server, raid, target, attackers, defenders);
         boolean atCenter = attackers.stream().anyMatch(e -> e.blockPosition().distSqr(target.center) <= 12 * 12);
         raid.held = defenders.isEmpty() && atCenter ? raid.held + 20 : 0;
+        String back = attack.fallingBack() > 0 ? " (" + attack.fallingBack() + " falling back)" : "";
+        String hold = defence.regrouping() ? ", holding the centre" : defence.fallingBack() > 0 ? " (" + defence.fallingBack() + " falling back)" : "";
         status(source, target, defenders.isEmpty() && atCenter ? "City center occupied: " + raid.held / 20 + "/60 seconds"
-                : "Raid in progress: " + attackers.size() + " attackers; " + defenders.size() + " local defenders");
+                : "Raid in progress: " + attackers.size() + " attackers" + back + "; " + defenders.size() + " local defenders" + hold);
         if (raid.held >= HOLD_TICKS) {
             boolean capital = target.capital;
             UUID oldOwner = target.owner;
@@ -193,9 +228,22 @@ public final class Raids {
         }
     }
 
-    private static LivingEntity nearest(LivingEntity from, List<LivingEntity> candidates) {
-        return candidates.stream().filter(e -> e.distanceToSqr(from) <= 48 * 48)
-                .min(Comparator.comparingDouble(from::distanceToSqr)).orElse(null);
+    static String key(Raid raid) { return raid.source + ">" + raid.target; }
+
+    /** Carries out one battle order. Village Expansion hears about the target first, so its stickiness keeps it. */
+    static void command(ServerLevel level, LivingEntity soldier, BattleAI.Order order) {
+        BlockPos hold = level.hasChunkAt(order.hold()) ? RecruitsBridge.surface(level, order.hold()) : order.hold();
+        if (order.stance() == BattleAI.Stance.FALL_BACK) {
+            soldier.getPersistentData().putBoolean(BattleAI.FALLBACK, true);
+            RecruitsBridge.fallBack(soldier, hold);
+            // At the rally point the wounded bind their wounds, so they can rejoin the line.
+            if (soldier.blockPosition().distSqr(hold) <= 36)
+                soldier.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 60, 0, true, true));
+            return;
+        }
+        soldier.getPersistentData().remove(BattleAI.FALLBACK);
+        Realms.assign(soldier, order.target());
+        RecruitsBridge.raidOrder(soldier, hold, order.target());
     }
 
     private static void status(Settlement source, Settlement target, String message) {
@@ -213,6 +261,9 @@ public final class Raids {
 
     static void finish(MinecraftServer server, SettlementManager m, Raid raid, String message) {
         m.raids.remove(raid);
+        BattleAI.release(key(raid));
+        Strategy.raidEnded(m, raid, server.overworld().getGameTime());
+        Statecraft.raidEnded(server, m, raid, raid.held >= HOLD_TICKS);
         Settlement source = m.get(raid.source), target = m.get(raid.target);
         livingrealms.compat.Compat.raidEnded(server, raid, source);
         for (Settlement s : new Settlement[]{source, target}) if (s != null) {

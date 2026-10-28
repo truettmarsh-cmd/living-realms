@@ -39,6 +39,8 @@ minecraft {
             if (project.hasProperty('tour')) property 'livingrealms.tour', 'true'
             // ./gradlew runClient -PwarTour -PvillageExpansion -PpackMods -PrunDir=<fresh dir> : war and siege walkthrough (see WarTour)
             if (project.hasProperty('warTour')) property 'livingrealms.warTour', 'true'
+            // ./gradlew runClient -PtownRingTour -PrunDir=<dir> [-PvillageExpansion] : town ring and map claim, before and after a rank-up (see TownRingTour)
+            if (project.hasProperty('townRingTour')) property 'livingrealms.townRingTour', 'true'
         }
         server {
             args '--nogui'

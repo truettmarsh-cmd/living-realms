@@ -6,7 +6,15 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "When your queue is empty, villagers choose an affordable building the town needs, find a clear site and build it. They can even start with the Town Hall.$(br2)Your own queued projects always come first: adding one pauses automatic work, which resumes afterwards. Turn it off with $(l)Overview → Auto build$()."
+      "text": "When your queue is empty, villagers choose an affordable building the town needs, find it a lot and build it. They can even start with the Town Hall.$(br2)Your own queued projects always come first: adding one pauses automatic work, which resumes afterwards. Turn it off with $(l)Overview → Auto build$()."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l)The town plan$(): the Town Hall stands in a paved $(l)market place$() at the centre, facing south. Four $(l)high streets$() run out to the edge, crossed by $(l)ring streets$(). Every building gets a lot along a street with its $(l)door to the road$(), and the street is paved up to it."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Districts$(): market, tavern, chapel and library near the market place; houses and crafts around them; smithies, builders and stables out by the high streets; farms, lumber camps and mines at the edge.$(br2)Lots leave room to enlarge buildings, which grow backwards away from the street."
     }
   ]
 }

@@ -16,6 +16,7 @@ public final class Config {
     public static final ForgeConfigSpec.BooleanValue NPC_RAIDS;
     public static final ForgeConfigSpec.IntValue RAID_RANGE, RAID_COOLDOWN;
     public static final ForgeConfigSpec.BooleanValue VILLAGE_EXPANSION;
+    public static final ForgeConfigSpec.BooleanValue TOWN_CLAIMS;
 
     public static final ForgeConfigSpec.BooleanValue ORIGIN_NATIVE_SPAWNS;
     public static final ForgeConfigSpec.IntValue ORIGIN_HUMAN, ORIGIN_DWARF, ORIGIN_ELF, ORIGIN_GIANT;
@@ -47,6 +48,10 @@ public final class Config {
         b.pop();
         b.push("villageExpansion");
         VILLAGE_EXPANSION = b.comment("With Villager Recruits: Village Expansion installed, its village factions own the NPC villages, your kingdom joins its diplomacy and wars, and its city planner lays out your towns. No effect without it.")
+                .define("enabled", true);
+        b.pop();
+        b.push("townClaims");
+        TOWN_CLAIMS = b.comment("Your towns hold a Recruits claim owned by your realm's faction. It shows on the Recruits world map and grows with the town: Village Expansion's 7x7-chunk founding claim, then the town's land as it ranks up. Village Expansion's claim raids cannot delete it. Switching this off removes those claims.")
                 .define("enabled", true);
         b.pop();
         b.push("misc");

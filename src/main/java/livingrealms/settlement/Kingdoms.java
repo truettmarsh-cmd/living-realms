@@ -60,8 +60,10 @@ public final class Kingdoms {
         List<Settlement> captured = target.capital ? new ArrayList<>(cities(m, target)) : new ArrayList<>(List.of(target));
         // Village Expansion records change first: ordinary cities before the capital, so it never splits the losing faction.
         captured.sort(Comparator.comparing((Settlement s) -> s.capital));
+        Strategy.citiesLost(m, target.kingdomId(), captured.size(), server.overworld().getGameTime());
         Map<Settlement, String> losers = Realms.before(server, m, winner, captured);
         for (Settlement s : captured) {
+            Statecraft.Prior prior = Statecraft.prior(m, s);
             s.owner = winner.owner;
             s.ownerName = winner.ownerName;
             s.kingdom = winner.kingdomId();
@@ -81,8 +83,10 @@ public final class Kingdoms {
                 }
             }
             s.log("Captured by " + by);
+            Statecraft.transferred(server, m, winner, s, prior);
         }
         normalize(m);
+        TownClaims.follow(server, m, captured);
         return captured.size();
     }
 

@@ -80,6 +80,7 @@ public final class DevTour {
         if (server == null || !server.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize().getFileName().toString().equals(SAVE)) return;
         t++;
         UUID me = mc.player.getUUID();
+        if (t >= 4704 && t <= 4740) stageRaid();
         switch (t) {
             case 40 -> server.execute(() -> setup(server.getPlayerList().getPlayer(me)));
             case 80 -> server.execute(() -> plan(server.getPlayerList().getPlayer(me)));
@@ -144,12 +145,57 @@ public final class DevTour {
             }
             case 4700 -> shot(mc, "world_ai_town");
             case 4702 -> server.execute(() -> report(server, "end"));
-            case 4720 -> {
+            // the raid HUD and the overview's raid card, from a staged raid (the client is told about it each tick)
+            case 4704 -> mc.setScreen(null);
+            case 4712 -> shot(mc, "hud_raid");
+            case 4714 -> server.execute(() -> Net.openManager(server.getPlayerList().getPlayer(me), town(server)));
+            case 4730 -> tab(mc, "OVERVIEW", 0, null);
+            case 4740 -> shot(mc, "ui_overview_raid");
+            // the layouts at the smallest GUI (427 × 240 here), with the City Manager's finer-scale fit turned off
+            case 4742 -> { livingrealms.client.ui.Imm.fitEnabled = false; mc.resizeDisplay(); tab(mc, "OVERVIEW", 0, null); }
+            case 4752 -> shot(mc, "narrow_overview");
+            case 4754 -> tab(mc, "BUILD", 0, "livingrealms:barracks");
+            case 4766 -> shot(mc, "narrow_build");
+            case 4768 -> tab(mc, "PROJECTS", 0, null);
+            case 4778 -> shot(mc, "narrow_projects");
+            case 4780 -> tab(mc, "MAP", 0, null);
+            case 4790 -> shot(mc, "narrow_map");
+            case 4792 -> tab(mc, "MILITARY", 0, null);
+            case 4802 -> shot(mc, "narrow_garrison");
+            case 4804 -> tab(mc, "MILITARY", 1, null);
+            case 4814 -> shot(mc, "narrow_recruit");
+            case 4816 -> tab(mc, "MILITARY", 3, null);
+            case 4826 -> shot(mc, "narrow_kits");
+            case 4828 -> tab(mc, "FORGE", 2, "iron");
+            case 4838 -> shot(mc, "narrow_forge");
+            // GUI scale 2: the large layout
+            case 4840 -> { livingrealms.client.ui.Imm.fitEnabled = true; mc.options.guiScale().set(2); mc.resizeDisplay(); tab(mc, "OVERVIEW", 0, null); }
+            case 4852 -> shot(mc, "scale2_overview");
+            case 4854 -> tab(mc, "MILITARY", 0, null);
+            case 4866 -> shot(mc, "scale2_garrison");
+            case 4868 -> { mc.options.guiScale().set(0); mc.resizeDisplay(); }
+            case 4880 -> {
                 LOG.info("livingrealms tour: done");
                 mc.stop();
             }
             default -> {}
         }
+    }
+
+    /** A raid on the tour town, as the server would describe it, for the HUD and the overview card. */
+    static void stageRaid() {
+        CompoundTag r = new CompoundTag();
+        r.putBoolean("attacking", false);
+        r.putString("source", "Oakwatch");
+        r.putString("target", ClientState.view == null ? "Highhollow" : ClientState.view.getString("name"));
+        r.putInt("held", 37 * 20);
+        r.putInt("hold", livingrealms.settlement.Raids.HOLD_TICKS);
+        r.putInt("elapsed", 2400);
+        r.putInt("max", livingrealms.settlement.Raids.MAX_TICKS);
+        r.putInt("soldiers", 6);
+        r.putString("status", "City center occupied: 37/60 seconds");
+        ClientState.raids = new java.util.ArrayList<>(java.util.List.of(r));
+        if (ClientState.view != null) ClientState.view.put("raid", r.copy());
     }
 
     static Settlement town(MinecraftServer server) {

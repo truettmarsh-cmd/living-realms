@@ -2,6 +2,7 @@ package livingrealms.compat;
 
 import com.talhanation.recruits.entities.AbstractRecruitEntity;
 import com.talhanation.recruits.entities.BowmanEntity;
+import com.talhanation.recruits.entities.IStrategicFire;
 import com.talhanation.recruits.entities.SiegeEngineerEntity;
 import com.talhanation.recruits.init.ModEntityTypes;
 import livingrealms.military.RecruitsBridge;
@@ -121,6 +122,33 @@ final class SiegeTrains {
             if (level.hasChunkAt(p)) return new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
         }
         return null;
+    }
+
+    /**
+     * Keeps the bombardment off our own troops: the crews shell the centre until attackers reach it, then the densest
+     * defenders clear of them, and cease fire when there is nothing safe to hit. Changes are told once in the chronicle.
+     */
+    static void aim(MinecraftServer server, Raids.Raid raid, Settlement target, List<? extends Entity> attackers, List<? extends Entity> defenders) {
+        List<CompatData.Engine> list = CompatData.get(server).engines.get(key(raid));
+        ServerLevel level = server.getLevel(target.dim);
+        if (list == null || level == null) return;
+        BlockPos at = livingrealms.military.BattleAI.firePoint(target.center, attackers, defenders);
+        for (CompatData.Engine x : list) {
+            Entity crew = level.getEntity(x.crew());
+            if (!(crew instanceof IStrategicFire fire)) continue;
+            boolean was = crew instanceof BowmanEntity b ? b.getShouldStrategicFire() : crew instanceof SiegeEngineerEntity se && se.getShouldStrategicFire();
+            BlockPos old = crew instanceof BowmanEntity b ? b.StrategicFirePos() : crew instanceof SiegeEngineerEntity se ? se.getStrategicFirePos() : null;
+            if (at == null) {
+                fire.setShouldStrategicFire(false);
+                if (was) target.log("The siege engine outside " + target.name + " holds its fire: the attackers are in the way");
+            } else {
+                fire.setStrategicFirePos(at);
+                fire.setShouldStrategicFire(true);
+                if (!was || (old != null && old.equals(target.center) != at.equals(target.center)))
+                    target.log(at.equals(target.center) ? "The siege engine shells the centre of " + target.name
+                            : "The siege engine shifts its fire onto the defenders, away from the attackers");
+            }
+        }
     }
 
     /** Strikes the engines of a finished raid; an attacker's surviving engine returns to its stockpile. */

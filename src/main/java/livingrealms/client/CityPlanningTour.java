@@ -24,6 +24,8 @@ import java.util.UUID;
 public final class CityPlanningTour {
     private static final boolean ON=Boolean.getBoolean("livingrealms.cityPlanningTour");
     private static boolean opened,started;
+    /** 0: map UI checks; 1: growing the town; 2+: ticks of the grown-town camera stage. */
+    private static volatile int grown;
     private static int ticks,idle;
     private static UUID town;
     private static volatile boolean ready,verified;
@@ -45,6 +47,7 @@ public final class CityPlanningTour {
                 started=true;var server=mc.getSingleplayerServer();var id=mc.player.getUUID();
                 server.execute(()->setup(server.getPlayerList().getPlayer(id)));
             }
+            if(grown>0) { town(mc); return; }
             if(!ready || !(mc.screen instanceof CityScreen screen))return;
             ticks++;
             if(ticks==20)shot="planning-build.png";
@@ -52,21 +55,64 @@ public final class CityPlanningTour {
             if(ticks==50)shot="planning-map.png";
             if(ticks==60) {
                 float scale=field(screen,"mapScale"),x=field(screen,"mapOriginX"),y=field(screen,"mapOriginY");
-                screen.mouseClicked(x+(20.25-CityMapOrigin.x())*scale,y+(-9.75-CityMapOrigin.z())*scale,0);
+                float fit=field(screen,"fit"); // the screen may lay out at a finer scale than the GUI's
+                screen.mouseClicked((x+(21.25-CityMapOrigin.x())*scale)*fit,(y+(-13.75-CityMapOrigin.z())*scale)*fit,0);
             }
             if(ticks==90) {
                 var server=mc.getSingleplayerServer();server.execute(()->{
                     Settlement s=SettlementManager.get(server).get(town);
-                    verified=s.plots.stream().anyMatch(p->p.typeId.equals("livingrealms:cottage") && p.origin.getX()==20 && p.origin.getZ()==-10 && !p.automatic);
+                    verified=s.plots.stream().anyMatch(p->p.typeId.equals("livingrealms:cottage") && p.origin.getX()==21 && p.origin.getZ()==-14 && !p.automatic);
                     LivingRealms.LOG.info("CITY MAP UI {}",verified?"PASS: click sent a server-validated manual construction plan":"FAILED: map click did not queue cottage");
                 });
             }
             if(ticks==110)shot="planning-queued.png";
             if(ticks==130) {
-                if(!verified)throw new IllegalStateException("City map packet roundtrip failed");
-                LivingRealms.LOG.info("CITY PLANNING UI COMPLETE");mc.stop();
+                if(!verified)LivingRealms.LOG.error("CITY PLANNING UI FAILED: city map packet roundtrip failed; continuing to the town views");
+                else LivingRealms.LOG.info("CITY PLANNING UI COMPLETE");
+                mc.setScreen(null);grown=1;
+                var server=mc.getSingleplayerServer();var id=mc.player.getUUID();
+                server.execute(()->growTown(server.getPlayerList().getPlayer(id)));
             }
         }catch(Throwable e){LivingRealms.LOG.error("CITY PLANNING UI FAILED",e);mc.stop();}
+    }
+    /** Grown-town stage: villagers plan a whole town with Auto build, then overhead, street-level and map views. */
+    private static void town(Minecraft mc) throws Exception {
+        if(grown<2)return;
+        int t=grown++;var server=mc.getSingleplayerServer();var id=mc.player.getUUID();
+        if(t==2)server.execute(()->camera(server.getPlayerList().getPlayer(id),0.5,185,0.5,180,89.5f));
+        if(t==120)shot="planning-town-top.png";
+        if(t==130)server.execute(()->camera(server.getPlayerList().getPlayer(id),0,150,-70,0,52));
+        if(t==250)shot="planning-town-north.png";
+        if(t==260)server.execute(()->camera(server.getPlayerList().getPlayer(id),62,128,62,135,30));
+        if(t==380)shot="planning-town-southeast.png";
+        if(t==390)server.execute(()->{var p=server.getPlayerList().getPlayer(id);Net.openManager(p,SettlementManager.get(server).get(town),"build");});
+        if(t==420 && mc.screen instanceof CityScreen screen) {
+            var tab=Class.forName("livingrealms.client.ui.CityScreen$Tab");
+            var m=CityScreen.class.getDeclaredMethod("switchTab",tab);m.setAccessible(true);
+            m.invoke(screen,Enum.valueOf(tab.asSubclass(Enum.class),"MAP"));
+        }
+        if(t==460)shot="planning-town-map.png";
+        if(t==480){LivingRealms.LOG.info("CITY PLANNING TOUR COMPLETE");mc.stop();}
+    }
+    private static void camera(ServerPlayer player,double x,double y,double z,float yaw,float pitch){
+        player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+        player.connection.teleport(x,y,z,yaw,pitch);
+    }
+    private static void growTown(ServerPlayer player) {
+        try {
+            var level=player.serverLevel();
+            Settlement s=SettlementManager.get(player.server).get(town);
+            s.tier=Tier.TOWN;
+            int n=CityPlanningSelfTest.grow(level,s,36);
+            LivingRealms.LOG.info("CITY LAYOUT {} buildings placed, {} plots in all, radius {}",n,s.plots.size(),s.radius());
+            for(Plot p:s.plots){
+                var b=p.box();var c=p.center();
+                LivingRealms.LOG.info("CITY LAYOUT {} at {},{} size {}x{} rot {} dist {}",p.typeId,b.minX(),b.minZ(),b.getXSpan(),b.getZSpan(),p.rotation,
+                        (int)Math.sqrt(c.distSqr(new BlockPos(s.center.getX(),c.getY(),s.center.getZ()))));
+            }
+            level.setDayTime(6000);
+            grown=2;
+        }catch(Throwable e){LivingRealms.LOG.error("CITY PLANNING UI FAILED town",e);Minecraft.getInstance().execute(()->Minecraft.getInstance().stop());}
     }
     private static float field(CityScreen s,String name)throws Exception {
         var f=CityScreen.class.getDeclaredField(name);f.setAccessible(true);return f.getFloat(s);
@@ -78,8 +124,8 @@ public final class CityPlanningTour {
     private static void setup(ServerPlayer player) {
         try {
             var level=player.serverLevel();
-            for(int x=-48;x<=48;x++)for(int z=-48;z<=48;z++)for(int y=98;y<=113;y++)
-                level.setBlock(new BlockPos(x,y,z),(y<=99?Blocks.GRASS_BLOCK:Blocks.AIR).defaultBlockState(),2);
+            for(int x=-112;x<=112;x++)for(int z=-112;z<=112;z++)for(int y=96;y<=130;y++)
+                level.setBlock(new BlockPos(x,y,z),(y<=99?(y==99?Blocks.GRASS_BLOCK:Blocks.DIRT):Blocks.AIR).defaultBlockState(),2);
             level.setDayTime(6000);
             Settlement s=new Settlement();s.owner=player.getUUID();s.ownerName=player.getGameProfile().getName();s.name="City Planning Preview";
             s.center=new BlockPos(0,100,0);s.tier=Tier.TOWN;s.autoBuild=false;
@@ -88,8 +134,13 @@ public final class CityPlanningTour {
                 var t=BuildingCatalog.get("livingrealms:"+id);var bp=BuildingCatalog.blueprint(t.blueprintKey(1,s.style));
                 bp.bill().forEach((item,n)->s.stock.force(item,n+1000));
             }
-            String error=Planning.plan(level,s,BuildingCatalog.get("livingrealms:town_hall"),new BlockPos(-10,99,-10),Rotation.NONE,false);
+            // the hall goes where the town plan puts it: the middle of the market place, facing south
+            var hallType=BuildingCatalog.get("livingrealms:town_hall");
+            var at=s.plan().place(new livingrealms.settlement.plan.WorldTerrain(level),s,hallType);
+            if(at==null)throw new IllegalStateException("No town hall site");
+            String error=Planning.plan(level,s,hallType,at.origin(),at.rot(),false);
             if(error!=null)throw new IllegalStateException(error);
+            s.plan().frontage.put(s.plots.get(0).id,at.street());
             Plot hall=s.plots.get(0);
             for(int i=0;i<hall.totalSteps()+100;i++)if(Construction.work(level,s,hall)==Construction.Result.DONE)break;
             hall.state=Plot.State.BUILT;

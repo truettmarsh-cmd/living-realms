@@ -46,6 +46,7 @@ public class RecruitScreen extends Screen {
     private int px, py, pw, ph, cx, cy, cw, ch;
     private long openedAt;
     private int ticks;
+    private float fit = 1;
 
     public RecruitScreen(CompoundTag data) {
         super(Component.literal("Recruit Command"));
@@ -97,8 +98,11 @@ public class RecruitScreen extends Screen {
 
     @Override
     protected void init() {
-        pw = Math.min(width - 12, 500);
-        ph = Math.min(height - 12, 310);
+        fit = ui.scale = Imm.fit(CityScreen.MIN_W, CityScreen.MIN_H);
+        width = Math.round(minecraft.getWindow().getGuiScaledWidth() / fit);
+        height = Math.round(minecraft.getWindow().getGuiScaledHeight() / fit);
+        pw = Math.min(width - 12, CityScreen.MAX_W);
+        ph = Math.min(height - 12, CityScreen.MAX_H);
         px = (width - pw) / 2;
         py = (height - ph) / 2;
         cx = px + 112;
@@ -123,7 +127,10 @@ public class RecruitScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mx, int my, float partial) {
+    public void render(GuiGraphics g, int rawX, int rawY, float partial) {
+        int mx = (int) (rawX / fit), my = (int) (rawY / fit);
+        g.pose().pushPose();
+        g.pose().scale(fit, fit, 1);
         renderBackground(g);
         ui.begin(g, mx, my, partial);
         float open = Math.min(1, (System.currentTimeMillis() - openedAt) / 160f);
@@ -146,6 +153,7 @@ public class RecruitScreen extends Screen {
         g.pose().popPose();
         super.render(g, mx, my, partial);
         ui.end();
+        g.pose().popPose();
     }
 
     Item unitIcon() {
@@ -168,10 +176,12 @@ public class RecruitScreen extends Screen {
         // short windows: the two footer buttons share a row and the tabs tighten
         boolean compact = py + ph - (town ? 58 : 36) - 6 - y < pages * 21;
         int fy = py + ph - (town && !compact ? 58 : 36), pitch = Math.max(16, Math.min(21, (fy - 6 - y) / pages));
+        var hotbar = Minecraft.getInstance().options.keyHotbarSlots;
         for (Page p : Page.values()) {
             if (p == Page.SPECIAL && pages < Page.values().length) continue;
             final Page pp = p;
-            ui.iconButton("rcnav" + p, x - 2, y, w + 4, pitch - 1, p.icon, p.label, page == p, () -> showPage(pp));
+            if (ui.iconButton("rcnav" + p, x - 2, y, w + 4, pitch - 1, p.icon, p.label, page == p, () -> showPage(pp)) && p.ordinal() < hotbar.length)
+                ui.tip(p.label, "Shortcut: " + hotbar[p.ordinal()].getTranslatedKeyMessage().getString() + "  ·  Tab / Shift+Tab cycles pages");
             y += pitch;
         }
         ui.hline(x, fy - 6, w, LINE);
@@ -392,6 +402,7 @@ public class RecruitScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
+        x /= fit; y /= fit;
         if (nameBox.visible && nameBox.mouseClicked(x, y, button)) { setFocused(nameBox); return true; }
         nameBox.setFocused(false);
         if (button == 0 && ui.click(x, y)) return true;
@@ -400,7 +411,7 @@ public class RecruitScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double x, double y, double delta) { return ui.scroll(x, y, delta) || super.mouseScrolled(x, y, delta); }
+    public boolean mouseScrolled(double x, double y, double delta) { return ui.scroll(x / fit, y / fit, delta) || super.mouseScrolled(x / fit, y / fit, delta); }
 
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
@@ -408,7 +419,18 @@ public class RecruitScreen extends Screen {
             if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) { rename(); return true; }
             if (key != GLFW.GLFW_KEY_ESCAPE) return nameBox.keyPressed(key, scan, mods) || true;
         }
-        if (livingrealms.client.ClientSetup.RECRUIT.getKey().getValue() == key && key != GLFW.GLFW_KEY_UNKNOWN) { onClose(); return true; }
+        if (!livingrealms.client.ClientSetup.RECRUIT.isUnbound() && livingrealms.client.ClientSetup.RECRUIT.matches(key, scan)) { onClose(); return true; }
+        // pages follow the hotbar keybinds (1–6 by default); Tab and Shift+Tab step through them
+        CompoundTag so = soldier();
+        java.util.List<Page> shown = new java.util.ArrayList<>(java.util.List.of(Page.values()));
+        if (so == null || !SoldierPanels.hasSpecials(so)) shown.remove(Page.SPECIAL);
+        var hotbar = Minecraft.getInstance().options.keyHotbarSlots;
+        for (Page p : shown) if (p.ordinal() < hotbar.length && hotbar[p.ordinal()].matches(key, scan)) { showPage(p); return true; }
+        if (key == GLFW.GLFW_KEY_TAB) {
+            int i = Math.max(0, shown.indexOf(page));
+            showPage(shown.get((i + (hasShiftDown() ? shown.size() - 1 : 1)) % shown.size()));
+            return true;
+        }
         return super.keyPressed(key, scan, mods);
     }
 }
