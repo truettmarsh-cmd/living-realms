@@ -287,6 +287,26 @@ public final class VillageExpansionSelfTest {
         check(planned.layout.slots.stream().anyMatch(s -> s.used && s.x >= box.minX() - 2 && s.x <= box.maxX() + 2 && s.z >= box.minZ() - 2 && s.z <= box.maxZ() + 2),
                 "Building sits on a Village Expansion lot");
         check(planned.plots.stream().anyMatch(p -> p.typeId.equals("road") && p.automatic) || !planned.layout.paved.isEmpty(), "Its street is queued with it");
+        var hallSlot = planned.layout.slots.stream().filter(s -> s.used && s.x >= box.minX() - 2 && s.x <= box.maxX() + 2 && s.z >= box.minZ() - 2 && s.z <= box.maxZ() + 2).findFirst().orElseThrow();
+        var hallFit = livingrealms.settlement.vx.VxPlan.fit(planned, hallSlot, first.blueprint());
+        check(hallFit != null && hallFit.rot() == first.rotation, "The hall's door faces its lot's street");
+        // grow the town on Village Expansion's lots: doors to the streets, noisy trades and fields away from the centre
+        planned.tier = Tier.TOWN;
+        int grown = CityPlanningSelfTest.grow(level, planned, 14);
+        int fronted = 0, reached = 0;
+        for (Plot p : planned.plots) {
+            if (p.typeId.equals("road")) continue;
+            var t = BuildingCatalog.get(p.typeId);
+            double dist = Math.hypot(p.center().getX() - planned.center.getX(), p.center().getZ() - planned.center.getZ());
+            if (t != null && (t.category == livingrealms.building.Category.SMITHY || t.category == livingrealms.building.Category.MINE
+                    || t.category == livingrealms.building.Category.LUMBER || t.category == livingrealms.building.Category.CONSTRUCTION))
+                check(dist >= 24, "Village Expansion lot for " + t.name + " keeps out of the centre: " + (int) dist);
+            fronted++;
+            if (CityPlanningSelfTest.roadAtDoor(level, p)) reached++;
+            else LivingRealms.LOG.info("No road at the door of {} at {} rot {} front {}", p.typeId, p.box(), p.rotation, p.blueprint().front(p.rotation));
+        }
+        LivingRealms.LOG.info("Village Expansion town grew {} buildings; {} of {} have a road at the door", grown, reached, fronted);
+        check(grown >= 6 && reached == fronted, "Buildings on Village Expansion lots face their streets: " + reached + "/" + fronted);
         var restored = Settlement.load(planned.save());
         check(restored.layout.slots.size() == planned.layout.slots.size() && restored.layout.slots.stream().filter(s -> s.used).count() >= 1
                 && restored.layout.seed == planned.layout.seed, "Layout survives reload");

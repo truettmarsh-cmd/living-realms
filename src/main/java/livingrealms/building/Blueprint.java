@@ -2,6 +2,7 @@ package livingrealms.building;
 
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -72,6 +73,65 @@ public final class Blueprint {
     public int depth(Rotation r) { return quarter(r) ? sx : sz; }
 
     static boolean quarter(Rotation r) { return r == Rotation.CLOCKWISE_90 || r == Rotation.COUNTERCLOCKWISE_90; }
+
+    /** Front side before rotation: a template's "building_entrance" jigsaw, else the wall nearest its outer doors. */
+    private Direction front;
+    /** Local column of the main way in (door or entrance jigsaw), or null if it has none. */
+    private int[] door;
+
+    public Direction front() {
+        if (front == null) scanDoors();
+        return front;
+    }
+
+    /** Local x, y, z of the main door (or the middle of the front wall when it has no door). */
+    public int[] door() {
+        if (front == null || door == null) scanDoors();
+        return door;
+    }
+
+    private void scanDoors() {
+        double[] votes = new double[4]; // north, south, west, east
+        int[][] best = new int[4][];
+        int[] bestDist = {99, 99, 99, 99};
+        for (int i = 0; i < states.length; i++) {
+            BlockState st = states[i];
+            if (!(st.getBlock() instanceof DoorBlock) || st.getValue(DoorBlock.HALF) != DoubleBlockHalf.LOWER) continue;
+            int x = lx(i), z = lz(i);
+            int[] dist = {z, sz - 1 - z, x, sx - 1 - x};
+            int k = 0;
+            for (int j = 1; j < 4; j++) if (dist[j] < dist[k]) k = j;
+            votes[k] += 1.0 / (1 + dist[k]);
+            if (dist[k] < bestDist[k]) { bestDist[k] = dist[k]; best[k] = new int[]{x, ly(i), z}; }
+        }
+        int k = 1;
+        for (int j = 0; j < 4; j++) if (votes[j] > votes[k] + 1e-9) k = j;
+        if (front == null) front = SIDES[k];
+        int side = List.of(SIDES).indexOf(front);
+        if (door == null) door = best[side] != null ? best[side] : switch (front) {
+            case NORTH -> new int[]{sx / 2, 1, 0};
+            case WEST -> new int[]{0, 1, sz / 2};
+            case EAST -> new int[]{sx - 1, 1, sz / 2};
+            default -> new int[]{sx / 2, 1, sz - 1};
+        };
+    }
+
+    private static final Direction[] SIDES = {Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
+
+    /** The front side once placed with this rotation. */
+    public Direction front(Rotation r) { return r.rotate(front()); }
+
+    /** The rotation that turns its front toward the given side. */
+    public Rotation facing(Direction side) {
+        for (Rotation r : Rotation.values()) if (r.rotate(front()) == side) return r;
+        return Rotation.NONE;
+    }
+
+    /** World position of the main door for a building whose rotated bounding box starts at origin. */
+    public BlockPos doorWorld(BlockPos origin, Rotation r) {
+        int[] d = door();
+        return origin.offset(rotate(d[0], d[1], d[2], r));
+    }
 
     /** World position of entry i for a building whose rotated bounding box starts at origin. */
     public BlockPos worldPos(int i, BlockPos origin, Rotation r) {
@@ -155,6 +215,8 @@ public final class Blueprint {
         for (int i = 0; i < palette.length; i++) palette[i] = NbtUtils.readBlockState(BLOCKS, paletteTag.getCompound(i));
         ListTag blocks = tag.getList("blocks", Tag.TAG_COMPOUND);
         List<Entry> entries = new ArrayList<>(blocks.size());
+        Direction entrance = null;
+        int[] entranceAt = null;
         for (int i = 0; i < blocks.size(); i++) {
             CompoundTag bt = blocks.getCompound(i);
             int idx = bt.getInt("state");
@@ -163,6 +225,14 @@ public final class Blueprint {
             if (s.is(Blocks.STRUCTURE_VOID)) continue;
             if (s.is(Blocks.STRUCTURE_BLOCK)) s = Blocks.AIR.defaultBlockState();
             if (s.is(Blocks.JIGSAW)) {
+                CompoundTag jn = bt.getCompound("nbt");
+                Direction out = s.getValue(JigsawBlock.ORIENTATION).front();
+                if (entrance == null && out.getAxis().isHorizontal()
+                        && (jn.getString("name").contains("building_entrance") || jn.getString("target").contains("building_entrance"))) {
+                    ListTag jp = bt.getList("pos", Tag.TAG_INT);
+                    entrance = out;
+                    entranceAt = new int[]{jp.getInt(0), jp.getInt(1), jp.getInt(2)};
+                }
                 s = Blocks.AIR.defaultBlockState();
                 String fin = bt.getCompound("nbt").getString("final_state");
                 if (!fin.isEmpty()) {
@@ -176,7 +246,9 @@ public final class Blueprint {
             ListTag p = bt.getList("pos", Tag.TAG_INT);
             entries.add(new Entry(p.getInt(0), p.getInt(1), p.getInt(2), s));
         }
-        return new Blueprint(key, sx, sy, sz, entries);
+        Blueprint bp = new Blueprint(key, sx, sy, sz, entries);
+        if (entrance != null) { bp.front = entrance; bp.door = entranceAt; }
+        return bp;
     }
 
     public CompoundTag toTag() {
@@ -191,6 +263,8 @@ public final class Blueprint {
         t.put("pal", pl);
         t.putIntArray("p", packed);
         t.putIntArray("s", idx);
+        t.putString("front", front().getName());
+        t.putIntArray("door", door());
         return t;
     }
 
@@ -203,6 +277,10 @@ public final class Blueprint {
         List<Entry> entries = new ArrayList<>(p.length);
         for (int i = 0; i < p.length; i++)
             entries.add(new Entry(p[i] & 1023, p[i] >> 10 & 1023, p[i] >> 20 & 1023, pal[s[i]]));
-        return new Blueprint(t.getString("k"), size[0], size[1], size[2], entries);
+        Blueprint bp = new Blueprint(t.getString("k"), size[0], size[1], size[2], entries);
+        Direction f = Direction.byName(t.getString("front"));
+        if (f != null && f.getAxis().isHorizontal()) bp.front = f;
+        if (t.getIntArray("door").length == 3) bp.door = t.getIntArray("door");
+        return bp;
     }
 }

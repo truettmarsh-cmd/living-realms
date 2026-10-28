@@ -103,7 +103,10 @@ VE also filters every recruit's target change (`RecruitTargetStickiness`, `Facti
 - VE's planner cannot drive a player town directly. Its builder needs a VE faction with materials, Workers-mod templates and VE-owned claims. Registering your town as a VE centre would also hand it to VE's phantom-centre cleanup, auto-builder and garrison logic.
 - So Living Realms calls the pure `CityPlanGenerator.generate` for your town and keeps the result as a `VxLayout`: lots with their zone and street, saved with the town.
 - `Autonomy` grows the layout with the population, in VE's style.
-- `AutoBuild` asks Living Realms' economy what category is needed, puts that building on a matching lot facing its street, then queues the street as an automatic road.
+- `AutoBuild` asks Living Realms' economy what category is needed and `VxPlan` ranks the free lots for it by Living Realms' districts (`plan/Zoning`), with VE's zone only as a tie-break. VE zones lots by emission order, so its lumber, mine, farm and forge lots are among the most central; Living Realms keeps those trades out of the centre instead.
+- The building's door is turned to the lot's street (`Blueprint.front`) and its front wall placed just off the road, centred on the lot. VE's `Plot.anchor` is the lot centre (its overlap test is symmetric about it).
+- The street is queued as an automatic road: the part inside the town's land, paved like a high street when VE marks it `primary`.
+- Living Realms' own street plan is not used while a VE layout exists, so the two never cross. Buildings that find no VE lot take an open site in their district, door toward the centre, with a lane to the nearest road.
 - Buildings are Living Realms blueprints paid from the stockpile. The City Map, Architect view and manual queue are unchanged, and your queued plans still pause automatic work.
 - If no lot fits, the original site search runs.
 
