@@ -224,7 +224,8 @@ final class StatecraftSelfTest {
         check(!VxBridge.atWar(realm, vf) && Realms.truce(m, realm, vf) > now, "Village Expansion makes peace and keeps the truce: war "
                 + VxBridge.atWar(realm, vf) + " truce " + Realms.truce(m, realm, vf) + " now " + now + " realms " + Wars.realmOf(server, m, P, false) + "/" + Wars.realmOf(server, m, F, false)
                 + " vs " + realm + "/" + vf);
-        check(m.state.war(P, F) == null && Statecraft.raidBlocker(server, m, home, va) != null, "Treaty truce bars raids on their villages");
+        Settlement theirs = ceded == va ? vb : va; // the village they kept
+        check(m.state.war(P, F) == null && Statecraft.raidBlocker(server, m, home, theirs) != null, "Treaty truce bars raids on their villages");
         Wars.syncVillageExpansion(server, m, now);
         check(m.state.war(P, F) == null, "Peace holds after a sync");
         Statecraft.Fealty f = m.state.loyalty.get(ceded.id);
