@@ -238,33 +238,87 @@ public final class Realms {
         if (a != null && b != null && !a.equals(b) && !VxBridge.atWar(a, b)) VxBridge.declareWar(server.overworld(), a, b);
     }
 
-    /** Village Expansion factions declare war on nearby player kingdoms, with its own odds for player claims. */
+    /**
+     * Village Expansion factions decide war and peace with player kingdoms, which VE cannot see because Living Realms cities
+     * hold no claims. War uses VE's odds for player claims fed with measured strength (Strategy.warChance); a faction losing
+     * a war sues for peace (Strategy.suesForPeace). See docs/kingdom-ai.md.
+     */
     static void considerWars(MinecraftServer server, SettlementManager m, RandomSource random, boolean force) {
         if (!VxBridge.diplomacyEnabled()) return;
         ServerLevel level = server.overworld();
         long now = level.getGameTime();
         Map<String, List<Settlement>> factions = new LinkedHashMap<>();
         for (Settlement s : m.all()) if (s.mirror() && VxBridge.isNpc(s.vxFaction)) factions.computeIfAbsent(s.vxFaction, k -> new ArrayList<>()).add(s);
+        // One entry per player kingdom: any of its cities stands for it.
+        Map<UUID, Settlement> kingdoms = new LinkedHashMap<>();
+        for (Settlement c : m.all()) if (!c.isAi()) kingdoms.putIfAbsent(c.kingdomId(), c);
         for (var e : factions.entrySet()) {
             String f = e.getKey();
             if (!force && now < NEXT_WAR.getOrDefault(f, 0L)) continue;
             NEXT_WAR.put(f, now + WAR_DECISION);
-            Settlement best = null;
-            double bestD = (double) WAR_RANGE * WAR_RANGE;
-            for (Settlement v : e.getValue()) for (Settlement c : m.all()) {
-                if (c.isAi() || !c.dim.equals(v.dim)) continue;
-                double d = c.center.distSqr(v.center);
-                if (d < bestD) { bestD = d; best = c; }
+            double mine = Strategy.kingdomPower(m, e.getValue().get(0));
+            double weary = Strategy.defeats(m, kingdomFor(f), now);
+            boolean atWar = false;
+            Settlement best = null, bestCity = null;
+            double bestP = 0;
+            for (Settlement k : kingdoms.values()) {
+                String r = knownRealm(m, k);
+                double ratio = Strategy.ratio(mine, Strategy.kingdomPower(m, k));
+                if (r != null && VxBridge.atWar(f, r)) {
+                    atWar = true;
+                    if (Strategy.suesForPeace(ratio, weary)) offerPeace(server, m, f, r, k, now);
+                    continue;
+                }
+                // The kingdom's city nearest to any of the faction's villages.
+                Settlement city = null;
+                double d = (double) WAR_RANGE * WAR_RANGE;
+                for (Settlement v : e.getValue()) for (Settlement c : Kingdoms.cities(m, k)) {
+                    if (!c.dim.equals(v.dim)) continue;
+                    double dd = c.center.distSqr(v.center);
+                    if (dd < d) { d = dd; city = c; }
+                }
+                if (city == null) continue;
+                if (r != null && (!"NEUTRAL".equals(VxBridge.relation(f, r)) || truce(m, f, r) > now || VxBridge.peaceLocked(level, f, r))) continue;
+                double p = Strategy.warChance(ratio, Math.sqrt(d) <= WAR_NEAR, weary, false);
+                if (p > bestP) { bestP = p; best = k; bestCity = city; }
             }
             if (best == null) continue;
-            String r = realm(server, m, best);
-            if (r == null || !"NEUTRAL".equals(VxBridge.relation(f, r)) || truce(m, f, r) > now || VxBridge.peaceLocked(level, f, r)) continue;
-            double p = Math.min(0.85, (Math.sqrt(bestD) <= WAR_NEAR ? 0.35 : 0.18) + Math.max(0, VxBridge.strength(f, r) - 0.5));
-            if (random.nextDouble() >= p) continue;
+            if (atWar) bestP *= 0.5; // no second front while a war is on (Strategy.warChance's otherWar)
+            if (random.nextDouble() >= bestP) continue;
+            String r = realm(server, m, bestCity);
+            if (r == null || !"NEUTRAL".equals(VxBridge.relation(f, r))) continue;
             VxBridge.declareWar(level, f, r);
-            String msg = VxBridge.name(f) + " has declared war on your realm. Their villages may march on " + best.name + ".";
+            PEACE_OFFERS.remove(pair(f, r));
+            String msg = VxBridge.name(f) + " has declared war on your realm. Their villages may march on " + bestCity.name + ".";
             for (Settlement c : Kingdoms.cities(m, best)) Raids.announce(server, c, msg);
         }
+    }
+
+    /** Standing peace offers from Village Expansion factions to realms (faction pair -> expiry). Unsaved, like VE's own war decisions. */
+    static final Map<String, Long> PEACE_OFFERS = new HashMap<>();
+
+    static String pair(String a, String b) { return a.compareTo(b) < 0 ? a + "|" + b : b + "|" + a; }
+
+    /** A beaten faction asks for peace; the ruler accepts with Make peace. Never while a raid between them is under way, nor while VE locks the pair. */
+    static void offerPeace(MinecraftServer server, SettlementManager m, String faction, String realm, Settlement kingdom, long now) {
+        if (PEACE_OFFERS.getOrDefault(pair(faction, realm), 0L) > now) return;
+        UUID npc = kingdomFor(faction), them = kingdom.kingdomId();
+        if (m.raids.stream().anyMatch(r -> r.attacker.equals(npc) && r.defender.equals(them) || r.attacker.equals(them) && r.defender.equals(npc))) return;
+        if (VxBridge.peaceLocked(server.overworld(), faction, realm)) return;
+        PEACE_OFFERS.put(pair(faction, realm), now + TRUCE);
+        String msg = VxBridge.name(faction) + " sues for peace after its losses. Make peace from Military > Realms within a day to accept.";
+        for (Settlement c : Kingdoms.cities(m, kingdom)) Raids.announce(server, c, msg);
+    }
+
+    static boolean offersPeace(String faction, String realm, long now) {
+        return PEACE_OFFERS.getOrDefault(pair(faction, realm), 0L) > now;
+    }
+
+    /** A village that has sued for peace does not march on that realm meanwhile. */
+    static boolean suing(SettlementManager m, Settlement source, Settlement target, long now) {
+        if (!source.mirror() || target.isAi() || PEACE_OFFERS.isEmpty()) return false;
+        String r = knownRealm(m, target);
+        return r != null && offersPeace(source.vxFaction, r, now);
     }
 
     static long truce(SettlementManager m, String a, String b) {
@@ -294,8 +348,10 @@ public final class Realms {
         if (mine == null || !VxBridge.atWar(mine, faction)) return "You are not at war with them";
         ServerLevel level = player.server.overworld();
         if (m.raids.stream().anyMatch(r -> r.attacker.equals(kingdomFor(faction)) || r.defender.equals(kingdomFor(faction)))) return "Not while a raid is under way";
-        if (VxBridge.isNpc(faction) && !VxBridge.wouldAcceptPeace(level, faction, mine)) return VxBridge.name(faction) + " refuses peace for now";
+        boolean offered = offersPeace(faction, mine, level.getGameTime());
+        if (VxBridge.isNpc(faction) && !offered && !VxBridge.wouldAcceptPeace(level, faction, mine)) return VxBridge.name(faction) + " refuses peace for now";
         VxBridge.makePeace(level, mine, faction, TRUCE);
+        PEACE_OFFERS.remove(pair(mine, faction));
         m.truces.put(mine.compareTo(faction) < 0 ? mine + "|" + faction : faction + "|" + mine, level.getGameTime() + TRUCE);
         for (Settlement c : Kingdoms.cities(m, s)) c.log("Peace with " + VxBridge.name(faction) + "; a truce of one day");
         return null;

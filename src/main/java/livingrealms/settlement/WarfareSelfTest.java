@@ -90,7 +90,46 @@ public final class WarfareSelfTest {
         var reload = SettlementManager.load(m.save(new CompoundTag()));
         check(reload.get(province.id).capital && Kingdoms.same(reload.get(colony.id), reload.get(invader.id)), "Conquest and capital survive reload");
 
+        strategy();
         physical(level, owner, other);
+    }
+
+    /** Kingdom-level judgement (Strategy): odds, memory, peace, research. */
+    private static void strategy() {
+        check(Math.abs(Strategy.warChance(0.7, true, 0, false) - 0.55) < 1e-9 && Math.abs(Strategy.warChance(0.5, false, 0, false) - 0.18) < 1e-9
+                && Strategy.warChance(1, true, 0, false) == 0.85, "War odds equal Village Expansion's when the faction is at least even");
+        check(Strategy.warChance(0.2, true, 0, false) < Strategy.warChance(0.5, true, 0, false) / 2 && Strategy.warChance(Strategy.ratio(0, 12), true, 0, false) < 0.06,
+                "A weaker faction is far less eager for war");
+        check(Math.abs(Strategy.warChance(0.6, true, 1, false) - Strategy.warChance(0.6, true, 0, false) / 2) < 1e-9
+                && Math.abs(Strategy.warChance(0.6, true, 0, true) - Strategy.warChance(0.6, true, 0, false) / 2) < 1e-9, "War weariness and a second front halve the odds");
+        check(Strategy.ratio(0, 0) == 0.5 && Strategy.ratio(10, 2) > 0.7, "Strength ratio on Village Expansion's scale");
+        check(Strategy.suesForPeace(0.2, 0) && Strategy.suesForPeace(0.35, 1) && !Strategy.suesForPeace(0.35, 0.5) && !Strategy.suesForPeace(0.6, 3),
+                "Peace is sought when outmatched and bloodied, not when winning");
+        check(Strategy.odds(2, 8) < Strategy.HOPELESS && Strategy.odds(2, 2) >= Strategy.HOPELESS, "Hopeless raids recognised");
+        check(Strategy.musterNeeded(0) == 3 && Strategy.musterNeeded(1.5) == 6 && Strategy.musterNeeded(9) == 9, "A beaten kingdom needs more soldiers before marching");
+        var vet = new Settlement.Soldier(); vet.level = 10; vet.health = 20; vet.maxHealth = 20;
+        var hurt = new Settlement.Soldier(); hurt.health = 5; hurt.maxHealth = 20;
+        check(Math.abs(Strategy.power(vet) - 1.5) < 1e-9 && Strategy.power(hurt) == 0.25 && Strategy.power(new Settlement.Soldier()) == 1, "Veterans count more, the wounded less");
+
+        var m = new SettlementManager();
+        UUID a = UUID.randomUUID(), b = UUID.randomUUID();
+        var raid = new Raids.Raid(); raid.attacker = a; raid.defender = b; raid.source = UUID.randomUUID(); raid.target = UUID.randomUUID();
+        Strategy.raidStarted(m, raid, 1000);
+        Strategy.raidEnded(m, raid, 1000);
+        check(Strategy.defeats(m, a, 1000) == 1.5 && m.memory.get(b).victories == 1 && m.memory.get(a).repelledBy.get(b) == 1000, "A destroyed expedition is remembered as a heavy defeat");
+        check(Math.abs(Strategy.defeats(m, a, 1000 + Strategy.DAY) - 0.75) < 1e-9, "Defeats fade by half a day");
+        var town = new Settlement(); town.kingdom = b;
+        check(Strategy.threatened(m, town, 2000) && Strategy.guardGoal(m, town, 5, 2000) == 7 && Strategy.guardGoal(m, town, 12, 2000) == 18,
+                "An attacked town goes on a war footing");
+        check(!Strategy.threatened(m, town, 1000 + Strategy.FOOTING + 1) && Strategy.guardGoal(m, town, 5, 1000 + Strategy.FOOTING + 1) == 5, "The war footing ends after two days");
+        var back = SettlementManager.load(m.save(new CompoundTag()));
+        check(back.memory.size() == 2 && Strategy.defeats(back, a, 1000) == 1.5 && back.memory.get(b).attacked == 1000, "War memory survives reload");
+        check(!new SettlementManager().save(new CompoundTag()).contains("warMemory"), "No war memory, no save change");
+
+        var ai = new Settlement(); ai.tier = Tier.HAMLET; ai.population = 6; ai.d.buildings = 5;
+        check("carpentry".equals(Strategy.aiResearch(ai)), "NPC town researches towards its next rank: " + Strategy.aiResearch(ai));
+        ai.research.add("carpentry");
+        check("masonry".equals(Strategy.aiResearch(ai)), "NPC town follows the rank's research chain: " + Strategy.aiResearch(ai));
     }
 
     private static void physical(ServerLevel level, net.minecraft.server.level.ServerPlayer owner, net.minecraft.server.level.ServerPlayer stranger) {
@@ -111,10 +150,17 @@ public final class WarfareSelfTest {
             Entity defender = soldier(level, target, target.center); entities.add(defender);
             Entity survivor = soldier(level, province, province.center); entities.add(survivor);
             province.soldiers.get(0).royalGuard = true;
+            // A nearer NPC fortress is too strong for a two-soldier expedition: the weaker, farther player capital is chosen.
+            Settlement fortress = town(m, null, "NPC Fortress", 1900); towns.add(fortress); level.getChunkAt(fortress.center);
+            for (int i = 0; i < 8; i++) { var g = new Settlement.Soldier(); g.entity = UUID.randomUUID(); g.type = UnitType.FOOTMAN; g.name = "Fortress guard"; fortress.soldiers.add(g); }
+            check(Raids.canStart(server, m, source, fortress) == null, "Fortress is a legal target: " + Raids.canStart(server, m, source, fortress));
             online(server, owner, true);
-            check(Raids.npcTarget(server,m,source) == target, "NPC target selection includes an online player's capital");
+            check(Raids.npcTarget(server,m,source) == target, "NPC target selection includes an online player's capital, past a nearer fortress");
             online(server, owner, false);
-            check(Raids.npcTarget(server,m,source) == null, "NPC does not initiate raids against offline players");
+            check(Raids.npcTarget(server,m,source) == null, "NPC does not initiate raids against offline players, nor hopeless ones");
+            fortress.soldiers.subList(1, 8).clear();
+            check(Raids.npcTarget(server,m,source) == fortress, "A weakly held NPC town is raided");
+            m.remove(fortress); towns.remove(fortress);
             check(Raids.playerStart(stranger,m,target) != null && m.raids.isEmpty(), "Stranger cannot dispatch another kingdom's troops");
             source.founded = -48000;
             online(server, owner, true);
@@ -163,8 +209,26 @@ public final class WarfareSelfTest {
             for (UUID id : List.copyOf(loss.soldiers)) ((LivingEntity)level.getEntity(id)).hurt(level.damageSources().genericKill(),10000);
             Raids.tickRaid(server,m,loss);
             check(m.raids.isEmpty() && enemy.owner.equals(stranger.getUUID()), "Defeated NPC army does not conquer target");
+            // Regroup: the beaten kingdom does not march with a token force.
+            long now = server.overworld().getGameTime();
+            check(Strategy.defeats(m, source.kingdomId(), now) >= 1.4 && m.memory.get(source.kingdomId()).repelledBy.containsKey(enemy.kingdomId()), "Defeat remembered");
+            check(Strategy.threatened(m, enemy, now), "Raided town is on a war footing");
+            for (int i = 0; i < 2; i++) entities.add(soldier(level, source, source.center.offset(i, 0, 1)));
+            for (Settlement s : Kingdoms.cities(m,source)) s.raidCooldown=0;
+            enemy.raidCooldown = 0;
+            online(server, stranger, true);
+            int ready = Raids.available(level, source).size();
+            check(ready >= 3 && ready < Strategy.musterNeeded(Strategy.defeats(m, source.kingdomId(), now)) && Raids.npcTarget(server, m, source) == enemy, "Enough for a raid, not enough to regroup: " + ready);
+            m.nextRaidCheck = 0;
+            Raids.tick(server, m);
+            check(m.raids.isEmpty(), "Beaten NPC kingdom regroups instead of marching again");
+            m.memory.remove(source.kingdomId());
+            m.nextRaidCheck = 0;
+            Raids.tick(server, m);
+            check(m.raids.size() == 1 && m.raids.get(0).target.equals(enemy.id), "Once recovered it marches");
         } finally {
             online(server, owner, false);
+            online(server, stranger, false);
             m.raids.removeIf(r -> towns.stream().anyMatch(t -> t.id.equals(r.source) || t.id.equals(r.target)));
             entities.forEach(Entity::discard); towns.forEach(m::remove);
         }

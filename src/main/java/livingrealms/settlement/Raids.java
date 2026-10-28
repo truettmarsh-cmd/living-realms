@@ -80,6 +80,7 @@ public final class Raids {
         int count = Math.min(12, Math.max(2, troops.size() / 2));
         troops.stream().limit(count).forEach(so -> raid.soldiers.add(so.entity));
         m.raids.add(raid);
+        Strategy.raidStarted(m, raid, server.overworld().getGameTime());
         livingrealms.compat.Compat.raidStarted(server, raid, source, target);
         Realms.onRaid(server, m, source, target);
         for (Settlement s : Kingdoms.cities(m, source)) s.raidCooldown = server.overworld().getGameTime() + Config.RAID_COOLDOWN.get();
@@ -101,11 +102,25 @@ public final class Raids {
         return start(player.server, m, source, target);
     }
 
+    /** The raid an NPC kingdom wants most: winnable, valuable and near (Strategy.raidScore); none when every raid in reach is hopeless. */
     static Settlement npcTarget(MinecraftServer server, SettlementManager m, Settlement source) {
-        return m.all().stream().filter(t -> source.mirror() ? !t.isAi() : !t.mirror())
-                .filter(t -> canStart(server, m, source, t) == null)
-                .filter(t -> t.isAi() || server.getPlayerList().getPlayer(t.owner) != null)
-                .min(Comparator.comparingDouble(t -> t.center.distSqr(source.center))).orElse(null);
+        ServerLevel level = server.getLevel(source.dim);
+        if (level == null) return null;
+        double attack = Strategy.expedition(available(level, source));
+        long now = server.overworld().getGameTime();
+        Settlement best = null;
+        double bestScore = 0;
+        for (Settlement t : m.all()) {
+            if (source.mirror() ? t.isAi() : t.mirror()) continue;
+            if (!t.isAi() && server.getPlayerList().getPlayer(t.owner) == null) continue;
+            if (canStart(server, m, source, t) != null || Realms.suing(m, source, t, now)) continue;
+            double score = Strategy.raidScore(server, m, source, t, attack, now);
+            if (score > bestScore || score == bestScore && score > 0 && t.center.distSqr(source.center) < best.center.distSqr(source.center)) {
+                bestScore = score;
+                best = t;
+            }
+        }
+        return best;
     }
 
     public static void tick(MinecraftServer server, SettlementManager m) {
@@ -116,6 +131,10 @@ public final class Raids {
         for (Settlement s : m.all()) {
             if (!s.isAi() || engaged(m, s) || server.overworld().getGameTime() - s.founded < Config.RAID_COOLDOWN.get()) continue;
             if (s.mirror() && !Realms.mayMarch()) continue;
+            ServerLevel level = server.getLevel(s.dim);
+            if (level == null || !level.hasChunkAt(s.center)) continue;
+            // A beaten kingdom regroups before it marches again.
+            if (available(level, s).size() < Strategy.musterNeeded(Strategy.defeats(m, s.kingdomId(), now))) continue;
             Settlement target = npcTarget(server, m, s);
             if (target != null) start(server, m, s, target);
         }
@@ -213,6 +232,7 @@ public final class Raids {
 
     static void finish(MinecraftServer server, SettlementManager m, Raid raid, String message) {
         m.raids.remove(raid);
+        Strategy.raidEnded(m, raid, server.overworld().getGameTime());
         Settlement source = m.get(raid.source), target = m.get(raid.target);
         livingrealms.compat.Compat.raidEnded(server, raid, source);
         for (Settlement s : new Settlement[]{source, target}) if (s != null) {
