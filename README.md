@@ -49,6 +49,8 @@ Open a rival city's City Manager and choose **Raid this city**. The server selec
 
 Defeat the local defending recruits and any defending ruler present in Survival, then keep at least one attacker within 12 blocks of the city center, uncontested, for 60 seconds. Contested occupation resets the timer. Killing the expedition defeats the raid; an expedition that cannot capture the city within ten active minutes retreats.
 
+In the fight, shieldbearers screen the archers, archers hold at bow range, and melee soldiers spread over the enemy line and finish the wounded. Badly wounded soldiers fall back to bind their wounds. Outnumbered defenders close ranks around the city centre. Siege engines lift their fire once the attackers reach the centre, and Royal Guards cut down raiders who close on their ruler. See [docs/battle-ai.md](docs/battle-ai.md).
+
 - **Ordinary city victory:** transfers only that city.
 - **Capital victory:** transfers every city of the defeated kingdom, including cities in other dimensions. The winner retains its own capital; the captured capital becomes an ordinary city.
 - Ownership, stockpiles, buildings and research transfer together. Surviving town soldiers change allegiance, including when they next load. Personal guard status is cleared; captured riders dismount rather than transferring ownership of a player's dragon or horse.
