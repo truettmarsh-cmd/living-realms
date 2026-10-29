@@ -28,6 +28,7 @@ import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -39,7 +40,12 @@ import java.util.UUID;
 public final class CapitalTour {
     /** -PcapitalTerrain: the same capital on generated hills (a site picked for slopes, a stream or two), not superflat. */
     private static final boolean TERRAIN = Boolean.getBoolean("livingrealms.capitalTerrain");
-    private static final boolean ON = TERRAIN || Boolean.getBoolean("livingrealms.capitalTour");
+    /**
+     * -PcapitalUiTour: the same capital, but with part of the city wall and a few plans still queued, then the City Manager
+     * screenshotted on every page and a few interactions, at several window sizes and GUI scales (livingrealms_capitalui_*.png).
+     */
+    private static final boolean UI = Boolean.getBoolean("livingrealms.capitalUiTour");
+    private static final boolean ON = TERRAIN || UI || Boolean.getBoolean("livingrealms.capitalTour");
     private static final Logger LOG = LogUtils.getLogger();
     private static final String SAVE = (TERRAIN ? "livingrealms_capital_hills_" : "livingrealms_capital_") + System.currentTimeMillis();
     private static int waiting, ticks = -1;
@@ -68,6 +74,7 @@ public final class CapitalTour {
         if (!built || center == null) return;
         if (ticks < 100000 && ticks > 40) { ticks = 100000; mc.gui.getChat().clearMessages(false); }
         int t = ticks - 100000, cx = center.getX(), cy = center.getY(), cz = center.getZ();
+        if (UI) { uiTour(mc, server, id, t); return; }
         // overhead, the quarters from the air, a gate from the road, the castle, the wall walk, then the map
         String[] names = TERRAIN ? new String[]{"top", "southeast", "northwest", "northeast", "southwest", "south-gate", "high-street", "castle", "wall-walk"}
                 : new String[]{"top", "southeast", "northwest", "south-gate", "high-street", "castle", "wall-walk"};
@@ -139,8 +146,10 @@ public final class CapitalTour {
             } else throw new IllegalStateException("Town hall: " + err);
             LOG.info("Capital tour: castle {}", String.valueOf(CapitalCastles.plan(level, s)));
             CityPlanningSelfTest.buildQueued(level, s);
+            // the UI tour keeps the walls back for a long queue at the end
+            if (UI) s.autoWalls = false;
             n += CityPlanningSelfTest.grow(level, s, 110);
-            int walls = CityPlanningSelfTest.buildWalls(level, s);
+            int walls = UI ? 0 : CityPlanningSelfTest.buildWalls(level, s);
             // every building enlarged to the best its type allows
             int upgrades = 0;
             for (int round = 0; round < 3; round++) {
@@ -151,6 +160,19 @@ public final class CapitalTour {
                 }
                 CityPlanningSelfTest.stock(s);
                 CityPlanningSelfTest.buildQueued(level, s);
+            }
+            if (UI) {
+                // a long queue for the Projects page: the old-town wall and part of the city wall stand, the rest is queued,
+                // and a few of the player's own plans wait behind it
+                walls = CityPlanningSelfTest.buildWalls(level, s, 25);
+                int plans = 0;
+                for (String type : new String[]{"cottage", "market", "library", "cottage", "tavern", "storehouse"}) {
+                    var bt = BuildingCatalog.get("livingrealms:" + type);
+                    if (bt == null) continue;
+                    var spot = s.plan().place(new livingrealms.settlement.plan.WorldTerrain(level), s, bt);
+                    if (spot != null && Planning.plan(level, s, bt, spot.origin(), spot.rot(), false) == null) plans++;
+                }
+                LOG.info("Capital UI tour: {} plans queued behind the walls", plans);
             }
             Simulation.recompute(s);
             s.population = Math.max(s.population, s.d.housing);
@@ -230,6 +252,108 @@ public final class CapitalTour {
         }
         LOG.info("Capital tour terrain: ground {} to {} within the city wall; {} buildings, {} on built-up foundations; {} wall pieces, {} left open for water or cliff; {}",
                 lo, hi, buildings, raised, pieces, gaps, Walls.status(s));
+    }
+
+    /** Window size (in framebuffer pixels) and GUI scale for each pass, and which pages each pass shows. */
+    private static final Object[][] UI_PASSES = {
+            {"1080p-gs3", 1920, 1080, 3, true}, {"1080p-gs2", 1920, 1080, 2, false}, {"720p-gs2", 1280, 720, 2, false}, {"small-gs2", 1024, 640, 2, false}};
+    private static List<Object[]> uiSteps;
+    private static int uiStart = -1;
+
+    /** The City Manager on every page at each window size and GUI scale, one step every 40 ticks. */
+    private static void uiTour(Minecraft mc, MinecraftServer server, UUID id, int t) {
+        if (t == 1) cam(server, id, center.getX() + 0.5, center.getY() + 200, center.getZ() + 0.5, 180, 90, false);
+        if (t < 400) return; // chunks under the town load for the map
+        if (uiSteps == null) {
+            uiSteps = new ArrayList<>();
+            for (Object[] pass : UI_PASSES) {
+                String tag = (String) pass[0];
+                int w = (Integer) pass[1], h = (Integer) pass[2], gs = (Integer) pass[3];
+                boolean all = (Boolean) pass[4];
+                step(tag + "-setup", c -> {}, () -> { window(mc, w, h); mc.options.guiScale().set(gs); mc.resizeDisplay(); }, false);
+                step(tag + "-overview", c -> { c.tour("OVERVIEW", 0, null); c.tourScroll("overview", 0); }, null, true);
+                if (all) step(tag + "-overview-scrolled", c -> { c.tour("OVERVIEW", 0, null); c.tourScroll("overview", 999); }, null, true);
+                step(tag + "-map", c -> { c.tour("MAP", 0, null); c.tourMap(1, 0, 0); c.tourFocus(null); }, null, true);
+                if (all) {
+                    step(tag + "-map-hover", c -> { c.tour("MAP", 0, null); c.tourMap(1, 0, 0); }, null, false);
+                    step(tag + "-map-hover", c -> c.tourHoverPlot("town_hall"), null, true);
+                    step(tag + "-map-zoom", c -> { c.tour("MAP", 0, null); c.tourMap(3, 0, 0); }, null, false);
+                    step(tag + "-map-zoom", c -> c.tourHoverPlot("cottage"), null, true);
+                    step(tag + "-map-selected", c -> { c.tour("MAP", 0, null); c.tourMap(1.6f, 0, 0); c.tourSelectPlot("town_hall"); c.tourMouse(0, 0); }, null, true);
+                    step(tag + "-map-wall", c -> { c.tour("MAP", 0, null); c.tourMap(1, 0, 0); c.tourSelectPlot("gatehouse"); }, null, true);
+                    step(tag + "-map-focus", c -> { c.tour("MAP", 0, null); c.tourMap(1.25f, 0, 0); c.tourFocus("HOUSING"); }, null, true);
+                }
+                step(tag + "-build", c -> { c.tour("BUILD", 0, null); c.tourCategory("ALL"); }, null, true);
+                if (all) {
+                    step(tag + "-build-housing", c -> { c.tour("BUILD", 0, null); c.tourCategory("HOUSING"); }, null, true);
+                    step(tag + "-build-wall", c -> { c.tour("BUILD", 0, null); c.tourCategory("WALL"); }, null, true);
+                    step(tag + "-build-scrolled", c -> { c.tour("BUILD", 0, null); c.tourCategory("ALL"); c.tourScroll("blist", 3000); }, null, true);
+                }
+                step(tag + "-projects", c -> { c.tour("PROJECTS", 0, null); c.tourScroll("proj", 0); }, null, true);
+                if (all) {
+                    step(tag + "-projects-scrolled", c -> { c.tour("PROJECTS", 0, null); c.tourFocus(null); c.tourScroll("proj", 900); }, null, true);
+                    step(tag + "-projects-open", c -> { c.tour("PROJECTS", 0, null); c.tourOpenGroup("q:City wall"); c.tourOpenGroup("c:HOUSING"); c.tourScroll("proj", 0); }, null, true);
+                    step(tag + "-projects-selected", c -> { c.tour("PROJECTS", 0, null); c.tourScroll("proj", 0); c.tourSelectPlot("wall"); }, null, true);
+                    step(tag + "-stockpile", c -> c.tour("STORAGE", 0, null), null, true);
+                    step(tag + "-research", c -> c.tour("RESEARCH", 0, null), null, true);
+                    step(tag + "-military", c -> c.tour("MILITARY", 0, null), null, true);
+                    step(tag + "-blacksmith", c -> c.tour("FORGE", 2, null), null, true);
+                    step(tag + "-kingdom", c -> c.tour("KINGDOM", 0, null), null, true);
+                    // a moment back at City rank with some research unlearnt: the rank card's progress and locked buildings
+                    String[] unlearn = {"royal_charter", "banking", "engineering", "logistics", "cavalry", "deep_mining", "goldsmithing"};
+                    step(tag + "-city-setup", c -> c.tour("OVERVIEW", 0, null), () -> server.execute(() -> {
+                        Settlement s = SettlementManager.get(server).get(town);
+                        s.tier = Tier.CITY;
+                        for (String r : unlearn) s.research.remove(r);
+                        Simulation.recompute(s);
+                        livingrealms.net.Net.openManager(server.getPlayerList().getPlayer(id), s, "");
+                    }), false);
+                    step(tag + "-city-overview", c -> { c.tour("OVERVIEW", 0, null); c.tourScroll("overview", 0); }, null, true);
+                    step(tag + "-city-build", c -> { c.tour("BUILD", 0, null); c.tourCategory("ALL"); c.tourScroll("blist", 99999); }, null, true);
+                    step(tag + "-city-build-locked", c -> { c.tour("BUILD", 0, null); c.tourCategory("STABLE"); }, null, true);
+                    step(tag + "-city-restore", c -> c.tour("OVERVIEW", 0, null), () -> server.execute(() -> {
+                        Settlement s = SettlementManager.get(server).get(town);
+                        s.tier = Tier.CAPITAL;
+                        s.research.addAll(livingrealms.research.ResearchTree.nodes().keySet());
+                        Simulation.recompute(s);
+                        livingrealms.net.Net.openManager(server.getPlayerList().getPlayer(id), s, "");
+                    }), false);
+                }
+            }
+            server.execute(() -> livingrealms.net.Net.openManager(server.getPlayerList().getPlayer(id), SettlementManager.get(server).get(town), "build"));
+            uiStart = t + 40;
+        }
+        int k = (t - uiStart) / 40, at = (t - uiStart) % 40;
+        if (t < uiStart) return;
+        if (k >= uiSteps.size()) {
+            if (at == 0 && k == uiSteps.size()) LOG.info("CAPITAL UI TOUR COMPLETE: {} steps, screenshots livingrealms_capitalui_*.png", uiSteps.size());
+            return;
+        }
+        Object[] st = uiSteps.get(k);
+        if (at == 0) {
+            if (st[2] != null) ((Runnable) st[2]).run();
+            if (mc.screen instanceof livingrealms.client.ui.CityScreen screen) {
+                screen.tourMouse(-50, -50);
+                @SuppressWarnings("unchecked") var f = (java.util.function.Consumer<livingrealms.client.ui.CityScreen>) st[1];
+                f.accept(screen);
+            }
+        }
+        // hover steps put the mouse on the map after the page has drawn once
+        if (at == 30 && (Boolean) st[3]) {
+            String file = "livingrealms_capitalui_" + st[0] + ".png";
+            Screenshot.grab(mc.gameDirectory, file, mc.getMainRenderTarget(), message -> LOG.info("Capital UI tour captured {}", file));
+        }
+    }
+
+    private static void step(String name, java.util.function.Consumer<livingrealms.client.ui.CityScreen> screen, Runnable before, boolean shot) {
+        uiSteps.add(new Object[]{name, screen, before, shot});
+    }
+
+    /** Resizes the window so its framebuffer is w × h pixels (on high-DPI screens the window itself is smaller). */
+    private static void window(Minecraft mc, int w, int h) {
+        var win = mc.getWindow();
+        double k = win.getScreenWidth() <= 0 ? 1 : win.getWidth() / (double) win.getScreenWidth();
+        org.lwjgl.glfw.GLFW.glfwSetWindowSize(win.getWindow(), (int) Math.round(w / k), (int) Math.round(h / k));
     }
 
     private static void tabIfOpen(Minecraft mc, String name) {

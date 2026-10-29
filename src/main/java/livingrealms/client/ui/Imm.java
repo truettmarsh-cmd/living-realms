@@ -318,6 +318,9 @@ public final class Imm {
 
     public void resetScroll(String id) { scroll.put(id, 0f); }
 
+    /** Jumps a scrolling region to an offset (clamped when next drawn); the screenshot tours use it. */
+    public void setScroll(String id, float off) { scroll.put(id, off); }
+
     public void pushClip(int x0, int y0, int x1, int y1) {
         int[] c = clip.peek();
         if (c != null) { x0 = Math.max(x0, c[0]); y0 = Math.max(y0, c[1]); x1 = Math.min(x1, c[2]); y1 = Math.min(y1, c[3]); }
@@ -370,6 +373,8 @@ public final class Imm {
     public static int opaque(int rgb) { return 0xFF000000 | rgb; }
 
     public static String num(double v) {
+        if (Math.abs(v) >= 10_000_000) return String.format(Locale.ROOT, "%.0fM", v / 1_000_000);
+        if (Math.abs(v) >= 1_000_000) return String.format(Locale.ROOT, "%.1fM", v / 1_000_000);
         if (Math.abs(v) >= 10000) return String.format(Locale.ROOT, "%.0fk", v / 1000);
         if (Math.abs(v) >= 1000) return String.format(Locale.ROOT, "%.1fk", v / 1000);
         if (Math.abs(v) < 10 && v != Math.floor(v)) return String.format(Locale.ROOT, "%.1f", v);

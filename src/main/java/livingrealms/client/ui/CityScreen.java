@@ -90,6 +90,9 @@ public class CityScreen extends Screen {
     private int mapRotation;
     private float mapScale, mapOriginX, mapOriginY;
     private int mapX, mapY, mapW, mapH, resX, resY, resW, resH;
+    /** City Map: the category picked out in the legend (others dimmed), a plot to centre on next frame, the zoom controls. */
+    private Category mapFocus;
+    private int mapCenterOn = -1, mapCtlX, mapCtlY, mapCtlW, mapCtlH;
 
     public CityScreen(String tab) {
         super(Component.literal("City Manager"));
@@ -348,11 +351,14 @@ public class CityScreen extends Screen {
         ui.text(ui.clip((v().getBoolean("capital") ? "KINGDOM CAPITAL" : "Kingdom city") + " · " + cities + (cities == 1 ? " city" : " cities"), cw - 116), cx, warY, GOLD);
         if (ui.over(cx, warY, cw - 112, 13)) ui.tip("Each kingdom has one capital, even before Capital rank.",
                 "Capture a capital to take all its cities. Other victories take only the attacked city.");
-        if (v().getBoolean("ruler")) ui.button("capital", cx + cw - 108, warY - 2, 108, 16, "Make capital", Style.PRIMARY,
+        // the seat of the kingdom has nothing to move: no greyed-out "Make capital" there
+        boolean seat = v().getBoolean("ruler") && v().getBoolean("capital");
+        if (seat) {}
+        else if (v().getBoolean("ruler")) ui.button("capital", cx + cw - 108, warY - 2, 108, 16, "Make capital", Style.PRIMARY,
                 v().getBoolean("canMoveCapital"), () -> act("capital"));
         else ui.button("raid", cx + cw - 108, warY - 2, 108, 16, "Raid this city", Style.PRIMARY,
                 v().getBoolean("canRaid"), () -> act("raid"));
-        if (ui.over(cx + cw - 108, warY - 2, 108, 16)) ui.tip(v().getBoolean("ruler")
+        if (!seat && ui.over(cx + cw - 108, warY - 2, 108, 16)) ui.tip(v().getBoolean("ruler")
                 ? "Move the seat of your kingdom here. Old capital returns to City rank if needed."
                 : "Dispatch half the nearest eligible city's soldiers (2–12); at least 3 must be at home.",
                 v().getBoolean("ruler") ? "Unavailable during raids or within a day of moving it."
@@ -380,7 +386,7 @@ public class CityScreen extends Screen {
         if (raidH > 0) { livingrealms.client.Hud.raidCard(ui, raidTag, cx, y, cw, false); y += raidH; }
         int pop = v().getInt("pop"), housing = v().getInt("housing");
         tile(cx, y, tw, "People", pop + " / " + housing, (float) Math.max(0, v().getDouble("growth")), BLUE,
-                pop >= housing ? "Build houses to grow" : v().getBoolean("starving") ? "Starving" : "Growing", Items.PLAYER_HEAD);
+                pop >= housing ? "Housing full" : v().getBoolean("starving") ? "Starving" : "Growing", Items.PLAYER_HEAD);
         double happy = v().getDouble("happy");
         tile(cx + tw + 3, y, tw, "Happiness", (int) happy + "%", (float) happy / 100, moodColor(happy), "→ " + (int) v().getDouble("happyTarget") + "%", Items.POPPY);
         if (ui.over(cx + tw + 3, y, tw, 44)) {
@@ -394,33 +400,43 @@ public class CityScreen extends Screen {
         Map<Item, Integer> stock = stock();
         tile(cx + 3 * (tw + 3), y, tw, "Treasury", num(stock.getOrDefault(Items.EMERALD, 0)), 0, GOLD, "+" + num(v().getDouble("emeralds")) + " / day", Items.EMERALD);
         y += 50;
-        // rank
+        // rank: progress towards the next one, or the capital at a glance
         int rw = (int) (cw * 0.55), rh = 104;
         ui.card(cx, y, rw, rh);
         Tier cur = Tier.of(v().getInt("tier")), next = cur.next();
         ui.text("Rank", cx + 8, y + 7, MUTED);
         if (next == null) {
-            ui.big(cur.label, cx + 8, y + 20, GOLD, 1.3f);
-            ui.text("A castle crowns the capital.", cx + 8, y + 40, MUTED);
+            ui.big(cur.label, cx + 8, y + 18, GOLD, 1.3f);
+            ui.right("highest rank", cx + rw - 8, y + 7, FAINT);
             String castle = v().getString("castleStatus");
             if (castle.isEmpty()) castle = "Builders will survey the central district.";
-            ui.text(ui.clip(castle, rw - 16), cx + 8, y + 56, MUTED);
-            if (ui.over(cx, y + 48, rw, 30)) ui.tip(castle, "41 × 41 perimeter; central 25 × 25 courtyard stays intact.", "Builders use town materials. Clear blocked perimeter plots first.");
+            ui.text(ui.clip(castle, rw - 16), cx + 8, y + 34, MUTED);
+            if (ui.over(cx, y + 32, rw, 12)) ui.tip(castle, "41 × 41 perimeter; central 25 × 25 courtyard stays intact.", "Builders use town materials. Clear blocked perimeter plots first.");
+            glance(cx + 6, y + 48, rw - 12, stock);
         } else {
             ui.big(cur.label + "  →  " + next.label, cx + 8, y + 19, TEXT, 1.15f);
             List<String> blockers = strings("blockers");
-            int ly = y + 34;
-            String[][] reqs = {
-                    {next.population + " people", String.valueOf(pop >= next.population)},
-                    {next.buildings + " buildings", String.valueOf(v().getInt("buildings") >= next.buildings)},
-                    {next.research == null ? null : "Research " + researchName(next.research), String.valueOf(next.research == null || strings("research").contains(next.research))},
-                    {v().getBoolean("ai") ? null : "Finished Town Hall", String.valueOf(v().getBoolean("townHall"))},
-                    {v().getBoolean("ai") ? null : next.emeralds + " emeralds", String.valueOf(stock.getOrDefault(Items.EMERALD, 0) >= next.emeralds)}};
-            for (String[] r : reqs) {
-                if (r[0] == null) continue;
-                boolean ok = Boolean.parseBoolean(r[1]);
+            boolean ai = v().getBoolean("ai");
+            int em = stock.getOrDefault(Items.EMERALD, 0), ly = y + 34;
+            // label, have, need (need 0: a yes/no requirement with have 1 for yes)
+            List<Object[]> reqs = new ArrayList<>();
+            if (next == Tier.CAPITAL && !v().getBoolean("capital")) reqs.add(new Object[]{"Be the kingdom capital", 0, 0});
+            reqs.add(new Object[]{"People", pop, next.population});
+            reqs.add(new Object[]{"Buildings", v().getInt("buildings"), next.buildings});
+            if (next.research != null) reqs.add(new Object[]{"Research " + researchName(next.research), strings("research").contains(next.research) ? 1 : 0, 0});
+            if (!ai) reqs.add(new Object[]{"Finished Town Hall", v().getBoolean("townHall") ? 1 : 0, 0});
+            if (!ai) reqs.add(new Object[]{"Emeralds", em, next.emeralds});
+            int barW = Math.min(60, rw / 4), valR = cx + rw - 12 - barW;
+            for (Object[] r : reqs) {
+                int have = (Integer) r[1], goal = (Integer) r[2];
+                boolean ok = goal > 0 ? have >= goal : have > 0;
                 ui.text(ok ? "✔" : "✖", cx + 10, ly, ok ? GREEN : RED);
-                ui.text(ui.clip(r[0], rw - 30), cx + 22, ly, ok ? TEXT : MUTED);
+                if (goal > 0) {
+                    String val = num(have) + " / " + num(goal);
+                    ui.text(ui.clip((String) r[0], valR - ui.width(val) - 6 - cx - 22), cx + 22, ly, ok ? TEXT : MUTED);
+                    ui.right(val, valR, ly, ok ? MUTED : ORANGE);
+                    ui.bar(valR + 4, ly + 2, barW, 4, have / (float) goal, ok ? GREEN : GOLD, ok ? GREEN : GOLD_DK);
+                } else ui.text(ui.clip((String) r[0], rw - 30), cx + 22, ly, ok ? TEXT : MUTED);
                 ly += 11;
             }
             if (mine()) {
@@ -446,7 +462,7 @@ public class CityScreen extends Screen {
         ui.right(v().getInt("unemployed") + " idle", tx + txw - 8, jy + 6, FAINT);
         CompoundTag jobs = v().getCompound("jobs");
         List<String> keys = new ArrayList<>(jobs.getAllKeys());
-        int off = ui.beginScroll("jobs", tx + 4, jy + 17, txw - 8, jh - 20, keys.size() * 11);
+        int off = ui.beginScroll("jobs", tx + 4, jy + 17, txw - 8, Math.max(11, (jh - 20) / 11 * 11), keys.size() * 11);
         int yy = jy + 18 - off;
         for (String k : keys) {
             int[] a = jobs.getIntArray(k);
@@ -464,7 +480,7 @@ public class CityScreen extends Screen {
         ui.card(cx, y, cw, lh);
         ui.text("Chronicle", cx + 8, y + 6, MUTED);
         List<String> log = strings("log");
-        int off2 = ui.beginScroll("log", cx + 4, y + 18, cw - 8, lh - 22, log.size() * 11);
+        int off2 = ui.beginScroll("log", cx + 4, y + 18, cw - 8, Math.max(11, (lh - 22) / 11 * 11), log.size() * 11);
         int ly = y + 19 - off2;
         for (int i = 0; i < log.size(); i++) {
             ui.round(cx + 10, ly + 3, 3, 3, 1, i == 0 ? GOLD : FAINT);
@@ -478,7 +494,9 @@ public class CityScreen extends Screen {
     /** Switches for what the town does on its own while you are away. */
     void autonomy(int y) {
         ui.card(cx, y, cw, 18);
-        int x = cx + 6, gw = (cw - 12) / 4, skips = v().getInt("researchSkips");
+        // the garrison stepper keeps a fixed width (with its name when the switches can spare the room)
+        boolean named = (cw - 12 - 122) / 3 >= 88;
+        int x = cx + 6, garW = named ? 122 : 78, gw = (cw - 12 - garW) / 3, skips = v().getInt("researchSkips");
         String active = v().getString("activeResearch"), next = v().getString("nextResearch");
         String now = !active.isEmpty() ? (v().getBoolean("researchAuto") ? "Auto pick: " : "Your pick: ") + researchName(active)
                 : !next.isEmpty() ? "Next pick: " + researchName(next) : "Nothing affordable to start";
@@ -500,13 +518,14 @@ public class CityScreen extends Screen {
             if (i == 0 && skips > 0) ui.area(gx + 24, y + 2, gw - 28, 14, () -> act("clearSkips"));
             if (ui.over(gx, y + 2, gw - 4, 14)) ui.tip(tips[i]);
         }
-        int gx = x + 3 * gw, goal = v().getInt("garrisonGoal"), cap = v().getInt("garrisonCap");
+        int gx = cx + cw - 6 - garW, goal = v().getInt("garrisonGoal"), cap = v().getInt("garrisonCap");
         boolean fixed = v().getInt("garrisonTarget") >= 0;
+        if (named) { ui.text("Garrison", gx, y + 5, MUTED); gx += garW - 74; }
         ui.button("garMinus", gx, y + 2, 14, 14, "-", Style.SECONDARY, goal > 0, () -> act("garrisonTarget", tag("value", Math.max(0, goal - 1))));
         ui.center(v().getInt("garrisonNow") + "/" + goal, gx + 36, y + 5, fixed ? GOLD : TEXT);
         if (fixed) ui.area(gx + 16, y + 2, 40, 14, () -> act("garrisonTarget", tag("value", -1)));
         ui.button("garPlus", gx + 58, y + 2, 14, 14, "+", Style.SECONDARY, goal < cap, () -> act("garrisonTarget", tag("value", Math.min(cap, goal + 1))));
-        if (ui.over(gx, y + 2, gw, 14)) ui.tip("Garrison goal: soldiers and recruits now / goal (" + cap + " places).",
+        if (ui.over(cx + cw - 6 - garW, y + 2, garW, 14)) ui.tip("Garrison goal: soldiers and recruits now / goal (" + cap + " places).",
                 fixed ? "Set by you; click the number to follow half the capacity again." : "Follows half the garrison capacity.");
     }
 
@@ -519,6 +538,43 @@ public class CityScreen extends Screen {
         if (frac > 0) ui.bar(x + 7, y + 33, w - 14, 4, frac, color, color);
         else ui.text(ui.clip(sub, w - 14), x + 7, y + 32, FAINT);
         if (frac > 0 && ui.over(x, y, w, 44)) ui.tip(sub);
+    }
+
+    /** The capital at a glance: six figures in two rows, each with a tooltip. */
+    void glance(int x, int y, int w, Map<Item, Integer> stock) {
+        int built = 0, queued = 0, wallUp = 0, wallAll = 0;
+        for (PlotView p : plots()) {
+            // the queue counts roads as the Projects page does
+            if (!p.state.equals("BUILT")) queued++;
+            if (p.type.equals("road")) continue;
+            boolean wall = isWall(p);
+            if (wall) { wallAll++; if (p.state.equals("BUILT")) wallUp++; }
+            else if (p.state.equals("BUILT")) built++;
+        }
+        int known = strings("research").size(), all = ResearchTree.nodes().size();
+        String[][] cells = {
+                {"Buildings", String.valueOf(v().getInt("buildings")), built + " standing, not counting walls"},
+                {"Walls", wallAll == 0 ? "none" : wallUp + " / " + wallAll, v().getString("wallStatus")},
+                {"Queue", String.valueOf(queued), queued == 0 ? "Nothing being built" : queued + " projects under way or waiting (Projects page)"},
+                {"Garrison", v().getInt("garrisonNow") + " / " + v().getInt("garrisonCap"), "Soldiers and recruits / places in barracks and towers"},
+                {"Research", known >= all ? "all " + all : known + " / " + all, known >= all ? "Every project is known" : (all - known) + " projects still to study"},
+                {"Land", v().getInt("radius") + " blocks", "Radius of the town's land from its centre"}};
+        int cwid = w / 3;
+        for (int i = 0; i < cells.length; i++) {
+            int gx = x + (i % 3) * cwid, gy = y + (i / 3) * 25;
+            ui.round(gx, gy, cwid - 3, 23, 4, 0xFF181C22);
+            ui.text(ui.clip(cells[i][0], cwid - 10), gx + 5, gy + 3, FAINT);
+            ui.text(ui.clip(cells[i][1], cwid - 10), gx + 5, gy + 13, TEXT);
+            if (ui.over(gx, gy, cwid - 3, 23)) ui.tip(cells[i][0] + ": " + cells[i][1], cells[i][2]);
+        }
+    }
+
+    static boolean isWall(PlotView p) { return p.tag.getString("bp").startsWith("wall:"); }
+
+    /** "Old-town wall" or "City wall" from a wall piece's key (wall:town:line:index). */
+    static String wallLine(PlotView p) {
+        String[] k = p.tag.getString("bp").split(":");
+        return k.length > 2 && k[2].equals("0") ? "Old-town wall" : "City wall";
     }
 
     static String researchName(String id) {
@@ -565,6 +621,29 @@ public class CityScreen extends Screen {
         return t == null ? 0xAAAAAA : t.category.color;
     }
 
+    static Category plotCategory(PlotView p) {
+        if (p.type.equals("road")) return Category.ROAD;
+        BuildingType t = BuildingCatalog.get(p.type);
+        return t == null ? Category.DECOR : t.category;
+    }
+
+    /** Zooms the City Map by a factor around a point on screen, keeping that point still. */
+    void zoomMap(float factor, float ax, float ay) {
+        float old = mapZoom;
+        mapZoom = Mth.clamp(mapZoom * factor, 0.6f, 6f);
+        float cxm = mapX + mapW / 2f + mapPanX, cym = mapY + mapH / 2f + mapPanY;
+        mapPanX += (ax - cxm) * (1 - mapZoom / old);
+        mapPanY += (ay - cym) * (1 - mapZoom / old);
+    }
+
+    boolean overMapControls(double x, double y) {
+        return x >= mapCtlX && x < mapCtlX + mapCtlW && y >= mapCtlY && y < mapCtlY + mapCtlH;
+    }
+
+    static void outline(Imm ui, int x0, int z0, int x1, int z1, int c) {
+        ui.hline(x0, z0, x1 - x0, c); ui.hline(x0, z1 - 1, x1 - x0, c); ui.vline(x0, z0, z1 - z0, c); ui.vline(x1 - 1, z0, z1 - z0, c);
+    }
+
     void map() {
         BlockPos center = BlockPos.of(v().getLong("center"));
         int radius = v().getInt("radius");
@@ -574,11 +653,24 @@ public class CityScreen extends Screen {
         mapX = cx;
         mapY = cy;
         CityMap.ensure(center, radius + 12);
+        List<PlotView> plots = plots();
         ui.round(mapX - 1, mapY - 1, mapW + 2, mapH + 2, 6, BORDER);
         ui.round(mapX, mapY, mapW, mapH, 5, 0xFF0E1013);
         ui.pushClip(mapX + 1, mapY + 1, mapX + mapW - 1, mapY + mapH - 1);
-        float base = Math.min(mapW, mapH) / (float) CityMap.size;
+        // the terrain fills the frame (a non-square frame crops a little of the outer land rather than leaving bands)
+        float base = Math.max(mapW, mapH) / (float) CityMap.size;
         float s = base * mapZoom;
+        if (mapCenterOn >= 0) {
+            for (PlotView p : plots) if (p.id == mapCenterOn) {
+                mapPanX = -((p.x0 + p.x1 + 1) / 2f - center.getX() - 0.5f) * s;
+                mapPanY = -((p.z0 + p.z1 + 1) / 2f - center.getZ() - 0.5f) * s;
+            }
+            mapCenterOn = -1;
+        }
+        // never pan the town right out of the frame
+        float lim = CityMap.size * s / 2f;
+        mapPanX = Mth.clamp(mapPanX, -lim, lim);
+        mapPanY = Mth.clamp(mapPanY, -lim, lim);
         float ox = mapX + mapW / 2f - (center.getX() - CityMap.originX) * s + mapPanX;
         float oy = mapY + mapH / 2f - (center.getZ() - CityMap.originZ) * s + mapPanY;
         mapScale = s; mapOriginX = ox; mapOriginY = oy;
@@ -587,6 +679,8 @@ public class CityScreen extends Screen {
         ui.g.pose().scale(s, s, 1);
         ui.g.blit(CityMap.TEX, 0, 0, 0, 0, CityMap.size, CityMap.size, CityMap.size, CityMap.size);
         ui.g.pose().popPose();
+        // the ground a shade darker, so the coloured plots stand out on grass of the same green
+        ui.rect(mapX, mapY, mapW, mapH, mapFocus == null ? 0x48000000 : 0x90000000);
         // territory ring
         int segs = 120;
         for (int i = 0; i < segs; i++) {
@@ -609,23 +703,45 @@ public class CityScreen extends Screen {
                 }
             }
         }
-        PlotView hover = null;
-        for (PlotView p : plots()) {
+        PlotView hover = null, selected = null;
+        for (PlotView p : plots) {
             int x0 = (int) (ox + (p.x0 - CityMap.originX) * s), z0 = (int) (oy + (p.z0 - CityMap.originZ) * s);
             int x1 = (int) (ox + (p.x1 + 1 - CityMap.originX) * s), z1 = (int) (oy + (p.z1 + 1 - CityMap.originZ) * s);
-            int col = plotColor(p);
+            Category cat = plotCategory(p);
+            int col = cat.color;
             boolean built = p.state.equals("BUILT");
             if (p.type.equals("road")) {
                 if (!built) ui.rect(x0, z0, Math.max(1, x1 - x0), Math.max(1, z1 - z0), 0x30FFFFFF);
                 continue;
             }
-            ui.rect(x0, z0, x1 - x0, z1 - z0, alpha(col, built ? 0x90 : 0x40));
-            int oc = p.id == selPlot ? 0xFFFFFFFF : built ? opaque(col) : GOLD;
-            ui.hline(x0, z0, x1 - x0, oc); ui.hline(x0, z1 - 1, x1 - x0, oc); ui.vline(x0, z0, z1 - z0, oc); ui.vline(x1 - 1, z0, z1 - z0, oc);
-            if (!built && x1 - x0 > 6) ui.rect(x0 + 1, z1 - 3, (int) ((x1 - x0 - 2) * p.progress), 2, GOLD);
+            x1 = Math.max(x1, x0 + 1); z1 = Math.max(z1, z0 + 1);
+            boolean dim = mapFocus != null && cat != mapFocus;
+            if (!dim) ui.rect(x0, z0, x1 - x0, z1 - z0, alpha(col, mapFocus != null ? 0xD0 : built ? 0xA8 : 0x50));
+            outline(ui, x0, z0, x1, z1, dim ? alpha(col, 0x40) : built ? opaque(col) : GOLD);
+            if (!built && !dim && x1 - x0 > 6) ui.rect(x0 + 1, z1 - 3, (int) ((x1 - x0 - 2) * p.progress), 2, GOLD);
             if (ui.over(x0, z0, x1 - x0, z1 - z0)) hover = p;
+            if (p.id == selPlot) selected = p;
             final int id = p.id;
             if (mapPlan == null) ui.area(x0, z0, x1 - x0, z1 - z0, () -> selPlot = id, false);
+        }
+        // names on plots big enough to hold them once zoomed in
+        if (s >= 2.2f) for (PlotView p : plots) {
+            if (p.type.equals("road") || isWall(p) || mapFocus != null && plotCategory(p) != mapFocus) continue;
+            int x0 = (int) (ox + (p.x0 - CityMap.originX) * s), z0 = (int) (oy + (p.z0 - CityMap.originZ) * s);
+            int x1 = (int) (ox + (p.x1 + 1 - CityMap.originX) * s), z1 = (int) (oy + (p.z1 + 1 - CityMap.originZ) * s);
+            // whole names only, on plots wholly in the frame; at the top of the plot so a castle's name clears its hall's
+            String label = plotName(p);
+            if (z1 - z0 < 12 || x1 - x0 < ui.width(label) + 4 || x0 < mapX || x1 > mapX + mapW || z0 < mapY || z1 > mapY + mapH) continue;
+            ui.textShadow(label, x0 + (x1 - x0 - ui.width(label)) / 2, z1 - z0 >= 24 ? z0 + 3 : z0 + (z1 - z0 - 8) / 2, 0xFFF4F1EA);
+        }
+        // the selection on top of everything: a dark halo and a pulsing white frame that read on any ground
+        if (selected != null) {
+            int x0 = (int) (ox + (selected.x0 - CityMap.originX) * s), z0 = (int) (oy + (selected.z0 - CityMap.originZ) * s);
+            int x1 = Math.max((int) (ox + (selected.x1 + 1 - CityMap.originX) * s), x0 + 1), z1 = Math.max((int) (oy + (selected.z1 + 1 - CityMap.originZ) * s), z0 + 1);
+            float pulse = (float) (0.5 + 0.5 * Math.sin(System.currentTimeMillis() / 220.0));
+            outline(ui, x0 - 2, z0 - 2, x1 + 2, z1 + 2, 0xC0000000);
+            outline(ui, x0 - 1, z0 - 1, x1 + 1, z1 + 1, lerp(0xFFB0B0B0, 0xFFFFFFFF, pulse));
+            outline(ui, x0, z0, x1, z1, lerp(0xFFB0B0B0, 0xFFFFFFFF, pulse));
         }
         // the player
         var pl = Minecraft.getInstance().player;
@@ -633,6 +749,7 @@ public class CityScreen extends Screen {
             int x = (int) (ox + (pl.getX() - CityMap.originX) * s), y = (int) (oy + (pl.getZ() - CityMap.originZ) * s);
             ui.round(x - 3, y - 3, 6, 6, 3, 0xFFFFFFFF);
             ui.round(x - 2, y - 2, 4, 4, 2, BLUE);
+            if (ui.over(x - 3, y - 3, 6, 6)) hover = null;
         }
         if (mapPlan != null && ui.over(mapX, mapY, mapW, mapH)) {
             BuildingType planned = BuildingCatalog.get(mapPlan);
@@ -647,10 +764,39 @@ public class CityScreen extends Screen {
             }
         }
         ui.popClip();
-        if (hover != null) ui.tip(plotName(hover) + (hover.level > 1 ? " (level " + hover.level + ")" : ""), stateLabel(hover));
-        String hint = mapPlan == null ? "Scroll to zoom · drag to pan"
+        // zoom controls in the top right corner of the map
+        String pct = Math.round(mapZoom * 100) + "%";
+        int pctW = ui.width("600%");
+        mapCtlW = pctW + 8 + 15 + 1 + 15 + 1 + 22 + 3;
+        mapCtlH = 18;
+        mapCtlX = mapX + mapW - mapCtlW - 3;
+        mapCtlY = mapY + 3;
+        ui.round(mapCtlX, mapCtlY, mapCtlW, mapCtlH, 4, 0xE8101317);
+        ui.right(pct, mapCtlX + 4 + pctW, mapCtlY + 5, MUTED);
+        int bx = mapCtlX + pctW + 8;
+        float mcx = mapX + mapW / 2f, mcy = mapY + mapH / 2f;
+        ui.button("mapOut", bx, mapCtlY + 2, 15, 14, "−", Style.SECONDARY, mapZoom > 0.61f, () -> zoomMap(0.8f, mcx, mcy));
+        if (ui.over(bx, mapCtlY + 2, 15, 14)) ui.tip("Zoom out", "or scroll down over the map");
+        ui.button("mapIn", bx + 16, mapCtlY + 2, 15, 14, "+", Style.SECONDARY, mapZoom < 5.99f, () -> zoomMap(1.25f, mcx, mcy));
+        if (ui.over(bx + 16, mapCtlY + 2, 15, 14)) ui.tip("Zoom in", "or scroll up over the map");
+        ui.button("mapFit", bx + 32, mapCtlY + 2, 22, 14, "Fit", Style.SECONDARY, mapZoom != 1 || mapPanX != 0 || mapPanY != 0, () -> { mapZoom = 1; mapPanX = mapPanY = 0; });
+        if (ui.over(bx + 32, mapCtlY + 2, 22, 14)) ui.tip("Whole town in view");
+        if (hover != null && !ui.over(mapCtlX, mapCtlY, mapCtlW, mapCtlH)) {
+            List<String> tip = new ArrayList<>();
+            Category cat = plotCategory(hover);
+            tip.add(plotName(hover) + (hover.level > 1 ? " · level " + hover.level : ""));
+            tip.add((isWall(hover) ? wallLine(hover) : cat.label) + " · " + stateLabel(hover));
+            BuildingType ht = BuildingCatalog.get(hover.type);
+            int workers = v().getCompound("plotWorkers").getInt(String.valueOf(hover.id));
+            if (ht != null && ht.category.job != null && hover.state.equals("BUILT")) tip.add(workers + " " + ht.category.job.label.toLowerCase(Locale.ROOT) + (workers == 1 ? "" : "s") + " at work");
+            if (ht != null && ht.beds > 0) tip.add(ht.beds + (ht.beds == 1 ? " bed" : " beds"));
+            if (!hover.status.isEmpty()) tip.add(hover.status);
+            if (mapPlan == null) tip.add(hover.id == selPlot ? "Selected" : "Click for details");
+            ui.tip(tip);
+        }
+        String hint = mapPlan == null ? "Scroll or +/− to zoom · drag to pan"
                 : "Click to queue · " + livingrealms.client.ClientSetup.ROTATE.getTranslatedKeyMessage().getString() + " rotates · right-drag pans";
-        ui.round(mapX + 3, mapY + mapH - 15, Math.min(mapW - 6, ui.width(hint) + 8), 12, 3, 0xA0101317);
+        ui.round(mapX + 3, mapY + mapH - 15, Math.min(mapW - 6, ui.width(hint) + 8), 12, 3, 0xE0101317);
         ui.text(ui.clip(hint, mapW - 14), mapX + 7, mapY + mapH - 13, 0xD0FFFFFF);
         // side panel
         int sx = cx + cw - side;
@@ -668,38 +814,58 @@ public class CityScreen extends Screen {
             ui.button("finishMap", sx + 8, cy + ch - 24, side - 16, 18, "Done planning", Style.PRIMARY, true, () -> mapPlan = null);
             return;
         }
-        PlotView sel = null;
-        for (PlotView p : plots()) if (p.id == selPlot) sel = p;
-        if (sel == null) {
-            ui.text("Legend", sx + 8, cy + 8, MUTED);
-            int ly = cy + 22;
-            Category[] legend = {Category.CIVIC, Category.HOUSING, Category.FARM, Category.SMITHY, Category.BARRACKS, Category.TOWER, Category.MARKET, Category.LIBRARY, Category.STORAGE};
-            // two columns when the window is too short for one, so the road tools stay inside the card
-            int cols = ch < 230 ? 2 : 1, colW = (side - 16) / cols, rowsN = (legend.length + cols - 1) / cols;
-            for (int i = 0; i < legend.length; i++) {
-                Category c = legend[i];
-                int lx = sx + 8 + (i / rowsN) * colW, yy = ly + (i % rowsN) * 12;
-                ui.round(lx + 1, yy + 1, 7, 7, 2, opaque(c.color));
-                ui.text(ui.clip(c.label, colW - 16), lx + 14, yy, TEXT);
-                if (ui.over(lx, yy, colW, 11) && ui.width(c.label) > colW - 16) ui.tip(c.label);
+        if (selected == null) for (PlotView p : plots) if (p.id == selPlot) selected = p;
+        if (selected != null) { plotDetail(selected, sx, cy, side, ch); return; }
+        legend(plots, sx, side);
+    }
+
+    /** The City Map's legend: the categories this town has, most common first, each clickable to pick it out. */
+    void legend(List<PlotView> plots, int sx, int side) {
+        ui.text("Legend", sx + 8, cy + 8, MUTED);
+        if (mapFocus != null) {
+            ui.button("legendAll", sx + side - 52, cy + 5, 46, 13, "Show all", Style.GHOST, true, () -> mapFocus = null);
+        }
+        Map<Category, Integer> counts = new EnumMap<>(Category.class);
+        for (PlotView p : plots) if (!p.type.equals("road")) counts.merge(plotCategory(p), 1, Integer::sum);
+        List<Category> cats = new ArrayList<>(counts.keySet());
+        cats.sort(Comparator.comparingInt((Category c) -> -counts.get(c)).thenComparing(Enum::ordinal));
+        int roads = mine() ? 12 + 64 + 20 : 0;
+        int ly = cy + 22, rowH = 11;
+        String hint = cats.isEmpty() ? "Nothing built yet. Plan buildings on the Build page." : mapFocus == null
+                ? "Click a building for details, a category to pick it out." : "Showing " + mapFocus.label.toLowerCase(Locale.ROOT) + ". Click it again for all.";
+        int hintH = ui.wrapHeight(hint, side - 16);
+        int avail = cy + ch - 6 - roads - hintH - 6 - ly;
+        if (cats.size() * rowH > avail && cats.size() * 10 <= avail) rowH = 10;
+        int cols = cats.size() * rowH > avail ? 2 : 1, colW = (side - 14) / cols, rowsN = (cats.size() + cols - 1) / cols;
+        for (int i = 0; i < cats.size(); i++) {
+            Category c = cats.get(i);
+            int n = counts.get(c);
+            int lx = sx + 7 + (i / rowsN) * colW, yy = ly + (i % rowsN) * rowH;
+            boolean focus = c == mapFocus, on = ui.over(lx, yy - 1, colW - 1, rowH);
+            if (focus) ui.round(lx, yy - 1, colW - 1, rowH, 3, 0xFF2E3542);
+            else if (on) ui.round(lx, yy - 1, colW - 1, rowH, 3, 0x18FFFFFF);
+            ui.round(lx + 2, yy + 1, 7, 7, 2, mapFocus != null && !focus ? alpha(c.color, 0x60) : opaque(c.color));
+            String count = String.valueOf(n);
+            int room = colW - 16 - (cols == 1 ? ui.width(count) + 6 : 0);
+            ui.text(ui.clip(c.label, room), lx + 13, yy, focus ? GOLD : mapFocus != null ? MUTED : TEXT);
+            if (cols == 1) ui.right(count, lx + colW - 4, yy, FAINT);
+            ui.area(lx, yy - 1, colW - 1, rowH, () -> mapFocus = focus ? null : c);
+            if (on) ui.tip(c.label + ": " + n + (n == 1 ? " building" : " buildings"), focus ? "Click to show every category" : "Click to pick these out on the map");
+        }
+        ly += rowsN * rowH + 4;
+        ly += ui.wrap(hint, sx + 8, ly, side - 16, FAINT) + 6;
+        if (mine()) {
+            ui.text("Roads", sx + 8, ly, MUTED);
+            ly += 12;
+            roadPicker(sx + 6, ly, side - 12);
+            ly += 64;
+            if (ly + 16 <= cy + ch - 4) {
+                ui.button("autoWalls", sx + 6, ly, side - 12, 16, "Auto walls: " + (v().getBoolean("autoWalls") ? "ON" : "OFF"),
+                        Style.SECONDARY, true, () -> act("autoWalls", tag("on", !v().getBoolean("autoWalls"))));
+                if (ui.over(sx + 6, ly, side - 12, 16)) ui.tip(v().getString("wallStatus"),
+                        "Villagers build the dashed wall line: gatehouses on the high streets, towers, then the wall, from the stockpile.",
+                        "Old-town wall at Village rank with Fortifications; city wall at City rank. Your own plans come first.");
             }
-            ly += rowsN * 12 + 4;
-            ly += ui.wrap("Click a building to manage it.", sx + 8, ly, side - 16, FAINT) + 6;
-            if (mine()) {
-                ui.text("Roads", sx + 8, ly, MUTED);
-                ly += 12;
-                roadPicker(sx + 6, ly, side - 12);
-                ly += 64;
-                if (ly + 16 <= cy + ch - 4) {
-                    ui.button("autoWalls", sx + 6, ly, side - 12, 16, "Auto walls: " + (v().getBoolean("autoWalls") ? "ON" : "OFF"),
-                            Style.SECONDARY, true, () -> act("autoWalls", tag("on", !v().getBoolean("autoWalls"))));
-                    if (ui.over(sx + 6, ly, side - 12, 16)) ui.tip(v().getString("wallStatus"),
-                            "Villagers build the dashed wall line: gatehouses on the high streets, towers, then the wall, from the stockpile.",
-                            "Old-town wall at Village rank with Fortifications; city wall at City rank. Your own plans come first.");
-                }
-            }
-        } else {
-            plotDetail(sel, sx, cy, side, ch);
         }
     }
 
@@ -737,65 +903,113 @@ public class CityScreen extends Screen {
         };
     }
 
+    /** Where a plot stands from the town centre: "north-east, 64 blocks out" or "in the centre". */
+    static String quarter(PlotView p) {
+        BlockPos c = BlockPos.of(v().getLong("center"));
+        double dx = (p.x0 + p.x1 + 1) / 2.0 - c.getX(), dz = (p.z0 + p.z1 + 1) / 2.0 - c.getZ(), dist = Math.hypot(dx, dz);
+        if (dist < 16) return "in the centre";
+        String[] dirs = {"east", "south-east", "south", "south-west", "west", "north-west", "north", "north-east"};
+        int i = (int) Math.floorMod(Math.round(Math.atan2(dz, dx) / (Math.PI / 4)), 8);
+        return dirs[i] + ", " + (int) dist + " blocks out";
+    }
+
     void plotDetail(PlotView p, int x, int y, int w, int h) {
         BuildingType t = BuildingCatalog.get(p.type);
-        Category cat = p.type.equals("road") ? Category.ROAD : t == null ? Category.DECOR : t.category;
+        Category cat = plotCategory(p);
+        boolean road = p.type.equals("road"), built = p.state.equals("BUILT"), wall = isWall(p);
         ui.item(cat.icon, x + 8, y + 8);
         ui.text(ui.clip(plotName(p), w - 34), x + 28, y + 8, TEXT);
-        ui.text(cat.label + (p.level > 0 && !p.type.equals("road") ? " · level " + p.level : ""), x + 28, y + 18, opaque(cat.color));
+        if (ui.over(x, y + 6, w, 12) && ui.width(plotName(p)) > w - 34) ui.tip(plotName(p));
+        String kind = wall ? wallLine(p) : cat.label + (p.level > 0 && !road ? " · level " + p.level : "");
+        ui.text(ui.clip(kind, w - 34), x + 28, y + 18, opaque(cat.color));
         int yy = y + 34;
-        ui.text(stateLabel(p), x + 8, yy, MUTED);
+        ui.text(ui.clip(stateLabel(p), w - 16), x + 8, yy, built ? GREEN : p.state.equals("DEMOLISHING") ? RED : GOLD);
         yy += 11;
-        if (!p.state.equals("BUILT")) {
+        if (!built) {
             ui.bar(x + 8, yy, w - 16, 5, p.progress, GOLD, GOLD_DK);
             yy += 9;
             if (!p.status.isEmpty()) { yy += ui.wrap(p.status, x + 8, yy, w - 16, ORANGE); }
-        }
-        int workers = v().getCompound("plotWorkers").getInt(String.valueOf(p.id));
-        if (t != null && t.category.job != null && p.state.equals("BUILT")) {
-            ui.text(workers + " " + t.category.job.label.toLowerCase() + (workers == 1 ? "" : "s") + " at work", x + 8, yy, TEXT);
+            boolean auto = p.tag.getBoolean("automatic");
+            int prio = p.tag.getInt("prio");
+            String who = (auto ? "Chosen by the villagers" : "Your plan") + (!auto && prio != 0 ? " · priority " + (prio > 0 ? "+" : "") + prio : "");
+            ui.text(ui.clip(who, w - 16), x + 8, yy, FAINT);
             yy += 11;
         }
-        if (t != null && t.beds > 0) { ui.text(t.beds + " beds", x + 8, yy, FAINT); yy += 11; }
+        yy += ui.wrap((p.x1 - p.x0 + 1) + "×" + (p.z1 - p.z0 + 1) + " · " + quarter(p), x + 8, yy, w - 16, FAINT) + 1;
+        int workers = v().getCompound("plotWorkers").getInt(String.valueOf(p.id));
+        if (t != null && t.category.job != null && built) {
+            ui.text(workers + " " + t.category.job.label.toLowerCase(Locale.ROOT) + (workers == 1 ? "" : "s") + " at work", x + 8, yy, TEXT);
+            yy += 11;
+        }
+        if (t != null && t.beds > 0) { ui.text(t.beds + (t.beds == 1 ? " bed" : " beds"), x + 8, yy, MUTED); yy += 11; }
+        // the buttons stack up from the bottom; single-level buildings (walls) have no upgrade row
+        int maxLevel = v().getCompound("maxLevels").getInt(String.valueOf(p.id));
+        boolean upgradable = built && t != null && t.maxLevel > 1;
+        int rows = 1 + (!mine() ? 0 : built && t != null ? (upgradable ? 2 : 1) : p.state.equals("DEMOLISHING") ? 0 : 2);
+        int bx = x + 6, bw = w - 12, by = y + h - 4 - rows * 19;
         // bill of what's left
         CompoundTag bill = v().getCompound("bills").getCompound(String.valueOf(p.id));
-        if (!bill.isEmpty()) {
+        if (!bill.isEmpty() && by - yy > 30) {
             yy += 2;
             ui.text("Materials", x + 8, yy, MUTED);
             yy += 11;
             Map<Item, Integer> stock = stock();
-            int bh = y + h - yy - 66;
+            int bh = by - yy - 4;
             List<String> keys = new ArrayList<>(bill.getAllKeys());
             keys.sort(Comparator.comparingInt(k -> -bill.getInt(k)));
-            int off = ui.beginScroll("bill" + p.id, x + 4, yy, w - 8, Math.max(20, bh), keys.size() * 18);
-            int by = yy - off;
+            int off = ui.beginScroll("bill" + p.id, x + 4, yy, w - 8, Math.max(18, bh / 18 * 18), keys.size() * 18);
+            int ry = yy - off;
             for (String k : keys) {
                 ItemStack st = new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation(k)));
-                ui.itemTip(st, x + 8, by);
+                ui.itemTip(st, x + 8, ry);
                 int need = bill.getInt(k), has = stock.getOrDefault(st.getItem(), 0);
-                ui.text(ui.clip(st.getHoverName().getString(), w - 70), x + 28, by + 4, TEXT);
-                ui.right(num(has) + "/" + num(need), x + w - 10, by + 4, has >= need ? GREEN : ORANGE);
-                by += 18;
+                String n = num(has) + "/" + num(need);
+                ui.text(ui.clip(st.getHoverName().getString(), w - 40 - ui.width(n)), x + 28, ry + 4, TEXT);
+                ui.right(n, x + w - 10, ry + 4, has >= need ? GREEN : ORANGE);
+                ry += 18;
             }
             ui.endScroll();
+        } else if (!road && by - yy > 50) {
+            // a standing building: its model, turning, in the room above the buttons
+            Blueprint bp = ClientState.blueprint(p.tag.getString("bp"));
+            int ph = Math.min(120, by - yy - 8);
+            ui.round(x + 6, yy + 2, w - 12, ph, 4, 0xFF101317, 0xFF1A1F27);
+            if (bp != null && bp.size() > 1) {
+                ui.pushClip(x + 6, yy + 2, x + w - 6, yy + 2 + ph);
+                Preview.render(ui.g, bp, x + 6, yy + 2, w - 12, ph, (System.currentTimeMillis() % 36000) / 100f);
+                ui.popClip();
+            } else ui.center(bp == null ? "Loading…" : "Nothing to show", x + w / 2, yy + 2 + ph / 2 - 4, FAINT);
         }
-        if (!mine()) return;
-        int bx = x + 6, bw = w - 12, by = y + h - 60;
-        int maxLevel = v().getCompound("maxLevels").getInt(String.valueOf(p.id));
         final int id = p.id;
-        if (p.state.equals("BUILT") && t != null) {
-            boolean canUp = p.level < maxLevel;
-            ui.button("up" + id, bx, by, bw, 16, canUp ? "Upgrade to level " + (p.level + 1) : p.level >= t.maxLevel ? "Fully upgraded" : "Upgrade (needs higher rank)",
-                    Style.PRIMARY, canUp, () -> act("upgrade", tag("plot", id)));
-            if (canUp && !t.procedural() && ui.over(bx, by, bw, 16)) ui.tip("Renovation: " + 24 * p.level + " planks, " + 24 * p.level + " cobblestone, " + 2 * p.level + " emeralds");
-            ui.button("rep" + id, bx, by + 19, bw / 2 - 2, 16, "Repair", Style.SECONDARY, true, () -> act("repair", tag("plot", id)));
-            ui.button("dem" + id, bx + bw / 2 + 2, by + 19, bw / 2 - 2, 16, "Demolish", Style.DANGER, true, () -> act("demolish", tag("plot", id)));
-        } else if (!p.state.equals("DEMOLISHING")) {
-            ui.button("pu" + id, bx, by, bw / 2 - 2, 16, "▲ Sooner", Style.SECONDARY, true, () -> act("priority", tag("plot", id, "delta", 1)));
-            ui.button("pd" + id, bx + bw / 2 + 2, by, bw / 2 - 2, 16, "▼ Later", Style.SECONDARY, true, () -> act("priority", tag("plot", id, "delta", -1)));
-            ui.button("can" + id, bx, by + 19, bw, 16, "Cancel", Style.DANGER, true, () -> { act("demolish", tag("plot", id)); selPlot = -1; });
+        if (mine()) {
+            if (built && t != null) {
+                if (upgradable) {
+                    boolean canUp = p.level < maxLevel;
+                    ui.button("up" + id, bx, by, bw, 16, canUp ? "Upgrade to level " + (p.level + 1) : p.level >= t.maxLevel ? "Fully upgraded" : "Upgrade (needs higher rank)",
+                            Style.PRIMARY, canUp, () -> act("upgrade", tag("plot", id)));
+                    if (canUp && !t.procedural() && ui.over(bx, by, bw, 16)) ui.tip("Renovation: " + 24 * p.level + " planks, " + 24 * p.level + " cobblestone, " + 2 * p.level + " emeralds");
+                    by += 19;
+                }
+                ui.button("rep" + id, bx, by, bw / 2 - 2, 16, "Repair", Style.SECONDARY, true, () -> act("repair", tag("plot", id)));
+                ui.button("dem" + id, bx + bw / 2 + 2, by, bw / 2 - 2, 16, "Demolish", Style.DANGER, true, () -> act("demolish", tag("plot", id)));
+                by += 19;
+            } else if (!p.state.equals("DEMOLISHING")) {
+                ui.button("pu" + id, bx, by, bw / 2 - 2, 16, "▲ Sooner", Style.SECONDARY, true, () -> act("priority", tag("plot", id, "delta", 1)));
+                if (ui.over(bx, by, bw / 2 - 2, 16)) ui.tip("Move up the queue", "Builders take the highest priority first.");
+                ui.button("pd" + id, bx + bw / 2 + 2, by, bw / 2 - 2, 16, "▼ Later", Style.SECONDARY, true, () -> act("priority", tag("plot", id, "delta", -1)));
+                ui.button("can" + id, bx, by + 19, bw, 16, "Cancel", Style.DANGER, true, () -> { act("demolish", tag("plot", id)); selPlot = -1; });
+                by += 38;
+            }
         }
-        ui.button("close" + id, bx, by + 38, bw, 16, "Back", Style.GHOST, true, () -> selPlot = -1);
+        // find it on the map (or centre it there), and back to the list or legend
+        boolean onMap = tab == Tab.MAP;
+        ui.button("find" + id, bx, by, bw / 2 - 2, 16, onMap ? "Centre" : "On map", Style.SECONDARY, true, () -> {
+            mapCenterOn = id;
+            mapZoom = Math.max(mapZoom, 2);
+            if (!onMap) switchTab(Tab.MAP);
+        });
+        if (ui.over(bx, by, bw / 2 - 2, 16)) ui.tip(onMap ? "Centre the map on it" : "Show it on the City Map");
+        ui.button("close" + id, bx + bw / 2 + 2, by, bw / 2 - 2, 16, "Back", Style.GHOST, true, () -> selPlot = -1);
     }
 
     // ------------------------------------------------------------------ build catalogue
@@ -805,7 +1019,7 @@ public class CityScreen extends Screen {
         int top = cy + 30;
         // left: categories, shrinking to an icon column in narrow windows
         boolean icons = cw < 340;
-        int lw = icons ? 24 : 96;
+        int lw = icons ? 24 : 108;
         search.setX(cx + cw - 118);
         search.setY(cy + 4);
         search.setWidth(112);
@@ -814,19 +1028,40 @@ public class CityScreen extends Screen {
         List<String> cats = new ArrayList<>();
         cats.add("ALL");
         for (Category c : Category.values()) cats.add(c.name());
+        // how many buildings each category offers under the style filter and search, and how many of those are locked
+        String q = search.getValue().toLowerCase(Locale.ROOT);
+        CompoundTag locks = v().getCompound("locks");
+        Map<String, int[]> catCount = new HashMap<>();
+        for (BuildingType t : BuildingCatalog.types().values()) {
+            if (!styleFilter.equals("ALL") && !t.style.equals(styleFilter)) continue;
+            if (!q.isEmpty() && !(t.name.toLowerCase(Locale.ROOT).contains(q) || t.styleName.toLowerCase(Locale.ROOT).contains(q) || t.category.label.toLowerCase(Locale.ROOT).contains(q))) continue;
+            boolean locked = locks.contains(t.id);
+            for (String key : new String[]{"ALL", t.category.name()}) {
+                int[] n = catCount.computeIfAbsent(key, k -> new int[2]);
+                n[0]++;
+                if (locked) n[1]++;
+            }
+        }
         int off = ui.beginScroll("cats", cx + 2, top + 4, lw - 4, ch - 38 - (mine() ? 22 : 0), cats.size() * 17);
         int yy = top + 4 - off;
         for (String c : cats) {
             final String cc = c;
             Item ic = c.equals("ALL") ? Items.COMPASS : Category.valueOf(c).icon;
-            String label = c.equals("ALL") ? "Everything" : Category.valueOf(c).label;
+            String label = c.equals("ALL") ? "All" : Category.valueOf(c).label;
             boolean sel = catFilter.equals(c);
             boolean on = ui.over(cx + 2, yy, lw - 4, 16);
+            int[] n = catCount.getOrDefault(c, new int[2]);
             if (sel) ui.round(cx + 3, yy, lw - 6, 16, 4, 0xFF2E3542);
             else if (on) ui.round(cx + 3, yy, lw - 6, 16, 4, 0x18FFFFFF);
             ui.itemScaled(new ItemStack(ic), cx + 6, yy + 2, 0.75f);
-            if (!icons) ui.text(ui.clip(label, lw - 26), cx + 22, yy + 4, sel ? GOLD : TEXT);
-            else if (on) ui.tip(label);
+            String count = c.equals("ROAD") ? "" : String.valueOf(n[0]);
+            if (!icons) {
+                ui.text(ui.clip(label, lw - 30 - ui.width(count)), cx + 22, yy + 4, sel ? GOLD : n[0] == 0 && !c.equals("ROAD") ? FAINT : TEXT);
+                // a category with nothing to build yet shows its count in the lock colour
+                ui.right(count, cx + lw - 8, yy + 4, n[0] > 0 && n[1] == n[0] ? 0xFFB06060 : FAINT);
+            }
+            if (on) ui.tip(label + (count.isEmpty() ? "" : ": " + n[0] + (n[0] == 1 ? " building" : " buildings")),
+                    n[1] == 0 ? "" : n[1] == n[0] ? "All locked for now" : n[1] + " locked for now");
             ui.area(cx + 2, yy, lw - 4, 16, () -> { catFilter = cc; ui.resetScroll("blist"); });
             yy += 17;
         }
@@ -866,8 +1101,6 @@ public class CityScreen extends Screen {
         });
         if (ui.over(mx, top, mw, 15)) ui.tip("Style: " + styleLabel, "Click to cycle (shift-click goes back)", styleList.size() - 1 + " styles from your mods");
         List<BuildingType> types = new ArrayList<>();
-        String q = search.getValue().toLowerCase(Locale.ROOT);
-        CompoundTag locks = v().getCompound("locks");
         for (BuildingType t : BuildingCatalog.types().values()) {
             if (!catFilter.equals("ALL") && !t.category.name().equals(catFilter)) continue;
             if (!styleFilter.equals("ALL") && !t.style.equals(styleFilter)) continue;
@@ -887,10 +1120,14 @@ public class CityScreen extends Screen {
             else if (on) ui.round(mx + 3, ry, mw - 6, 23, 4, 0x18FFFFFF);
             ui.round(mx + 6, ry + 4, 3, 15, 1, opaque(t.category.color));
             boolean locked = locks.contains(id);
-            ui.text(ui.clip(t.name, mw - 22), mx + 13, ry + 3, locked ? FAINT : TEXT);
-            String sub = locked ? locks.getString(id) : t.w + "×" + t.d + (t.procedural() ? " · upgrades to " + t.maxLevel : " · " + t.styleName);
+            int have = v().getCompound("counts").getInt(id);
+            String sub = locked ? locks.getString(id) : t.w + "×" + t.d + (t.procedural() ? t.maxLevel > 1 ? " · " + t.maxLevel + " levels" : "" : " · " + t.styleName);
+            // how many the town already has, on the name line
+            String owned = have > 0 ? "×" + have : "";
+            if (!owned.isEmpty()) ui.right(owned, mx + mw - 8, ry + 3, MUTED);
+            ui.text(ui.clip(t.name, mw - 22 - (owned.isEmpty() ? 0 : ui.width(owned) + 4)), mx + 13, ry + 3, locked ? MUTED : TEXT);
             ui.text(ui.clip(sub, mw - 22), mx + 13, ry + 13, locked ? 0xFFB06060 : FAINT);
-            if (on && (ui.width(t.name) > mw - 22 || ui.width(sub) > mw - 22)) ui.tip(t.name, sub);
+            if (on) ui.tip(t.name, locked ? "Locked: " + sub : sub, have > 0 ? have + " in town" : "None in town yet");
             ui.area(mx + 2, ry, mw - 4, 23, () -> selType = id);
             ry += 24;
         }
@@ -916,14 +1153,23 @@ public class CityScreen extends Screen {
         yy2 += 10;
         ui.text(ui.clip(t.category.label + " · " + t.source, dw - 16), dx + 8, yy2, opaque(t.category.color));
         yy2 += 12;
-        String facts = t.w + "×" + t.d + "×" + t.h + " · " + t.blocks + " blocks" + (t.beds > 0 ? " · " + t.beds + " beds" : "");
-        ui.text(ui.clip(facts, dw - 16), dx + 8, yy2, MUTED);
-        yy2 += 10;
+        String facts = t.w + "×" + t.d + "×" + t.h + " · " + t.blocks + " blocks" + (t.beds > 0 ? " · " + t.beds + (t.beds == 1 ? " bed" : " beds") : "")
+                + (t.maxLevel > 1 ? " · " + t.maxLevel + " levels" : "");
+        yy2 += ui.wrap(facts, dx + 8, yy2, dw - 16, MUTED);
         String perks = perks(t);
         if (!perks.isEmpty()) { yy2 += ui.wrap(perks, dx + 8, yy2, dw - 16, FAINT); }
         String lock = locks.getString(t.id);
-        if (!lock.isEmpty()) { ui.text("🔒 " + lock, dx + 8, yy2 + 1, RED); yy2 += 12; }
-        // materials
+        if (!lock.isEmpty()) { yy2 += ui.wrap("Locked: " + lock, dx + 8, yy2 + 1, dw - 16, RED) + 2; }
+        // materials, with a one-line verdict on what the stockpile covers
+        if (bp != null) {
+            Map<Item, Integer> stock0 = stock();
+            int shortKinds = 0;
+            for (var e : bp.bill().entrySet()) if (stock0.getOrDefault(e.getKey(), 0) < e.getValue()) shortKinds++;
+            String verdict = shortKinds == 0 ? "Materials: all in stock" : "Materials: " + shortKinds + " short";
+            ui.text(ui.clip(verdict, dw - 16), dx + 8, yy2 + 2, shortKinds == 0 ? GREEN : ORANGE);
+            if (ui.over(dx + 8, yy2 + 1, dw - 16, 10)) ui.tip("Level 1 bill. Green: enough in the stockpile; orange: short.", "Builders wait at the site for anything missing.");
+            yy2 += 12;
+        }
         int bh = top + ch - 30 - yy2 - 26;
         if (bp != null && bh < 18) ui.text(ui.clip(bp.bill().size() + " materials", dw - 16), dx + 8, yy2 + 2, FAINT);
         else if (bp != null) {
@@ -988,61 +1234,229 @@ public class CityScreen extends Screen {
 
     // ------------------------------------------------------------------ projects
 
+    /** Projects: which groups are open (wall lines in the queue, categories of the standing list). */
+    private final Set<String> projOpen = new HashSet<>(), projClosed = new HashSet<>();
+
+    /** One line of the Projects list: a section title, a foldable group, or a plot. */
+    record ProjRow(String title, String key, int count, List<PlotView> members, PlotView plot, int position, boolean indent, boolean open, boolean byDefault) {}
+
+    boolean projGroupOpen(String key, boolean byDefault) { return byDefault ? !projClosed.contains(key) : projOpen.contains(key); }
+
+    void toggleProjGroup(String key, boolean byDefault) {
+        if (byDefault) { if (!projClosed.remove(key)) projClosed.add(key); }
+        else if (!projOpen.remove(key)) projOpen.add(key);
+    }
+
     void projects() {
-        header("Projects", "Construction queue and every building in town.");
         List<PlotView> all = plots();
         List<PlotView> active = new ArrayList<>(), built = new ArrayList<>();
         for (PlotView p : all) {
             if (p.state.equals("BUILT")) { if (!p.type.equals("road")) built.add(p); }
             else active.add(p);
         }
+        // the order builders take them in: highest priority first, then oldest
         active.sort(Comparator.comparingInt((PlotView p) -> -p.tag.getInt("prio")).thenComparingInt(p -> p.id));
+        int waiting = 0;
+        for (PlotView p : active) if (!p.status.isEmpty()) waiting++;
+        header("Projects", active.isEmpty() ? built.size() + " standing · nothing under way"
+                : active.size() + " under way" + (waiting > 0 ? " · " + waiting + " waiting" : "") + " · " + built.size() + " standing");
+        // rows: the queue with each wall line folded into one group, then the standing buildings by category
+        List<ProjRow> rows = new ArrayList<>();
+        rows.add(new ProjRow("Under way", null, active.size(), null, null, 0, false, false, false));
+        Map<String, List<PlotView>> wallQueue = new LinkedHashMap<>();
+        for (PlotView p : active) if (isWall(p)) wallQueue.computeIfAbsent(wallLine(p), k -> new ArrayList<>()).add(p);
+        int pos = 0;
+        Set<String> placed = new HashSet<>();
+        for (PlotView p : active) {
+            pos++;
+            if (!isWall(p)) { rows.add(new ProjRow(null, null, 0, null, p, pos, false, false, false)); continue; }
+            String line = wallLine(p);
+            if (!placed.add(line)) continue;
+            List<PlotView> members = wallQueue.get(line);
+            // a lone piece needs no group
+            if (members.size() == 1) { rows.add(new ProjRow(null, null, 0, null, p, pos, false, false, false)); continue; }
+            String key = "q:" + line;
+            boolean open = projGroupOpen(key, false);
+            rows.add(new ProjRow(null, key, members.size(), members, null, pos, false, open, false));
+            if (open) for (PlotView m : members) rows.add(new ProjRow(null, null, 0, null, m, 0, true, false, false));
+        }
+        rows.add(new ProjRow("Standing", null, built.size(), null, null, 0, false, false, false));
+        Map<Category, List<PlotView>> byCat = new EnumMap<>(Category.class);
+        for (PlotView p : built) byCat.computeIfAbsent(plotCategory(p), k -> new ArrayList<>()).add(p);
+        // a small town lists everything; a big one folds each category until it is opened
+        boolean foldAll = built.size() > 24;
+        for (var e : byCat.entrySet()) {
+            String key = "c:" + e.getKey().name();
+            List<PlotView> members = e.getValue();
+            members.sort(Comparator.comparingInt((PlotView p) -> -p.level).thenComparing(CityScreen::plotName));
+            boolean byDefault = !foldAll || e.getKey() != Category.WALL && members.size() <= 3, open = projGroupOpen(key, byDefault);
+            rows.add(new ProjRow(null, key, members.size(), members, null, 0, false, open, byDefault));
+            if (open) for (PlotView m : members) rows.add(new ProjRow(null, null, 0, null, m, 0, true, false, false));
+        }
         int side = Math.min(150, cw * 2 / 5), lw = cw - side - 6, top = cy + 30;
         ui.card(cx, top, lw, ch - 30);
-        int rows = active.size() + built.size();
-        int off = ui.beginScroll("proj", cx + 2, top + 2, lw - 4, ch - 34, rows * 26 + 40);
+        int height = 8;
+        for (ProjRow r : rows) height += r.title != null ? 16 : r.plot != null ? 26 : 20;
+        int off = ui.beginScroll("proj", cx + 2, top + 2, lw - 4, ch - 34, height);
         int y = top + 6 - off;
-        ui.text("Under way (" + active.size() + ")", cx + 8, y, GOLD);
-        y += 13;
-        if (active.isEmpty()) { ui.text("Nothing being built. Plan something on the Build page.", cx + 8, y, FAINT); y += 14; }
-        for (PlotView p : active) y = projectRow(p, y, lw);
-        y += 6;
-        ui.text("Standing (" + built.size() + ")", cx + 8, y, GOLD);
-        y += 13;
-        for (PlotView p : built) y = projectRow(p, y, lw);
+        for (ProjRow r : rows) {
+            if (r.title != null) {
+                if (y > top) y += 2;
+                ui.text(r.title, cx + 8, y + 1, GOLD);
+                ui.text(String.valueOf(r.count), cx + 12 + ui.width(r.title), y + 1, FAINT);
+                ui.hline(cx + 18 + ui.width(r.title) + ui.width(String.valueOf(r.count)), y + 5, lw - 30 - ui.width(r.title) - ui.width(String.valueOf(r.count)), LINE);
+                y += 14;
+                if (r.title.equals("Under way") && r.count == 0) {
+                    ui.text(ui.clip("Nothing being built. Plan something on the Build page.", lw - 20), cx + 10, y, FAINT);
+                    y += 12;
+                }
+                continue;
+            }
+            if (r.plot != null) { y = projectRow(r.plot, y, lw, r.position, r.indent); continue; }
+            y = groupRow(r, y, lw);
+        }
         ui.endScroll();
         int sx = cx + lw + 6;
         PlotView sel = null;
         for (PlotView p : all) if (p.id == selPlot) sel = p;
         ui.card(sx, top, cw - lw - 6, ch - 30);
         if (sel != null) plotDetail(sel, sx, top, cw - lw - 6, ch - 30);
-        else {
-            ui.text("Select a project", sx + 8, top + 8, MUTED);
-            ui.wrap("Builders take materials straight from the stockpile, wherever they are working. If something is missing the site waits and shows what it needs.",
-                    sx + 8, top + 22, cw - lw - 22, FAINT);
-        }
+        else queueSummary(active, sx, top, cw - lw - 6, ch - 30);
     }
 
-    int projectRow(PlotView p, int y, int w) {
-        final int id = p.id;
-        boolean sel = id == selPlot, on = ui.over(cx + 3, y, w - 6, 24);
-        if (sel) ui.round(cx + 3, y, w - 6, 24, 4, 0xFF2E3542);
-        else if (on) ui.round(cx + 3, y, w - 6, 24, 4, 0x18FFFFFF);
-        BuildingType t = BuildingCatalog.get(p.type);
-        Category cat = p.type.equals("road") ? Category.ROAD : t == null ? Category.DECOR : t.category;
-        ui.item(cat.icon, cx + 7, y + 4);
-        int barW = Math.max(30, Math.min(80, (w - 40) / 4)), room = w - barW - 44;
-        String name = plotName(p) + (p.level > 1 ? " · L" + p.level : ""), state = p.status.isEmpty() ? stateLabel(p) : p.status;
-        ui.text(ui.clip(name, room), cx + 27, y + 3, TEXT);
-        ui.text(ui.clip(state, room), cx + 27, y + 13, p.status.isEmpty() ? FAINT : ORANGE);
-        if (on) ui.tip(name, stateLabel(p) + (p.state.equals("BUILT") ? "" : " · " + (int) (p.progress * 100) + "%"), p.status);
-        if (!p.state.equals("BUILT")) ui.bar(cx + w - barW - 8, y + 9, barW, 5, p.progress, p.state.equals("DEMOLISHING") ? RED : GOLD, p.state.equals("DEMOLISHING") ? RED : GOLD_DK);
-        else {
-            int workers = v().getCompound("plotWorkers").getInt(String.valueOf(id));
-            if (t != null && t.category.job != null) ui.right(workers + " " + t.category.job.label.toLowerCase() + (workers == 1 ? "" : "s"), cx + w - 10, y + 8, MUTED);
+    /** A foldable group: a wall line in the queue (with its overall progress) or a category of standing buildings. */
+    int groupRow(ProjRow r, int y, int w) {
+        boolean queue = r.key.startsWith("q:"), open = r.open;
+        boolean on = ui.over(cx + 3, y, w - 6, 18);
+        ui.round(cx + 3, y, w - 6, 18, 4, on ? 0xFF2A303B : 0xFF222831);
+        ui.text(open ? "▾" : "▸", cx + 9, y + 5, MUTED);
+        Category cat = queue ? Category.WALL : Category.valueOf(r.key.substring(2));
+        ui.itemScaled(new ItemStack(cat.icon), cx + 18, y + 3, 0.75f);
+        int right = cx + w - 10;
+        if (queue) {
+            float prog = 0;
+            int waiting = 0;
+            for (PlotView m : r.members) { prog += m.progress; if (!m.status.isEmpty()) waiting++; }
+            prog /= r.members.size();
+            int barW = Math.max(30, Math.min(80, (w - 40) / 4));
+            ui.bar(right - barW, y + 7, barW, 4, prog, GOLD, GOLD_DK);
+            String pct = (int) (prog * 100) + "%";
+            ui.right(pct, right - barW - 4, y + 5, MUTED);
+            // the places in the queue the pieces take, the line's name, then how many (when it fits)
+            String label = (r.position > 0 ? r.position + "–" + (r.position + r.count - 1) + ". " : "") + r.key.substring(2);
+            String more = " · " + r.count + " pieces" + (waiting > 0 ? ", " + waiting + " waiting" : "");
+            int room = right - barW - 10 - ui.width(pct) - (cx + 32);
+            ui.text(ui.clip(label, room), cx + 32, y + 5, TEXT);
+            if (ui.width(label + more) <= room) ui.text(more, cx + 32 + ui.width(label), y + 5, FAINT);
+            if (on) ui.tip(r.key.substring(2) + ": " + r.count + " gatehouses, towers and wall sections queued", "Villagers build them in turn from the stockpile, gatehouses first.",
+                    open ? "Click to fold" : "Click to list every piece");
+        } else {
+            ui.text(ui.clip(cat.label, w - 80), cx + 32, y + 5, TEXT);
+            ui.text(String.valueOf(r.count), cx + 36 + ui.width(ui.clip(cat.label, w - 80)), y + 5, FAINT);
+            int workers = 0;
+            for (PlotView m : r.members) workers += v().getCompound("plotWorkers").getInt(String.valueOf(m.id));
+            if (cat.job != null) ui.right(workers + " " + cat.job.label.toLowerCase(Locale.ROOT) + (workers == 1 ? "" : "s") + " at work", right, y + 5, MUTED);
+            if (on) ui.tip(cat.label + ": " + r.count + (r.count == 1 ? " building" : " buildings"), open ? "Click to fold" : "Click to list them");
         }
-        ui.area(cx + 3, y, w - 6, 24, () -> selPlot = id);
+        ui.area(cx + 3, y, w - 6, 18, () -> toggleProjGroup(r.key, r.byDefault));
+        return y + 20;
+    }
+
+    int projectRow(PlotView p, int y, int w, int position, boolean indent) {
+        final int id = p.id;
+        int x = cx + (indent ? 10 : 0);
+        w -= indent ? 10 : 0;
+        boolean sel = id == selPlot, on = ui.over(x + 3, y, w - 6, 24);
+        if (sel) ui.round(x + 3, y, w - 6, 24, 4, 0xFF2E3542);
+        else if (on) ui.round(x + 3, y, w - 6, 24, 4, 0x18FFFFFF);
+        BuildingType t = BuildingCatalog.get(p.type);
+        Category cat = plotCategory(p);
+        ui.item(cat.icon, x + 7, y + 4);
+        boolean built = p.state.equals("BUILT"), auto = p.tag.getBoolean("automatic");
+        int prio = p.tag.getInt("prio");
+        int barW = Math.max(30, Math.min(80, (w - 40) / 4)), right = x + w - 10;
+        // the right-hand side: progress for the queue, workers or level for standing buildings
+        int workers = v().getCompound("plotWorkers").getInt(String.valueOf(id));
+        String side = "";
+        if (!built) {
+            ui.bar(right - barW, y + 9, barW, 5, p.progress, p.state.equals("DEMOLISHING") ? RED : GOLD, p.state.equals("DEMOLISHING") ? RED : GOLD_DK);
+            String pct = (int) (p.progress * 100) + "%";
+            ui.right(pct, right - barW - 4, y + 8, MUTED);
+            side = pct;
+            // who asked for it, and a bumped priority
+            String tagText = !auto && prio > 0 ? "▲" + prio : auto && !(indent && isWall(p)) ? "auto" : "";
+            if (!tagText.isEmpty()) {
+                int px0 = right - barW - 10 - ui.width(pct) - ui.pillWidth(tagText);
+                ui.pill(tagText, px0, y + 6, auto ? 0xFF2A3038 : 0xFF5A4A1E, auto ? FAINT : GOLD);
+                side = tagText + "  " + pct;
+            }
+        } else if (t != null && t.category.job != null) {
+            side = workers + " " + t.category.job.label.toLowerCase(Locale.ROOT) + (workers == 1 ? "" : "s");
+            ui.right(side, right, y + 8, MUTED);
+        }
+        int room = Math.max(40, (built ? right - ui.width(side) - 8 : right - barW - 14 - ui.width(side)) - (x + 27));
+        String name = (position > 0 ? position + ". " : "") + plotName(p) + (p.level > 1 ? " · L" + p.level : "");
+        String state = p.status.isEmpty() ? (built ? quarter(p) : stateLabel(p)) : p.status;
+        ui.text(ui.clip(name, room), x + 27, y + 3, TEXT);
+        ui.text(ui.clip(state, room), x + 27, y + 13, p.status.isEmpty() ? FAINT : ORANGE);
+        if (on) {
+            List<String> tip = new ArrayList<>(List.of(plotName(p) + (p.level > 1 ? " · level " + p.level : ""),
+                    (isWall(p) ? wallLine(p) : cat.label) + " · " + stateLabel(p)));
+            if (!built) tip.add((auto ? "Chosen by the villagers" : "Your plan") + (prio != 0 && !auto ? " · priority " + (prio > 0 ? "+" : "") + prio : ""));
+            if (!p.status.isEmpty()) tip.add(p.status);
+            ui.tip(tip);
+        }
+        ui.area(x + 3, y, w - 6, 24, () -> selPlot = id);
         return y + 26;
+    }
+
+    /** With nothing selected: what the builders are up to and what the queue still needs from the stockpile. */
+    void queueSummary(List<PlotView> active, int x, int y, int w, int h) {
+        ui.text("Construction", x + 8, y + 8, MUTED);
+        int yy = y + 22;
+        int[] builders = v().getCompound("jobs").getIntArray("BUILDER");
+        ui.text(ui.clip("Builders: " + (builders.length > 1 ? builders[0] + " of " + builders[1] + " places" : "none"), w - 16), x + 8, yy, TEXT);
+        yy += 11;
+        int player = 0;
+        for (PlotView p : active) if (!p.tag.getBoolean("automatic")) player++;
+        String mix = player == 0 ? "All chosen by the villagers" : player == active.size() ? "All your own plans" : player + " yours, " + (active.size() - player) + " the villagers'";
+        yy += ui.wrap(active.isEmpty() ? "The queue is empty" : mix, x + 8, yy, w - 16, MUTED) + 4;
+        // a rough bill of what is still to come: each plot's bill less the share already built
+        Map<String, Integer> owed = new HashMap<>();
+        CompoundTag bills = v().getCompound("bills");
+        for (PlotView p : active) {
+            if (p.state.equals("DEMOLISHING")) continue;
+            CompoundTag b = bills.getCompound(String.valueOf(p.id));
+            for (String k : b.getAllKeys()) owed.merge(k, (int) Math.ceil(b.getInt(k) * (1 - p.progress)), Integer::sum);
+        }
+        Map<Item, Integer> stock = stock();
+        List<Map.Entry<String, Integer>> short_ = new ArrayList<>();
+        for (var e : owed.entrySet()) {
+            int has = stock.getOrDefault(BuiltInRegistries.ITEM.get(new ResourceLocation(e.getKey())), 0);
+            if (has < e.getValue()) short_.add(Map.entry(e.getKey(), e.getValue() - has));
+        }
+        short_.sort(Comparator.comparingInt((Map.Entry<String, Integer> e) -> -e.getValue()));
+        if (!active.isEmpty()) {
+            ui.text(short_.isEmpty() ? "Stockpile covers the queue" : "Still to bring in", x + 8, yy, short_.isEmpty() ? GREEN : ORANGE);
+            if (ui.over(x, yy - 1, w, 11)) ui.tip("An estimate: what the queued projects still need beyond what the stockpile holds.");
+            yy += 12;
+            int max = Math.max(0, (y + h - 70 - yy) / 18);
+            for (int i = 0; i < Math.min(max, short_.size()); i++) {
+                var e = short_.get(i);
+                ItemStack st = new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation(e.getKey())));
+                ui.itemTip(st, x + 8, yy);
+                String n = num(e.getValue());
+                ui.text(ui.clip(st.getHoverName().getString(), w - 40 - ui.width(n)), x + 28, yy + 4, TEXT);
+                ui.right(n, x + w - 10, yy + 4, ORANGE);
+                yy += 18;
+            }
+            if (short_.size() > max && max > 0) { ui.text("and " + (short_.size() - max) + " more", x + 28, yy, FAINT); yy += 12; }
+            yy += 4;
+        }
+        ui.pushClip(x, yy, x + w, y + h - 4);
+        ui.wrap("Click a project for details. Builders take materials straight from the stockpile; a site that lacks something waits and says what.",
+                x + 8, Math.max(yy, y + h - 4 - ui.wrapHeight("Click a project for details. Builders take materials straight from the stockpile; a site that lacks something waits and says what.", w - 16)), w - 16, FAINT);
+        ui.popClip();
     }
 
     // ------------------------------------------------------------------ stockpile
@@ -1118,7 +1532,11 @@ public class CityScreen extends Screen {
         int top = cy + 30;
         // current project
         ui.card(cx, top, cw, 34);
-        if (active.isEmpty()) {
+        boolean allKnown = strings("research").containsAll(ResearchTree.nodes().keySet());
+        if (active.isEmpty() && allKnown) {
+            ui.text("Every project is known", cx + 10, top + 8, GOLD);
+            ui.text(ui.clip("All " + ResearchTree.nodes().size() + " projects of the tree have been studied.", cw - 20), cx + 10, top + 19, FAINT);
+        } else if (active.isEmpty()) {
             ui.text("No research under way", cx + 10, top + 8, MUTED);
             ui.text("Pick a project below. Libraries and scholars speed it up.", cx + 10, top + 19, FAINT);
         } else {
@@ -1310,7 +1728,9 @@ public class CityScreen extends Screen {
         if (ui.over(cx + 6, ly + 5, segW, 13)) ui.tip("Sort by " + ROSTER_SORTS[rosterSort].toLowerCase(Locale.ROOT), "Rank: skill rank, then Recruits level · Health: most hurt first · Unit: by kind");
         String[] filters = new String[ROSTER_FILTERS.length];
         // counts beside the filters when they fit
-        boolean counts = segW / filters.length >= ui.width("Home 8") + 6;
+        int widest = 0;
+        for (int i = 0; i < filters.length; i++) widest = Math.max(widest, ui.width(ROSTER_FILTERS[i] + " " + rosterCount(all, i)));
+        boolean counts = segW / filters.length >= widest + 6;
         for (int i = 0; i < filters.length; i++) filters[i] = ROSTER_FILTERS[i] + (counts ? " " + rosterCount(all, i) : "");
         ui.segments("rosterFilter", cx + cw - 6 - segW, ly + 5, segW, 13, filters, rosterFilter, i -> { rosterFilter = i; ui.resetScroll("roster"); });
         if (ui.over(cx + cw - 6 - segW, ly + 5, segW, 13)) ui.tip("Show: all soldiers, those in town, those away, or those under 60% health",
@@ -1776,7 +2196,7 @@ public class CityScreen extends Screen {
         x /= fit; y /= fit;
         if (search.visible && search.mouseClicked(x, y, button)) { setFocused(search); return true; }
         search.setFocused(false);
-        if (tab == Tab.MAP && mapPlan != null && x >= mapX && x < mapX + mapW && y >= mapY && y < mapY + mapH) {
+        if (tab == Tab.MAP && mapPlan != null && x >= mapX && x < mapX + mapW && y >= mapY && y < mapY + mapH && !overMapControls(x, y)) {
             if (button == 1) { dragMap = true; return true; }
             if (button == 0 && mine() && mapScale > 0) {
                 int wx = (int)Math.floor((x - mapOriginX) / mapScale) + CityMap.originX;
@@ -1810,12 +2230,8 @@ public class CityScreen extends Screen {
     public boolean mouseScrolled(double x, double y, double delta) {
         x /= fit; y /= fit;
         if (tab == Tab.MAP && x >= mapX && x < mapX + mapW && y >= mapY && y < mapY + mapH) {
-            float old = mapZoom;
-            mapZoom = Mth.clamp(mapZoom * (delta > 0 ? 1.25f : 0.8f), 0.6f, 6f);
             // zoom around the cursor
-            float cxm = mapX + mapW / 2f + mapPanX, cym = mapY + mapH / 2f + mapPanY;
-            mapPanX += (float) ((x - cxm) * (1 - mapZoom / old));
-            mapPanY += (float) ((y - cym) * (1 - mapZoom / old));
+            zoomMap(delta > 0 ? 1.25f : 0.8f, (float) x, (float) y);
             return true;
         }
         if (tab == Tab.RESEARCH && y >= resY && y < resY + resH) {
@@ -1862,5 +2278,52 @@ public class CityScreen extends Screen {
         if (tab == Tab.RESEARCH) selResearch = select;
         if (tab == Tab.FORGE && select != null) { forgePiece = "SET"; forgePattern = select; forgeQty = 4; }
         if (tab == Tab.MAP || tab == Tab.PROJECTS) selPlot = select == null ? -1 : Integer.parseInt(select);
+    }
+
+    /** Tour support: the City Map's zoom and pan. */
+    public void tourMap(float zoom, float panX, float panY) { mapZoom = zoom; mapPanX = panX; mapPanY = panY; }
+
+    /** Tour support: a scrolling region's offset ("proj", "blist", "overview", ...). */
+    public void tourScroll(String id, float off) { ui.setScroll(id, off); }
+
+    /** Tour support: the Build page's category ("ALL" or a Category name). */
+    public void tourCategory(String cat) { catFilter = cat; selType = null; ui.resetScroll("blist"); }
+
+    /** Tour support: the City Map legend's picked-out category (null for all). */
+    public void tourFocus(String cat) { mapFocus = cat == null ? null : Category.valueOf(cat); }
+
+    /** Tour support: opens a Projects group ("q:City wall", "c:HOUSING", ...). */
+    public void tourOpenGroup(String key) { projOpen.add(key); projClosed.remove(key); }
+
+    /** Tour support: selects the first plot whose type id contains the text (-1 when none); returns its id. */
+    public int tourSelectPlot(String type) {
+        selPlot = -1;
+        for (PlotView p : plots()) if (p.type.contains(type) && !p.type.equals("road")) { selPlot = p.id; break; }
+        return selPlot;
+    }
+
+    /** Tour support: puts the mouse over a point in this screen's layout units. */
+    public void tourMouse(double lx, double ly) {
+        var win = Minecraft.getInstance().getWindow();
+        double sx = lx * fit * win.getScreenWidth() / win.getGuiScaledWidth(), sy = ly * fit * win.getScreenHeight() / win.getGuiScaledHeight();
+        org.lwjgl.glfw.GLFW.glfwSetCursorPos(win.getWindow(), sx, sy);
+        try {
+            var mh = Minecraft.getInstance().mouseHandler;
+            for (String[] f : new String[][]{{"xpos", String.valueOf(sx)}, {"ypos", String.valueOf(sy)}}) {
+                var field = mh.getClass().getDeclaredField(f[0]);
+                field.setAccessible(true);
+                field.setDouble(mh, Double.parseDouble(f[1]));
+            }
+        } catch (ReflectiveOperationException ignored) {}
+    }
+
+    /** Tour support: puts the mouse over the middle of the first plot of a type on the City Map (drawn at least once). */
+    public boolean tourHoverPlot(String type) {
+        if (mapScale <= 0) return false;
+        for (PlotView p : plots()) if (p.type.contains(type) && !p.type.equals("road")) {
+            tourMouse(mapOriginX + ((p.x0 + p.x1 + 1) / 2f - CityMap.originX) * mapScale, mapOriginY + ((p.z0 + p.z1 + 1) / 2f - CityMap.originZ) * mapScale);
+            return true;
+        }
+        return false;
     }
 }

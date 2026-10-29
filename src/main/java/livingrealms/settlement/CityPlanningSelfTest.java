@@ -139,16 +139,19 @@ public final class CityPlanningSelfTest {
     static long buildings(Settlement s) { return s.plots.stream().filter(p -> !p.typeId.equals("road") && !livingrealms.settlement.plan.Walls.isWallPiece(p)).count(); }
 
     /** Plans and builds every wall piece the town has unlocked, one after another (tour support). Returns pieces planned. */
-    public static int buildWalls(ServerLevel level, Settlement s) {
+    public static int buildWalls(ServerLevel level, Settlement s) { return buildWalls(level, s, Integer.MAX_VALUE); }
+
+    /** As {@link #buildWalls(ServerLevel, Settlement)}, but only the first {@code built} pieces are built; the rest stay queued. */
+    public static int buildWalls(ServerLevel level, Settlement s, int built) {
         int n = 0;
         s.autoWalls = true;
         for (int i = 0; i < 400; i++) {
             stock(s);
             if (!AutoBuild.walls(level, s)) break;
-            buildQueued(level, s);
+            if (n < built) buildQueued(level, s);
             n++;
         }
-        buildQueued(level, s);
+        if (n <= built) buildQueued(level, s);
         Simulation.recompute(s);
         return n;
     }

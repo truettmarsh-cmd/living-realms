@@ -44,6 +44,8 @@ minecraft {
             // ./gradlew runClient -PcapitalTour -PrunDir=<fresh dir> : a fully grown Capital with walls and castle, screenshots, then left open; -PcapitalTerrain instead builds it on generated hills (see CapitalTour)
             if (project.hasProperty('capitalTour')) property 'livingrealms.capitalTour', 'true'
             if (project.hasProperty('capitalTerrain')) property 'livingrealms.capitalTerrain', 'true'
+            // ./gradlew runClient -PcapitalUiTour -PrunDir=<fresh dir> : the same capital with a long queue, the City Manager on every page at several window sizes and GUI scales
+            if (project.hasProperty('capitalUiTour')) property 'livingrealms.capitalUiTour', 'true'
         }
         server {
             args '--nogui'
