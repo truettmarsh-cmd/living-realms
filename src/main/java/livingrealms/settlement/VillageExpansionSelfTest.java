@@ -295,7 +295,7 @@ public final class VillageExpansionSelfTest {
         int grown = CityPlanningSelfTest.grow(level, planned, 14);
         int fronted = 0, reached = 0;
         for (Plot p : planned.plots) {
-            if (p.typeId.equals("road")) continue;
+            if (p.typeId.equals("road") || livingrealms.settlement.plan.Walls.isWallPiece(p)) continue;
             var t = BuildingCatalog.get(p.typeId);
             double dist = Math.hypot(p.center().getX() - planned.center.getX(), p.center().getZ() - planned.center.getZ());
             if (t != null && (t.category == livingrealms.building.Category.SMITHY || t.category == livingrealms.building.Category.MINE
@@ -307,7 +307,36 @@ public final class VillageExpansionSelfTest {
         }
         LivingRealms.LOG.info("Village Expansion town grew {} buildings; {} of {} have a road at the door", grown, reached, fronted);
         check(grown >= 6 && reached == fronted, "Buildings on Village Expansion lots face their streets: " + reached + "/" + fronted);
+        // walls round a Village Expansion town: fitted to its buildings, gatehouses where its streets cross
+        int pieces = CityPlanningSelfTest.buildWalls(level, planned);
+        var lines = planned.plan().customWalls;
+        check(lines != null && !lines.isEmpty(), "A wall line is fitted round the Village Expansion town");
+        var line = lines.get(0);
+        LivingRealms.LOG.info("Village Expansion walls: a {} b {} gates {} · {} pieces · {}", line.a(), line.b(), line.gates(), pieces,
+                livingrealms.settlement.plan.Walls.status(planned));
+        check(livingrealms.settlement.plan.Walls.pieces(line).stream().allMatch(pc -> planned.plots.stream().anyMatch(p -> p.blueprintKey.equals(pc.key(planned)))),
+                "Every piece of the Village Expansion wall is planned: " + livingrealms.settlement.plan.Walls.status(planned));
+        var wallBad = livingrealms.settlement.plan.PlanAudit.walls(planned, planned.plan(), livingrealms.settlement.plan.Terrain.grid((x, z) -> 99, (x, z) -> false));
+        check(wallBad.isEmpty(), "Village Expansion wall audit: " + wallBad);
+        Set<Long> blocking = new HashSet<>();
+        for (Plot p : planned.plots) if (livingrealms.settlement.plan.Walls.isWallPiece(p) && !p.typeId.equals(livingrealms.settlement.plan.Walls.GATE)) blocking.addAll(p.columns());
+        int crossings = 0;
+        for (Plot r : planned.plots) {
+            if (!r.typeId.equals("road")) continue;
+            var rb = r.blueprint();
+            for (int i = 0; i < rb.size(); i++) {
+                if (rb.state(i).isAir()) continue;
+                int x = r.origin.getX() + rb.lx(i), z = r.origin.getZ() + rb.lz(i);
+                int lv = Math.abs(livingrealms.settlement.plan.Walls.level(line, x - planned.center.getX(), z - planned.center.getZ()));
+                if (lv > 6) continue;
+                crossings++;
+                if (lv > 1) continue;
+                check(!blocking.contains(BlockPos.asLong(x, 0, z)), "Village Expansion street at " + x + "," + z + " meets a gatehouse, not the wall");
+            }
+        }
+        check(crossings > 0 && !line.gates().isEmpty(), "Village Expansion streets leave the town through its gates: " + crossings);
         var restored = Settlement.load(planned.save());
+        check(restored.townPlan.customWalls != null && restored.townPlan.customWalls.get(0).equals(line), "Fitted wall line survives reload");
         check(restored.layout.slots.size() == planned.layout.slots.size() && restored.layout.slots.stream().filter(s -> s.used).count() >= 1
                 && restored.layout.seed == planned.layout.seed, "Layout survives reload");
 

@@ -105,11 +105,19 @@ public final class AiPlanner {
         String material = RoadClass.LANE.material(s.tier, desert);
         BlockPos step = out.relative(front.getOpposite(), 2);
         for (BlockPos[] leg : new BlockPos[][]{{step, out}, {out, to}}) {
-            if (leg[0].distSqr(leg[1]) < 1 || Planning.road(level, s, leg[0], leg[1], 2, material) != null) continue;
+            if (leg[0].distSqr(leg[1]) < 1 || crossesWall(s, leg[0], leg[1]) || Planning.road(level, s, leg[0], leg[1], 2, material) != null) continue;
             Plot road = s.plots.get(s.plots.size() - 1);
             road.automatic = automatic;
             road.priority = automatic ? -2 : -1;
         }
+    }
+
+    /** A lane that would cut through a wall line away from its gates. */
+    static boolean crossesWall(Settlement s, BlockPos a, BlockPos b) {
+        int n = Math.max(1, Math.max(Math.abs(b.getX() - a.getX()), Math.abs(b.getZ() - a.getZ())));
+        for (int i = 0; i <= n; i++)
+            if (Walls.breach(s, a.getX() + (b.getX() - a.getX()) * i / n, a.getZ() + (b.getZ() - a.getZ()) * i / n)) return true;
+        return false;
     }
 
     static Category decide(RandomSource r, Settlement s) {

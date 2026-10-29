@@ -144,7 +144,7 @@ public final class PlanAudit {
             }
             // gatehouses: every high street reaching the line passes through one, open to the sky for PASSAGE blocks
             for (Street st : plan.streets) {
-                if (st.cls != RoadClass.HIGH || plan.open(st, s.radius()) < l.a() - TownPlan.PLAZA + 2) continue;
+                if (st.cls != RoadClass.HIGH || plan.laid.getOrDefault(st.id, -1) < l.a() - TownPlan.PLAZA + 2) continue;
                 int t = l.a() - TownPlan.PLAZA;
                 int gx = st.x(t), gz = st.z(t);
                 Plot g = owner.get(BlockPos.asLong(gx, 0, gz));

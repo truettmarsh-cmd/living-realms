@@ -79,20 +79,33 @@ public final class CityPlanningTour {
     private static void town(Minecraft mc) throws Exception {
         if(grown<2)return;
         int t=grown++;var server=mc.getSingleplayerServer();var id=mc.player.getUUID();
+        // the grown town before its walls: from above and at the high street where the north gate will stand
         if(t==2)server.execute(()->camera(server.getPlayerList().getPlayer(id),0.5,185,0.5,180,89.5f));
         if(t==120)shot="planning-town-top.png";
-        if(t==130)server.execute(()->camera(server.getPlayerList().getPlayer(id),0,150,-70,0,52));
-        if(t==250)shot="planning-town-north.png";
-        if(t==260)server.execute(()->camera(server.getPlayerList().getPlayer(id),62,128,62,135,30));
-        if(t==380)shot="planning-town-southeast.png";
-        if(t==390)server.execute(()->{var p=server.getPlayerList().getPlayer(id);Net.openManager(p,SettlementManager.get(server).get(town),"build");});
-        if(t==420 && mc.screen instanceof CityScreen screen) {
+        if(t==130)server.execute(()->camera(server.getPlayerList().getPlayer(id),0.5,108,-62,0,12));
+        if(t==250)shot="planning-gate-before.png";
+        // walls: villagers queue and build the old-town wall, its gatehouses and towers
+        if(t==260)server.execute(()->{
+            Settlement s=SettlementManager.get(server).get(town);
+            int n=CityPlanningSelfTest.buildWalls(server.overworld(),s);
+            LivingRealms.LOG.info("CITY WALLS {} pieces built · {}",n,livingrealms.settlement.plan.Walls.status(s));
+        });
+        if(t==270)server.execute(()->camera(server.getPlayerList().getPlayer(id),0.5,185,0.5,180,89.5f));
+        if(t==390)shot="planning-walls-top.png";
+        if(t==400)server.execute(()->camera(server.getPlayerList().getPlayer(id),0.5,108,-62,0,12));
+        if(t==520)shot="planning-gate-after.png";
+        if(t==530)server.execute(()->camera(server.getPlayerList().getPlayer(id),-58,135,-58,-45,32));
+        if(t==650)shot="planning-walls-northwest.png";
+        if(t==660)server.execute(()->camera(server.getPlayerList().getPlayer(id),0.5,103,-22,180,6));
+        if(t==780)shot="planning-gate-inside.png";
+        if(t==790)server.execute(()->{var p=server.getPlayerList().getPlayer(id);Net.openManager(p,SettlementManager.get(server).get(town),"build");});
+        if(t==820 && mc.screen instanceof CityScreen screen) {
             var tab=Class.forName("livingrealms.client.ui.CityScreen$Tab");
             var m=CityScreen.class.getDeclaredMethod("switchTab",tab);m.setAccessible(true);
             m.invoke(screen,Enum.valueOf(tab.asSubclass(Enum.class),"MAP"));
         }
-        if(t==460)shot="planning-town-map.png";
-        if(t==480){LivingRealms.LOG.info("CITY PLANNING TOUR COMPLETE");mc.stop();}
+        if(t==860)shot="planning-town-map.png";
+        if(t==880){LivingRealms.LOG.info("CITY PLANNING TOUR COMPLETE");mc.stop();}
     }
     private static void camera(ServerPlayer player,double x,double y,double z,float yaw,float pitch){
         player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
@@ -102,7 +115,7 @@ public final class CityPlanningTour {
         try {
             var level=player.serverLevel();
             Settlement s=SettlementManager.get(player.server).get(town);
-            s.tier=Tier.TOWN;
+            s.tier=Tier.TOWN;s.autoWalls=false;
             int n=CityPlanningSelfTest.grow(level,s,36);
             LivingRealms.LOG.info("CITY LAYOUT {} buildings placed, {} plots in all, radius {}",n,s.plots.size(),s.radius());
             for(Plot p:s.plots){

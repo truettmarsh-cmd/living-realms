@@ -595,6 +595,20 @@ public class CityScreen extends Screen {
             int y = (int) (oy + (center.getZ() + 0.5 + Math.sin(a) * radius - CityMap.originZ) * s);
             ui.rect(x, y, 2, 2, i % 2 == 0 ? GOLD : 0x80E8C15A);
         }
+        // planned wall lines: dashed stone-grey outlines (the pieces themselves appear as plots once queued)
+        for (Tag wt : v().getList("walls", Tag.TAG_INT_ARRAY)) {
+            int[] wv = ((net.minecraft.nbt.IntArrayTag) wt).getAsIntArray();
+            for (int i = 0; i + 1 < wv.length; i += 2) {
+                int j = (i + 2) % wv.length;
+                float ax = ox + (wv[i] + 0.5f - CityMap.originX) * s, ay = oy + (wv[i + 1] + 0.5f - CityMap.originZ) * s;
+                float bx = ox + (wv[j] + 0.5f - CityMap.originX) * s, by = oy + (wv[j + 1] + 0.5f - CityMap.originZ) * s;
+                int n = Math.max(1, (int) (Math.hypot(bx - ax, by - ay) / 3));
+                for (int k = 0; k < n; k++) {
+                    if (k % 3 == 2) continue;
+                    ui.rect((int) (ax + (bx - ax) * k / n) - 1, (int) (ay + (by - ay) * k / n) - 1, 2, 2, 0xD0C8C2B6);
+                }
+            }
+        }
         PlotView hover = null;
         for (PlotView p : plots()) {
             int x0 = (int) (ox + (p.x0 - CityMap.originX) * s), z0 = (int) (oy + (p.z0 - CityMap.originZ) * s);
@@ -675,6 +689,14 @@ public class CityScreen extends Screen {
                 ui.text("Roads", sx + 8, ly, MUTED);
                 ly += 12;
                 roadPicker(sx + 6, ly, side - 12);
+                ly += 64;
+                if (ly + 16 <= cy + ch - 4) {
+                    ui.button("autoWalls", sx + 6, ly, side - 12, 16, "Auto walls: " + (v().getBoolean("autoWalls") ? "ON" : "OFF"),
+                            Style.SECONDARY, true, () -> act("autoWalls", tag("on", !v().getBoolean("autoWalls"))));
+                    if (ui.over(sx + 6, ly, side - 12, 16)) ui.tip(v().getString("wallStatus"),
+                            "Villagers build the dashed wall line: gatehouses on the high streets, towers, then the wall, from the stockpile.",
+                            "Old-town wall at Village rank with Fortifications; city wall at City rank. Your own plans come first.");
+                }
             }
         } else {
             plotDetail(sel, sx, cy, side, ch);

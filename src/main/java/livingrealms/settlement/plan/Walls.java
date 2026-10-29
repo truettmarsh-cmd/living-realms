@@ -260,6 +260,9 @@ public final class Walls {
         int z0 = c.getZ() + Math.min(e.z(Math.max(0, ta)), e.z(Math.min(e.len, tb))), z1 = c.getZ() + Math.max(e.z(Math.max(0, ta)), e.z(Math.min(e.len, tb)));
         if (!terrain.loaded(x0 - 16, z0 - 16, x1 + 16, z1 + 16)) { blocked(s, "waiting for the wall line to be visited"); return null; }
         Set<Long> others = obstacles(s, c, l);
+        // our own walls already standing are not someone else's building
+        Set<Long> ours = new HashSet<>();
+        for (Plot o : s.plots) if (isWallPiece(o) && o.columns() != null) ours.addAll(o.columns());
         if (p.kind == Kind.WALL) {
             type = WALL;
             Set<Long> structures = structures(l, c);
@@ -272,7 +275,7 @@ public final class Walls {
                     boolean clear = true;
                     for (int k = -2; k <= 2 && clear; k++) {
                         long col = BlockPos.asLong(c.getX() + e.x(t) + (o + k) * e.ux, 0, c.getZ() + e.z(t) + (o + k) * e.uz);
-                        if (others.contains(col) || terrain.built(BlockPos.getX(col), BlockPos.getZ(col)) && !structures.contains(col)) clear = false;
+                        if (others.contains(col) || terrain.built(BlockPos.getX(col), BlockPos.getZ(col)) && !structures.contains(col) && !ours.contains(col)) clear = false;
                     }
                     if (clear) { need[i] = o; break; }
                     if (o == 12) { blocked(s, "a building blocks the wall at " + (c.getX() + e.x(t)) + ", " + (c.getZ() + e.z(t))); return null; }
@@ -327,7 +330,7 @@ public final class Walls {
             List<long[]> foot = footprint(l, p, c);
             for (long[] f : foot) {
                 long col = BlockPos.asLong((int) f[0], 0, (int) f[1]);
-                if (others.contains(col) || terrain.built((int) f[0], (int) f[1])) {
+                if (others.contains(col) || terrain.built((int) f[0], (int) f[1]) && !ours.contains(col)) {
                     blocked(s, "a building stands where a " + (p.kind == Kind.GATE ? "gatehouse" : "tower") + " should go at " + f[0] + ", " + f[1]);
                     return null;
                 }
@@ -538,6 +541,23 @@ public final class Walls {
             if (d < bd) { bd = d; best = g; }
         }
         return best;
+    }
+
+    /** A street column on or next to a wall line, away from that line's gatehouses (a street there would breach the wall). */
+    public static boolean breach(Settlement s, int x, int z) {
+        int dx = x - s.center.getX(), dz = z - s.center.getZ();
+        for (Line l : s.plan().wallLines()) {
+            if (Math.abs(level(l, dx, dz)) > 3) continue;
+            boolean gate = false;
+            List<Edge> es = edges(l);
+            for (int g : l.gates) {
+                Edge e = es.get(g / 10_000);
+                int t = g % 10_000;
+                if (Math.max(Math.abs(e.x(t) - dx), Math.abs(e.z(t) - dz)) <= 4) gate = true;
+            }
+            if (!gate) return true;
+        }
+        return false;
     }
 
     /** North, south, east or west of the centre, for messages. */

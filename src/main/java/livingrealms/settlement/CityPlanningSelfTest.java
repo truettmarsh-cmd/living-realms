@@ -136,7 +136,22 @@ public final class CityPlanningSelfTest {
         return false;
     }
 
-    static long buildings(Settlement s) { return s.plots.stream().filter(p -> !p.typeId.equals("road")).count(); }
+    static long buildings(Settlement s) { return s.plots.stream().filter(p -> !p.typeId.equals("road") && !livingrealms.settlement.plan.Walls.isWallPiece(p)).count(); }
+
+    /** Plans and builds every wall piece the town has unlocked, one after another (tour support). Returns pieces planned. */
+    public static int buildWalls(ServerLevel level, Settlement s) {
+        int n = 0;
+        s.autoWalls = true;
+        for (int i = 0; i < 400; i++) {
+            stock(s);
+            if (!AutoBuild.walls(level, s)) break;
+            buildQueued(level, s);
+            n++;
+        }
+        buildQueued(level, s);
+        Simulation.recompute(s);
+        return n;
+    }
 
     // ------------------------------------------------------------------ the town plan on synthetic ground
 
@@ -425,23 +440,14 @@ public final class CityPlanningSelfTest {
         if (s.plan().laid.isEmpty() && s.count("livingrealms:town_hall") > 0) AutoBuild.pave(level, s, s.plan().founding(s.radius()), true);
         int placed = 0;
         for (int i = 0; i < projects * 4 && placed < projects; i++) {
-            for (BuildingType t : BuildingCatalog.types().values()) {
-                Blueprint b = BuildingCatalog.blueprint(t.blueprintKey(1, s.style));
-                if (b != null) b.bill().forEach((item, n) -> { if (s.stock.count(item) < n + 200) s.stock.force(item, n + 400); });
-            }
-            s.stock.force(Blueprint.costItem(Construction.foundationBlock(s)), 5000);
+            stock(s);
             Simulation.recompute(s);
             s.population = Math.max(1, s.d.housing - (i % 3 == 0 ? 0 : 6));
             Realms.plan(level, s);
-            long before = s.plots.stream().filter(p -> !p.typeId.equals("road")).count();
+            long before = buildings(s);
             AutoBuild.think(level, s);
-            for (Plot p : new ArrayList<>(s.plots)) {
-                if (!AutoBuild.pending(p)) continue;
-                if (p.state == Plot.State.PLANNED) p.state = Plot.State.BUILDING;
-                for (int k = 0; k < p.totalSteps() + 200; k++) if (Construction.work(level, s, p) != Construction.Result.PLACED) break;
-                Simulation.finish(level, s, p);
-            }
-            placed += (int) (s.plots.stream().filter(p -> !p.typeId.equals("road")).count() - before);
+            buildQueued(level, s);
+            placed += (int) (buildings(s) - before);
         }
         Simulation.recompute(s);
         return placed;

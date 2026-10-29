@@ -107,6 +107,33 @@ public final class VxPlan {
         }
     }
 
+    /** Laid street projects and the streets VE planned for its lots, as columns relative to the centre. */
+    static List<List<long[]>> streets(Settlement s) {
+        List<List<long[]>> out = new ArrayList<>();
+        for (var p : s.plots) {
+            if (!p.typeId.equals("road")) continue;
+            Blueprint bp = p.blueprint();
+            if (bp == null) continue;
+            List<long[]> cols = new ArrayList<>();
+            for (int i = 0; i < bp.size(); i++) if (!bp.state(i).isAir())
+                cols.add(new long[]{p.origin.getX() + bp.lx(i) - s.center.getX(), p.origin.getZ() + bp.lz(i) - s.center.getZ()});
+            out.add(cols);
+        }
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+        for (VxLayout.Slot slot : s.layout.slots) {
+            if (!slot.hasRoad() || !seen.add(slot.roadA ^ (slot.roadB * 31))) continue;
+            BlockPos a = slot.roadA(), b = slot.roadB();
+            int n = Math.max(1, Math.max(Math.abs(b.getX() - a.getX()), Math.abs(b.getZ() - a.getZ())));
+            List<long[]> cols = new ArrayList<>();
+            for (int i = 0; i <= n; i++) {
+                int x = a.getX() + (b.getX() - a.getX()) * i / n - s.center.getX(), z = a.getZ() + (b.getZ() - a.getZ()) * i / n - s.center.getZ();
+                cols.add(new long[]{x, z});
+            }
+            out.add(cols);
+        }
+        return out;
+    }
+
     @Nullable
     static livingrealms.settlement.plan.Walls.Line fitLine(Settlement s, int index, livingrealms.settlement.Tier tier, int atLeast) {
         int maxAbs = 0, maxSum = 0;
@@ -120,25 +147,49 @@ public final class VxPlan {
             maxAbs = Math.max(maxAbs, Math.max(x, z));
             maxSum = Math.max(maxSum, x + z);
         }
-        int a = Math.max(Math.max(26, atLeast), maxAbs + livingrealms.settlement.plan.Walls.BAND + 1);
+        int a0 = Math.max(Math.max(26, atLeast), maxAbs + livingrealms.settlement.plan.Walls.BAND + 1);
         int r = tier.radius - 4;
-        if (a >= r) return null;
-        int bMax = a + (int) Math.floor(Math.sqrt((double) r * r - (double) a * a));
-        int bMin = Math.max(a + 4, maxSum + livingrealms.settlement.plan.Walls.BAND + 1);
-        if (bMax < bMin) return null;
-        int b = Math.min(bMax, 2 * a - 4);
-        if (b < bMin) b = bMin;
-        var probe = new livingrealms.settlement.plan.Walls.Line(index, a, b, tier, List.of());
+        // the town's streets, laid or only planned by VE, each as its columns relative to the centre
+        List<List<long[]>> roads = streets(s);
+        livingrealms.settlement.plan.Walls.Line probe = null;
+        int bestCount = Integer.MAX_VALUE;
+        for (int a = a0; a <= a0 + 40 && a < r; a++) {
+            int bMax = a + (int) Math.floor(Math.sqrt((double) r * r - (double) a * a));
+            int bMin = Math.max(a + 4, maxSum + livingrealms.settlement.plan.Walls.BAND + 1);
+            if (bMax < bMin) continue;
+            int b = Math.max(bMin, Math.min(bMax, 2 * a - 4));
+            var l = new livingrealms.settlement.plan.Walls.Line(index, a, b, tier, List.of());
+            // fields and outlying towers may lie outside, but nothing may stand on the line itself
+            boolean clash = false;
+            for (var p : s.plots)
+                if (!p.typeId.equals("road") && !livingrealms.settlement.plan.Walls.isWallPiece(p)
+                        && livingrealms.settlement.plan.Walls.inBand(l, s.center, p.box(), 6)) { clash = true; break; }
+            if (clash) continue;
+            // a street crossing the line is a gate; one running along it would be cut, so those lines are avoided
+            int count = 0, crossing = 0;
+            for (List<long[]> road : roads) {
+                int in = 0;
+                boolean inside = false, outside = false;
+                for (long[] q : road) {
+                    int lv = livingrealms.settlement.plan.Walls.level(l, (int) q[0], (int) q[1]);
+                    if (Math.abs(lv) <= 3) in++;
+                    else if (lv < 0) inside = true;
+                    else outside = true;
+                }
+                if (in > 0 && inside && outside && in <= 24) crossing++;
+                else count += in;
+            }
+            int score = count * 10 - Math.min(crossing, 4);
+            if (score < bestCount) { bestCount = score; probe = l; }
+        }
+        if (probe == null) return null;
+        int a = probe.a(), b = probe.b();
         // gatehouses where laid streets cross the line
         var edges = livingrealms.settlement.plan.Walls.edges(probe);
         java.util.TreeMap<Integer, List<Integer>> hits = new java.util.TreeMap<>();
-        for (var p : s.plots) {
-            if (!p.typeId.equals("road")) continue;
-            Blueprint bp = p.blueprint();
-            if (bp == null) continue;
-            for (int i = 0; i < bp.size(); i++) {
-                if (bp.state(i).isAir()) continue;
-                int dx = p.origin.getX() + bp.lx(i) - s.center.getX(), dz = p.origin.getZ() + bp.lz(i) - s.center.getZ();
+        for (List<long[]> road : roads) {
+            for (long[] q : road) {
+                int dx = (int) q[0], dz = (int) q[1];
                 if (Math.abs(livingrealms.settlement.plan.Walls.level(probe, dx, dz)) > 1) continue;
                 int best = -1, bt = 0, bd = Integer.MAX_VALUE;
                 for (var e : edges) for (int t = 0; t <= e.len(); t++) {

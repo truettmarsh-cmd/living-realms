@@ -356,6 +356,24 @@ public final class ArchitectView {
             if (id == selectedPlot || id == hoveredPlot) LevelRenderer.renderLineBox(ps, lines, box.inflate(0.06), 1f, 0.85f, 0.3f, 1f);
             else if (built && !pl.getString("type").equals(ROAD)) LevelRenderer.renderLineBox(ps, lines, box.inflate(0.03), 0.85f, 0.88f, 0.95f, 0.35f);
         }
+        // the planned wall lines, a hand's breadth above the ground
+        for (Tag wt : view().getList("walls", Tag.TAG_INT_ARRAY)) {
+            int[] wv = ((net.minecraft.nbt.IntArrayTag) wt).getAsIntArray();
+            var pose = ps.last();
+            for (int i = 0; i + 1 < wv.length; i += 2) {
+                int j = (i + 2) % wv.length;
+                int n = Math.max(1, Math.max(Math.abs(wv[j] - wv[i]), Math.abs(wv[j + 1] - wv[i + 1])) / 2);
+                for (int k = 0; k < n; k++) {
+                    double ax = wv[i] + (wv[j] - wv[i]) * (double) k / n + 0.5, az = wv[i + 1] + (wv[j + 1] - wv[i + 1]) * (double) k / n + 0.5;
+                    double bx = wv[i] + (wv[j] - wv[i]) * (double) (k + 1) / n + 0.5, bz = wv[i + 1] + (wv[j + 1] - wv[i + 1]) * (double) (k + 1) / n + 0.5;
+                    float ay = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(ax), (int) Math.floor(az)) + 0.15f;
+                    float by = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(bx), (int) Math.floor(bz)) + 0.15f;
+                    Vec3 nrm = new Vec3(bx - ax, by - ay, bz - az).normalize();
+                    lines.vertex(pose.pose(), (float) ax, ay, (float) az).color(0.85f, 0.82f, 0.75f, 0.9f).normal(pose.normal(), (float) nrm.x, (float) nrm.y, (float) nrm.z).endVertex();
+                    lines.vertex(pose.pose(), (float) bx, by, (float) bz).color(0.85f, 0.82f, 0.75f, 0.9f).normal(pose.normal(), (float) nrm.x, (float) nrm.y, (float) nrm.z).endVertex();
+                }
+            }
+        }
         BuildingType bt = tool == null ? null : BuildingCatalog.get(tool);
         Blueprint bp = blueprint();
         if (bt != null && bp != null && origin != null) {

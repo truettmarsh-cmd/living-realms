@@ -204,15 +204,21 @@ public final class Raids {
         double reach = Math.min(target.radius() + 8, 56);
         var attack = BattleAI.plan(new BattleAI.Side(attackers, defenders, target.center, BattleAI.toward(target.center, source.center, reach), false, null));
         List<LivingEntity> holding = defenders.stream().filter(d -> RecruitsBridge.isRecruit(d) && !guards.contains(d.getUUID())).toList();
-        var defence = BattleAI.plan(new BattleAI.Side(holding, attackers, target.center, BattleAI.rally(target.center, front, 8), true, ruler));
+        // behind town walls the defenders hold the gate the attackers are gathering at, until they are through it
+        Plot gate = livingrealms.settlement.plan.Walls.gateFacing(target, front.x, front.z);
+        BlockPos stand = gate == null ? target.center : BattleAI.toward(gate.center(), target.center, 5);
+        var defence = BattleAI.plan(new BattleAI.Side(holding, attackers, stand, BattleAI.rally(stand, front, 8), true, ruler));
         for (var plan : List.of(attack, defence)) plan.orders().forEach((soldier, order) -> command(level, soldier, order));
-        if (defence.regrouping() && !raid.regrouped) announce(server, target, "Outnumbered, the defenders of " + target.name + " close ranks at the centre.");
+        if (defence.regrouping() && !raid.regrouped) announce(server, target, gate != null
+                ? "Outnumbered, the defenders of " + target.name + " close ranks at the " + livingrealms.settlement.plan.Walls.side(target, gate.center()) + " gate."
+                : "Outnumbered, the defenders of " + target.name + " close ranks at the centre.");
         raid.regrouped = defence.regrouping();
         livingrealms.compat.Compat.raidTick(server, raid, target, attackers, defenders);
         boolean atCenter = attackers.stream().anyMatch(e -> e.blockPosition().distSqr(target.center) <= 12 * 12);
         raid.held = defenders.isEmpty() && atCenter ? raid.held + 20 : 0;
         String back = attack.fallingBack() > 0 ? " (" + attack.fallingBack() + " falling back)" : "";
-        String hold = defence.regrouping() ? ", holding the centre" : defence.fallingBack() > 0 ? " (" + defence.fallingBack() + " falling back)" : "";
+        String hold = gate != null ? ", holding the " + livingrealms.settlement.plan.Walls.side(target, gate.center()) + " gate"
+                : defence.regrouping() ? ", holding the centre" : defence.fallingBack() > 0 ? " (" + defence.fallingBack() + " falling back)" : "";
         status(source, target, defenders.isEmpty() && atCenter ? "City center occupied: " + raid.held / 20 + "/60 seconds"
                 : "Raid in progress: " + attackers.size() + " attackers" + back + "; " + defenders.size() + " local defenders" + hold);
         if (raid.held >= HOLD_TICKS) {

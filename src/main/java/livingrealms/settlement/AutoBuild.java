@@ -119,6 +119,18 @@ public final class AutoBuild {
         Walls.Line line = s.plan().wallLines().get(plan.piece().line());
         int[] street = Walls.gateStreet(s, line, plan.piece());
         if (street != null) pave(level, s, s.plan().connect(street[0], street[1], s.radius()), true);
+        else if (plan.piece().kind() == Walls.Kind.GATE && plan.edge() != null) {
+            // a Village Expansion street: paved through the gate, a little way in and out
+            var e = plan.edge();
+            int gx = s.center.getX() + e.x(plan.piece().tc()), gz = s.center.getZ() + e.z(plan.piece().tc());
+            BlockPos in = new BlockPos(gx - 8 * e.ux(), s.center.getY(), gz - 8 * e.uz()), out = new BlockPos(gx + 8 * e.ux(), s.center.getY(), gz + 8 * e.uz());
+            boolean desert = Procedural.styleFamily(s.style).equals("desert");
+            if (s.contains(in) && s.contains(out) && Planning.road(level, s, in, out, 3, RoadClass.STREET.material(s.tier, desert)) == null) {
+                Plot road = s.plots.get(s.plots.size() - 1);
+                road.automatic = true;
+                road.priority = -2;
+            }
+        }
         return true;
     }
 
@@ -169,6 +181,13 @@ public final class AutoBuild {
                 BlockPos corner = new BlockPos(x, s.center.getY(), z), far = new BlockPos(x + w - 1, s.center.getY(), z + d - 1);
                 if (!s.contains(corner) || !s.contains(far) || !s.contains(new BlockPos(x, 0, z + d - 1)) || !s.contains(new BlockPos(x + w - 1, 0, z))) continue;
                 if (AiPlanner.overlaps(s, x - 1, z - 1, x + w, z + d) || castle && CapitalCastles.reserved(s, x - 1, z - 1, x + w, z + d)) continue;
+                if (s.plan().customWalls != null) {
+                    // keep off the wall's band, and off lots whose street would have to run through the wall
+                    if (s.plan().inWallBand(new net.minecraft.world.level.levelgen.structure.BoundingBox(x, 0, z, x + w - 1, 0, z + d - 1))) continue;
+                    var f = bp.front(fit.rot());
+                    int fx = x + w / 2 + f.getStepX() * (w / 2 + 2), fz = z + d / 2 + f.getStepZ() * (d / 2 + 2);
+                    if (Walls.breach(s, fx, fz)) { slot.used = true; continue; }
+                }
                 BlockPos at = new BlockPos(x, Construction.ground(level, x + w / 2, z + d / 2), z);
                 BlockPos origin = at.below(t.sink);
                 if (!clear(level, origin, bp, fit.rot())) continue;
@@ -199,6 +218,30 @@ public final class AutoBuild {
         int n = Math.max(Math.abs(far.getX() - a.getX()), Math.abs(far.getZ() - a.getZ()));
         for (int i = n; i > 0 && !s.contains(b); i--)
             b = new BlockPos(a.getX() + (int) Math.round((far.getX() - a.getX()) * i / (double) n), far.getY(), a.getZ() + (int) Math.round((far.getZ() - a.getZ()) * i / (double) n));
+        // a street that would cross a wall line away from its gates is paved up to the wall on each side, not through it
+        BlockPos rest = null, restEnd = null;
+        if (s.plan().customWalls != null) {
+            if (a.distSqr(s.center) > b.distSqr(s.center)) { BlockPos t = a; a = b; b = t; }
+            BlockPos end = b;
+            int m = Math.max(1, Math.max(Math.abs(end.getX() - a.getX()), Math.abs(end.getZ() - a.getZ())));
+            int first = -1, last = -1;
+            for (int i = 0; i <= m; i++) {
+                if (Walls.breach(s, at(a, end, i, m).getX(), at(a, end, i, m).getZ())) { if (first < 0) first = i; last = i; }
+                else if (first >= 0) break;
+            }
+            if (first >= 0) {
+                if (last + 3 < m) { rest = at(a, end, last + 3, m); restEnd = end; }
+                b = at(a, end, Math.max(0, first - 3), m);
+            }
+        }
+        if (rest != null && rest.distSqr(restEnd) >= 4) {
+            boolean desert = Procedural.styleFamily(s.style).equals("desert");
+            if (Planning.road(level, s, rest, restEnd, 3, (slot.primary ? RoadClass.HIGH : RoadClass.STREET).material(s.tier, desert)) == null) {
+                Plot road = s.plots.get(s.plots.size() - 1);
+                road.automatic = true;
+                road.priority = -2;
+            }
+        }
         if (a.distSqr(b) < 4) return;
         boolean desert = Procedural.styleFamily(s.style).equals("desert");
         String material = (slot.primary ? RoadClass.HIGH : RoadClass.STREET).material(s.tier, desert);
@@ -207,6 +250,10 @@ public final class AutoBuild {
             road.automatic = true;
             road.priority = -2;
         }
+    }
+
+    static BlockPos at(BlockPos a, BlockPos b, int i, int n) {
+        return new BlockPos(a.getX() + (int) Math.round((b.getX() - a.getX()) * i / (double) n), b.getY(), a.getZ() + (int) Math.round((b.getZ() - a.getZ()) * i / (double) n));
     }
 
     /** While loaded, keeps a few lots along the streets on file (one new or rechecked per step) for planning while nobody is near. */
