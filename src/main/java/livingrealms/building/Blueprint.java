@@ -215,15 +215,17 @@ public final class Blueprint {
         for (int i = 0; i < palette.length; i++) palette[i] = NbtUtils.readBlockState(BLOCKS, paletteTag.getCompound(i));
         ListTag blocks = tag.getList("blocks", Tag.TAG_COMPOUND);
         List<Entry> entries = new ArrayList<>(blocks.size());
-        Direction entrance = null;
-        int[] entranceAt = null;
+        Direction entrance = null, edgeEntrance = null;
+        int[] entranceAt = null, edgeEntranceAt = null;
         for (int i = 0; i < blocks.size(); i++) {
             CompoundTag bt = blocks.getCompound(i);
             int idx = bt.getInt("state");
             if (idx < 0 || idx >= palette.length) continue;
             BlockState s = palette[idx];
             if (s.is(Blocks.STRUCTURE_VOID)) continue;
-            if (s.is(Blocks.STRUCTURE_BLOCK)) s = Blocks.AIR.defaultBlockState();
+            // no free mob spawners or command blocks from other mods' buildings
+            if (s.is(Blocks.STRUCTURE_BLOCK) || s.is(Blocks.SPAWNER) || s.is(Blocks.COMMAND_BLOCK) || s.is(Blocks.CHAIN_COMMAND_BLOCK)
+                    || s.is(Blocks.REPEATING_COMMAND_BLOCK)) s = Blocks.AIR.defaultBlockState();
             if (s.is(Blocks.JIGSAW)) {
                 CompoundTag jn = bt.getCompound("nbt");
                 Direction out = s.getValue(JigsawBlock.ORIENTATION).front();
@@ -232,6 +234,15 @@ public final class Blueprint {
                     ListTag jp = bt.getList("pos", Tag.TAG_INT);
                     entrance = out;
                     entranceAt = new int[]{jp.getInt(0), jp.getInt(1), jp.getInt(2)};
+                }
+                // packs that name their entrance otherwise: a sideways jigsaw on the outer wall leading nowhere (pool minecraft:empty)
+                if (edgeEntrance == null && out.getAxis().isHorizontal() && jn.getString("pool").equals("minecraft:empty")) {
+                    ListTag jp = bt.getList("pos", Tag.TAG_INT);
+                    int jx = jp.getInt(0), jz = jp.getInt(2);
+                    boolean edge = switch (out) {
+                        case WEST -> jx == 0; case EAST -> jx == sx - 1; case NORTH -> jz == 0; default -> jz == sz - 1;
+                    };
+                    if (edge) { edgeEntrance = out; edgeEntranceAt = new int[]{jx, jp.getInt(1), jz}; }
                 }
                 s = Blocks.AIR.defaultBlockState();
                 String fin = bt.getCompound("nbt").getString("final_state");
@@ -248,6 +259,7 @@ public final class Blueprint {
         }
         Blueprint bp = new Blueprint(key, sx, sy, sz, entries);
         if (entrance != null) { bp.front = entrance; bp.door = entranceAt; }
+        else if (edgeEntrance != null) { bp.front = edgeEntrance; bp.door = edgeEntranceAt; }
         return bp;
     }
 

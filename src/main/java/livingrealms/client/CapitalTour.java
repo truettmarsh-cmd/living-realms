@@ -119,6 +119,7 @@ public final class CapitalTour {
             Settlement s = new Settlement();
             s.owner = player.getUUID(); s.ownerName = player.getGameProfile().getName();
             s.name = "Highcrown"; s.center = center; s.tier = Tier.CAPITAL; s.capital = true;
+            s.style = livingrealms.building.Procedural.biomeStyle(level, center); // as a charter founds it
             s.research.addAll(livingrealms.research.ResearchTree.nodes().keySet());
             s.stock.capacity = 10_000_000;
             SettlementManager.get(player.server).add(s);

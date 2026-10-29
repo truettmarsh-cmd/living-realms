@@ -351,7 +351,7 @@ public final class Walls {
                     for (long[] f : foot) if (f.length == 5 && f[4] == side) half.add(f);
                     tower(terrain, blocks, half, walk, e, stone, true);
                 }
-                String material = RoadClass.HIGH.material(s.tier, Procedural.styleFamily(s.style).equals("desert"));
+                String material = RoadClass.HIGH.material(s.tier, s.style);
                 BlockState floor = Planning.ROAD_MATERIALS.getOrDefault(material, Blocks.DIRT_PATH.defaultBlockState());
                 for (long[] f : foot) {
                     if (f[4] != 0) continue;

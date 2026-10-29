@@ -41,6 +41,7 @@ public final class Planning {
         ROAD_MATERIALS.put("cobblestone", Blocks.COBBLESTONE.defaultBlockState());
         ROAD_MATERIALS.put("stone_bricks", Blocks.STONE_BRICKS.defaultBlockState());
         ROAD_MATERIALS.put("planks", Blocks.SPRUCE_PLANKS.defaultBlockState());
+        ROAD_MATERIALS.put("sandstone", Blocks.SANDSTONE.defaultBlockState());
     }
 
     /** Plans a building with its bounding box corner at origin (before sinking). Returns an error or null. A null level

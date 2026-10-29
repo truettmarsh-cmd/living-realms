@@ -62,6 +62,64 @@ public final class BuildingCatalog {
         return b;
     }
 
+    /** Whether a building suits a town of this style: procedural ones take the town's palette, templates must share its
+     *  family, and styles a data pack excludes (festive, fantasy, far-off lands) are only ever built by hand. */
+    public static boolean fits(BuildingType t, String style) {
+        if (t.procedural()) return true;
+        return !excludedStyle(t.style) && Procedural.styleFamily(t.style).equals(Procedural.styleFamily(style));
+    }
+
+    // ------------------------------------------------------------------ the style map (livingrealms_styles/*.json)
+
+    private static volatile Map<String, String> styleFamilies = Map.of();
+    private static volatile Set<String> excludedStyles = Set.of();
+
+    /** The family a data pack gives a style or biome id ({@code ns:*} for a whole namespace), or null. */
+    @javax.annotation.Nullable
+    static String mappedFamily(String style) {
+        Map<String, String> m = styleFamilies;
+        if (m.isEmpty()) return null;
+        String f = m.get(style);
+        if (f == null && style.indexOf(':') > 0) f = m.get(style.substring(0, style.indexOf(':')) + ":*");
+        return f;
+    }
+
+    public static boolean excludedStyle(String style) {
+        Set<String> x = excludedStyles;
+        return x.contains(style) || style.indexOf(':') > 0 && x.contains(style.substring(0, style.indexOf(':')) + ":*");
+    }
+
+    static void readStyles(ResourceManager rm) {
+        Map<String, String> families = new HashMap<>();
+        Set<String> exclude = new HashSet<>();
+        var found = new TreeMap<>(rm.listResources("livingrealms_styles", rl -> rl.getPath().endsWith(".json")));
+        found.forEach((rl, res) -> {
+            try (Reader r = res.openAsReader()) {
+                JsonObject o = JsonParser.parseReader(r).getAsJsonObject();
+                if (o.has("families")) for (var e : o.getAsJsonObject("families").entrySet()) {
+                    if (!Procedural.FAMILIES.contains(e.getKey())) throw new IllegalArgumentException("unknown family " + e.getKey());
+                    e.getValue().getAsJsonArray().forEach(s -> { families.put(s.getAsString().toLowerCase(Locale.ROOT), e.getKey()); exclude.remove(s.getAsString().toLowerCase(Locale.ROOT)); });
+                }
+                if (o.has("exclude")) o.getAsJsonArray("exclude").forEach(s -> exclude.add(s.getAsString().toLowerCase(Locale.ROOT)));
+            } catch (Exception e) {
+                LivingRealms.LOG.warn("Bad style map {}: {}", rl, e.toString());
+            }
+        });
+        styleFamilies = Map.copyOf(families);
+        excludedStyles = Set.copyOf(exclude);
+    }
+
+    /** The neighbouring family whose templates come closest when a town's own has none of a kind. */
+    public static String kin(String family) {
+        return switch (family) {
+            case "snowy" -> "taiga";
+            case "taiga" -> "snowy";
+            case "desert" -> "savanna";
+            case "savanna" -> "desert";
+            default -> "taiga";
+        };
+    }
+
     /** Roads and other one-off blueprints that live in a plot. */
     public static void putBlueprint(Blueprint b) { BLUEPRINTS.put(b.key, b); }
 
@@ -73,6 +131,7 @@ public final class BuildingCatalog {
         Map<String, BuildingType> out = new LinkedHashMap<>();
         addProcedural(out);
         Map<String, Tweak> overrides = readOverrides(rm);
+        readStyles(rm);
         int maxFoot;
         try {
             maxFoot = Config.MAX_TEMPLATE_FOOTPRINT.get();
@@ -86,14 +145,20 @@ public final class BuildingCatalog {
         for (ResourceLocation file : keys) {
             String path = file.getPath().substring("structures/".length(), file.getPath().length() - 4);
             String[] seg = path.split("/");
-            int vi = Arrays.asList(seg).indexOf("village");
-            if (vi < 0 || vi + 2 >= seg.length) continue;
+            // village/<style>/..., villages/<style>/... (Repurposed Structures) or village_<style>/... (Dungeons and Taverns)
+            int vi = -1;
+            for (int i = 0; i < seg.length - 1 && vi < 0; i++) if (seg[i].equals("village") || seg[i].equals("villages") || seg[i].startsWith("village_")) vi = i;
+            boolean suffixed = vi >= 0 && seg[vi].startsWith("village_");
+            if (vi < 0 || !suffixed && vi + 2 >= seg.length) continue;
+            // zombie villages and the like: whole folders of ruined variants
+            if (Arrays.stream(seg).anyMatch(g -> g.equals("zombie") || g.equals("abandoned"))) continue;
             String templateId = file.getNamespace() + ":" + path;
             Tweak ov = overrides.get(templateId);
             if (ov != null && ov.hide) continue;
             String fileName = seg[seg.length - 1];
             String folder = seg[seg.length - 2];
-            String styleSeg = seg[vi + 1].equals("exclusives") && vi + 2 < seg.length - 1 ? seg[vi + 2] : seg[vi + 1];
+            String styleSeg = suffixed ? seg[vi].substring("village_".length())
+                    : seg[vi + 1].equals("exclusives") && vi + 2 < seg.length - 1 ? seg[vi + 2] : seg[vi + 1];
             if (excluded(folder) || excluded(fileName)) continue;
             Category cat = ov != null && ov.category != null ? ov.category : classify(folder + "/" + fileName);
             if (cat == null && !(folder.contains("house") || folder.contains("jobsite") || folder.contains("building"))) continue;
@@ -189,7 +254,8 @@ public final class BuildingCatalog {
 
     private static final String[] EXCLUDE = {"street", "road", "deco", "lamp", "town_center", "center", "terrain", "zombie",
             "abandoned", "ruin", "villager", "pillager", "outpost", "tree", "animal", "plaza", "bridge", "path", "pieces",
-            "connector", "end", "turn", "corner", "decay", "camp", "fence", "pond", "spawn", "mob", "cat", "iron_golem", "pool"};
+            "connector", "end", "turn", "corner", "decay", "camp", "fence", "pond", "spawn", "mob", "cat", "iron_golem", "pool",
+            "meeting_point", "accessory", "waystone", "bell"};
 
     static boolean excluded(String s) {
         for (String e : EXCLUDE) if (s.contains(e)) return true;
@@ -251,6 +317,7 @@ public final class BuildingCatalog {
             case "minecraft" -> "Vanilla";
             case "ctov" -> "ChoiceTheorem's Overhauled Village";
             case "kaisyn" -> "Towns and Towers";
+            case "repurposed_structures" -> "Repurposed Structures";
             default -> pretty(ns);
         };
     }

@@ -79,6 +79,7 @@ public final class Actions {
             case "planMap" -> Planning.planMap(level, s, d.getString("type"), d.getInt("x"), d.getInt("z"), d.getInt("rot"));
             case "autoBuild" -> { s.autoBuild = d.getBoolean("on"); yield null; }
             case "autoWalls" -> { s.autoWalls = d.getBoolean("on"); s.dirty = true; yield null; }
+            case "style" -> style(level, s, d.getString("family"));
             case "road" -> Planning.road(level, s, BlockPos.of(d.getLong("a")), BlockPos.of(d.getLong("b")), d.getInt("width"), d.getString("material"));
             case "upgrade" -> withPlot(s, d, p -> p.deferred ? DEFERRED : Planning.upgrade(level, s, p));
             case "repair" -> withPlot(s, d, p -> { if (p.deferred) return DEFERRED; Planning.repair(s, p); return null; });
@@ -494,4 +495,14 @@ public final class Actions {
     }
 
     private Actions() {}
+
+    /** The look of what the villagers build from now on: a family (plains, desert, savanna, taiga, snowy) or "biome". */
+    static String style(ServerLevel level, Settlement s, String family) {
+        if (family.equals("biome")) s.style = livingrealms.building.Procedural.biomeStyle(level, s.center);
+        else if (livingrealms.building.Procedural.FAMILIES.contains(family)) s.style = "minecraft:" + family;
+        else return "Unknown style " + family;
+        s.dirty = true;
+        s.log("Builders now follow the " + livingrealms.building.Procedural.styleFamily(s.style) + " style");
+        return null;
+    }
 }

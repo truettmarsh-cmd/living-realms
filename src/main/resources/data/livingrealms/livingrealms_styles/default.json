@@ -1,0 +1,22 @@
+{
+  "_comment": "Which palette family (plains, desert, savanna, taiga, snowy) a template style or biome belongs to, and which template styles towns never build on their own. Unlisted styles fall back to name rules (snow -> snowy, sand/badlands -> desert, ...). Data packs may add files here; 'ns:*' matches a whole namespace.",
+  "families": {
+    "plains": ["minecraft:meadow", "minecraft:cherry_grove", "minecraft:mushroom_fields",
+      "ctov:plains", "ctov:plains_fortified", "ctov:beach", "kaisyn:birch_forest_romanian", "kaisyn:sunflower_plains_farm",
+      "kaisyn:classic", "kaisyn:rustic", "kaisyn:tudor", "repurposed_structures:oak", "repurposed_structures:birch"],
+    "taiga": ["ctov:taiga", "ctov:taiga_fortified", "ctov:mountain", "ctov:swamp", "ctov:swamp_fortified",
+      "kaisyn:old_growth_taiga_polish", "kaisyn:meadow_swiss", "kaisyn:swedish", "minecraft:swamp",
+      "repurposed_structures:giant_taiga", "repurposed_structures:mountains", "repurposed_structures:dark_forest", "repurposed_structures:swamp"],
+    "snowy": ["ctov:mountain_alpine", "ctov:snowy_igloo", "kaisyn:snowy_taiga_viking", "kaisyn:snowy_slopes_inn"],
+    "desert": ["ctov:desert", "ctov:desert_oasis", "ctov:mesa", "ctov:mesa_fortified", "kaisyn:badlands_pueblo",
+      "kaisyn:wooded_badlands_tipi", "kaisyn:nilotic", "repurposed_structures:badlands"],
+    "savanna": ["ctov:savanna", "ctov:savanna_na", "ctov:jungle", "minecraft:jungle", "kaisyn:iberian", "kaisyn:mediterranean",
+      "repurposed_structures:jungle"]
+  },
+  "exclude": ["ctov:halloween", "ctov:christmas", "ctov:mushroom", "ctov:underground", "ctov:jungle_tree", "ctov:common",
+    "kaisyn:flower_forest_japanese", "kaisyn:jungle_tribal", "kaisyn:sparse_jungle_polynesian", "kaisyn:mushroom_fields_fantasy",
+    "kaisyn:savanna_plateau_ramshackled", "kaisyn:swamp_boat", "kaisyn:forest_ruins", "kaisyn:piglin", "kaisyn:wandering_trader_camp",
+    "kaisyn:grove_villager_outpost", "kaisyn:beach_lighthouse", "kaisyn:modded", "kaisyn:ocean", "minecraft:common",
+    "repurposed_structures:cherry", "repurposed_structures:bamboo", "repurposed_structures:mushroom", "repurposed_structures:ocean",
+    "repurposed_structures:crimson", "repurposed_structures:warped"]
+}

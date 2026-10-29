@@ -488,7 +488,8 @@ public final class Settlement {
         t.getList("researchSkip", Tag.TAG_STRING).forEach(r -> s.researchSkip.add(r.getAsString()));
         for (long l : t.getLongArray("sites")) s.sites.add(BlockPos.of(l));
         s.away.load(t.getCompound("away"));
-        s.style = t.getString("style");
+        // saves from before towns kept a style build in the plains style
+        if (t.contains("style") && !t.getString("style").isEmpty()) s.style = t.getString("style");
         s.tier = Tier.of(t.getInt("tier"));
         s.stock.load(t.getList("stock", Tag.TAG_COMPOUND));
         for (Tag p : t.getList("plots", Tag.TAG_COMPOUND)) s.plots.add(Plot.load((CompoundTag) p));
