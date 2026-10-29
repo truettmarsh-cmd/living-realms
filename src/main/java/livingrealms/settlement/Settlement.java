@@ -39,6 +39,8 @@ public final class Settlement {
     public long capitalMovedAt;
     public String raidStatus = "";
     public boolean autoBuild = true;
+    /** Villagers also build the town walls, gatehouses and towers of the town plan (with Auto build on). */
+    public boolean autoWalls = true;
     public boolean autoResearch = true, autoTier = true, autoTrain = true;
     /** Garrison size auto training keeps; -1 means half the garrison capacity. */
     public int garrisonTarget = -1;
@@ -398,6 +400,7 @@ public final class Settlement {
         t.putLong("capitalMovedAt", capitalMovedAt);
         t.putString("raidStatus", raidStatus);
         t.putBoolean("autoBuild", autoBuild);
+        t.putBoolean("autoWalls", autoWalls);
         t.putBoolean("autoResearch", autoResearch);
         t.putBoolean("autoTier", autoTier);
         t.putBoolean("autoTrain", autoTrain);
@@ -476,6 +479,7 @@ public final class Settlement {
         s.capitalMovedAt = t.getLong("capitalMovedAt");
         s.raidStatus = t.getString("raidStatus");
         s.autoBuild = !t.contains("autoBuild") || t.getBoolean("autoBuild");
+        s.autoWalls = !t.contains("autoWalls") || t.getBoolean("autoWalls");
         s.autoResearch = !t.contains("autoResearch") || t.getBoolean("autoResearch");
         s.autoTier = !t.contains("autoTier") || t.getBoolean("autoTier");
         s.autoTrain = !t.contains("autoTrain") || t.getBoolean("autoTrain");

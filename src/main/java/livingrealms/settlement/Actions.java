@@ -78,6 +78,7 @@ public final class Actions {
             case "plan" -> plan(level, s, d);
             case "planMap" -> Planning.planMap(level, s, d.getString("type"), d.getInt("x"), d.getInt("z"), d.getInt("rot"));
             case "autoBuild" -> { s.autoBuild = d.getBoolean("on"); yield null; }
+            case "autoWalls" -> { s.autoWalls = d.getBoolean("on"); s.dirty = true; yield null; }
             case "road" -> Planning.road(level, s, BlockPos.of(d.getLong("a")), BlockPos.of(d.getLong("b")), d.getInt("width"), d.getString("material"));
             case "upgrade" -> withPlot(s, d, p -> p.deferred ? DEFERRED : Planning.upgrade(level, s, p));
             case "repair" -> withPlot(s, d, p -> { if (p.deferred) return DEFERRED; Planning.repair(s, p); return null; });

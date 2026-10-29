@@ -43,6 +43,10 @@ public final class TownPlan {
     public final List<Site> sites = new ArrayList<>();
     /** Street lengths owed to buildings planned while the ground was not loaded: street id to along-distance. */
     public final Map<Integer, Integer> owed = new HashMap<>();
+    /** Wall lines laid round a Village Expansion layout (null: the standard old-town and city walls). */
+    @Nullable public List<Walls.Line> customWalls;
+    /** Why the next wall piece could not be planned (not saved). */
+    public transient String wallBlocked = "";
     /** Which street each automatically placed plot fronts, by plot id. */
     public final Map<Integer, Integer> frontage = new HashMap<>();
 
@@ -81,9 +85,27 @@ public final class TownPlan {
         // ring streets: each side leaves its high street both ways and meets the next side at the corner
         for (int k : RINGS) for (int i = 0; i < 4; i++) {
             Direction d = arms[i];
-            for (Direction side : new Direction[]{d.getClockWise(), d.getCounterClockWise()})
-                streets.add(new Street(streets.size(), RoadClass.STREET, cx + d.getStepX() * k, cz + d.getStepZ() * k, side, k, armIds[i], k - p));
+            for (Direction side : new Direction[]{d.getClockWise(), d.getCounterClockWise()}) {
+                Street full = new Street(streets.size(), RoadClass.STREET, cx + d.getStepX() * k, cz + d.getStepZ() * k, side, k, armIds[i], k - p);
+                // a ring street stops short of a wall line rather than run through it
+                int len = k;
+                for (int t = 0; t <= k && len == k; t++)
+                    for (Walls.Line l : Walls.standard()) {
+                        BoundingBox slice = full.corridor(t, t);
+                        int lo = Walls.minLevel(l, center, slice), hi = Walls.maxLevel(l, center, slice);
+                        if (hi >= -1 && lo <= 1) { len = Math.max(0, t - 2); break; }
+                    }
+                streets.add(new Street(full.id, RoadClass.STREET, full.ax, full.az, side, len, armIds[i], k - p));
+            }
         }
+    }
+
+    public List<Walls.Line> wallLines() { return customWalls != null ? customWalls : Walls.standard(); }
+
+    /** True if a footprint reaches into a wall line's band (the wall and the strips kept free each side). */
+    public boolean inWallBand(BoundingBox b) {
+        for (Walls.Line l : wallLines()) if (Walls.inBand(l, center, b, Walls.BAND)) return true;
+        return false;
     }
 
     /** How far along a street is inside the town's land (its centre line two blocks inside the edge). */
@@ -162,8 +184,10 @@ public final class TownPlan {
         Blueprint max = biggest(t, s.style);
         List<BoundingBox> taken = new ArrayList<>();
         List<BoundingBox> noisy = new ArrayList<>(), homes = new ArrayList<>(), same = new ArrayList<>();
+        List<Plot> walls = new ArrayList<>();
         for (Plot p : s.plots) {
             if (p.typeId.equals("road") || p.state == Plot.State.DEMOLISHING) continue;
+            if (Walls.isWallPiece(p)) { walls.add(p); continue; }
             BoundingBox g = grownBox(s, p);
             taken.add(g);
             BuildingType o = BuildingCatalog.get(p.typeId);
@@ -194,10 +218,11 @@ public final class TownPlan {
                     double d = dist(b1);
                     if (d < rule.min() || d > rule.max()) continue;
                     if (rule.noHighInCore() && st.cls == RoadClass.HIGH && d < 40) continue;
-                    if (crossesOther(st, lot)) continue;
+                    if (crossesOther(st, lot) || inWallBand(lot)) continue;
                     boolean clash = false;
                     BoundingBox padded = lot.inflatedBy(rule.gap());
                     for (BoundingBox o : taken) if (o.intersects(padded.minX(), padded.minZ(), padded.maxX(), padded.maxZ())) { clash = true; break; }
+                    for (Plot w : walls) if (!clash && w.covers(padded)) clash = true;
                     if (clash) continue;
                     double score = -Math.abs(d - rule.pref());
                     if (rule.wantsHigh() && (st.cls == RoadClass.HIGH || st.cls == RoadClass.PLAZA)) score += 15;
@@ -234,7 +259,8 @@ public final class TownPlan {
         int x0 = center.getX() - wm / 2, z0 = center.getZ() - dm / 2;
         BoundingBox b1 = new BoundingBox(x0 + (wm - w) / 2, 0, z0 + dm - d, x0 + (wm - w) / 2 + w - 1, 0, z0 + dm - 1);
         for (Plot p : s.plots)
-            if (!p.typeId.equals("road") && p.state != Plot.State.DEMOLISHING && grownBox(s, p).intersects(x0 - 1, z0 - 1, x0 + wm, z0 + dm)) return null;
+            if (!p.typeId.equals("road") && p.state != Plot.State.DEMOLISHING && (Walls.isWallPiece(p) ? p.covers(new BoundingBox(x0 - 1, 0, z0 - 1, x0 + wm, 0, z0 + dm))
+                    : grownBox(s, p).intersects(x0 - 1, z0 - 1, x0 + wm, z0 + dm))) return null;
         BlockPos at = ground(terrain, t, bp, rot, b1);
         return at == null ? null : new Placement(at, rot, 1, PLAZA + 2, Direction.SOUTH);
     }
@@ -379,7 +405,7 @@ public final class TownPlan {
     public Site survey(Terrain terrain, Settlement s, int size, boolean outskirts) {
         int radius = s.radius();
         List<BoundingBox> taken = new ArrayList<>();
-        for (Plot p : s.plots) if (!p.typeId.equals("road") && p.state != Plot.State.DEMOLISHING) taken.add(grownBox(s, p));
+        for (Plot p : s.plots) if (!p.typeId.equals("road") && p.state != Plot.State.DEMOLISHING && !Walls.isWallPiece(p)) taken.add(grownBox(s, p));
         for (Site o : sites) taken.add(new BoundingBox(o.corner.getX(), 0, o.corner.getZ(), o.corner.getX() + o.size - 1, 0, o.corner.getZ() + o.size - 1));
         List<Object[]> cands = new ArrayList<>();
         for (Street st : streets) {
@@ -388,7 +414,7 @@ public final class TownPlan {
             for (Direction side : new Direction[]{st.dir.getClockWise(), st.dir.getCounterClockWise()}) {
                 for (int a = 3; a + size - 1 <= open; a += 4) {
                     BoundingBox lot = square(st, side, a, size);
-                    if (!inside(s, lot) || inCore(lot) || crossesOther(st, lot)) continue;
+                    if (!inside(s, lot) || inCore(lot) || crossesOther(st, lot) || inWallBand(lot)) continue;
                     BoundingBox padded = lot.inflatedBy(2);
                     if (taken.stream().anyMatch(o -> o.intersects(padded.minX(), padded.minZ(), padded.maxX(), padded.maxZ()))) continue;
                     double d = dist(lot);
@@ -473,6 +499,11 @@ public final class TownPlan {
         i = 0;
         for (var e : owed.entrySet()) { o[i++] = e.getKey(); o[i++] = e.getValue(); }
         t.putIntArray("owed", o);
+        if (customWalls != null) {
+            ListTag wl = new ListTag();
+            for (Walls.Line line : customWalls) wl.add(Walls.saveLine(line));
+            t.put("walls", wl);
+        }
         return t;
     }
 
@@ -490,6 +521,10 @@ public final class TownPlan {
         for (int i = 0; i + 1 < f.length; i += 2) p.frontage.put(f[i], f[i + 1]);
         int[] o = t.getIntArray("owed");
         for (int i = 0; i + 1 < o.length; i += 2) if (o[i] < p.streets.size()) p.owed.put(o[i], o[i + 1]);
+        if (t.contains("walls")) {
+            p.customWalls = new ArrayList<>();
+            for (Tag e : t.getList("walls", Tag.TAG_COMPOUND)) { Walls.Line line = Walls.loadLine((CompoundTag) e); if (line != null) p.customWalls.add(line); }
+        }
         return p;
     }
 }

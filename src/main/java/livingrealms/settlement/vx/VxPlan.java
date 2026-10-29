@@ -80,5 +80,90 @@ public final class VxPlan {
         return (int) Math.round(v0 + (v1 - v0) * t);
     }
 
+    // ------------------------------------------------------------------ walls round a Village Expansion town
+
+    /**
+     * Fits the town's wall lines to what stands on VE's lots: the old-town wall at Village rank round every building
+     * except fields, woods, mines and outlying towers, the city wall at City rank at least 20 further out; both as square
+     * as the town's land allows. Gatehouses go where VE's streets cross a line. Free lots in a wall's band are kept empty.
+     */
+    public static void walls(Settlement s) {
+        var plan = s.plan();
+        List<livingrealms.settlement.plan.Walls.Line> have = plan.customWalls == null ? new ArrayList<>() : new ArrayList<>(plan.customWalls);
+        livingrealms.settlement.Tier[] tiers = {livingrealms.settlement.Tier.VILLAGE, livingrealms.settlement.Tier.CITY};
+        boolean changed = false;
+        for (int i = have.size(); i < tiers.length; i++) {
+            if (s.tier.number() < tiers[i].number()) break;
+            var l = fitLine(s, i, tiers[i], i == 0 ? 0 : have.get(i - 1).a() + 20);
+            if (l == null) break;
+            have.add(l);
+            changed = true;
+        }
+        if (!changed) return;
+        plan.customWalls = have;
+        for (VxLayout.Slot slot : s.layout.slots) {
+            var box = new net.minecraft.world.level.levelgen.structure.BoundingBox(slot.x - slot.w / 2, 0, slot.z - slot.d / 2, slot.x + slot.w / 2, 0, slot.z + slot.d / 2);
+            if (!slot.used && plan.inWallBand(box)) slot.used = true;
+        }
+    }
+
+    @Nullable
+    static livingrealms.settlement.plan.Walls.Line fitLine(Settlement s, int index, livingrealms.settlement.Tier tier, int atLeast) {
+        int maxAbs = 0, maxSum = 0;
+        for (var p : s.plots) {
+            if (p.typeId.equals("road") || livingrealms.settlement.plan.Walls.isWallPiece(p)) continue;
+            BuildingType t = BuildingCatalog.get(p.typeId);
+            if (t != null && (t.category == Category.FARM || t.category == Category.LUMBER || t.category == Category.MINE || t.category == Category.TOWER)) continue;
+            var b = p.box();
+            int x = Math.max(Math.abs(b.minX() - s.center.getX()), Math.abs(b.maxX() - s.center.getX()));
+            int z = Math.max(Math.abs(b.minZ() - s.center.getZ()), Math.abs(b.maxZ() - s.center.getZ()));
+            maxAbs = Math.max(maxAbs, Math.max(x, z));
+            maxSum = Math.max(maxSum, x + z);
+        }
+        int a = Math.max(Math.max(26, atLeast), maxAbs + livingrealms.settlement.plan.Walls.BAND + 1);
+        int r = tier.radius - 4;
+        if (a >= r) return null;
+        int bMax = a + (int) Math.floor(Math.sqrt((double) r * r - (double) a * a));
+        int bMin = Math.max(a + 4, maxSum + livingrealms.settlement.plan.Walls.BAND + 1);
+        if (bMax < bMin) return null;
+        int b = Math.min(bMax, 2 * a - 4);
+        if (b < bMin) b = bMin;
+        var probe = new livingrealms.settlement.plan.Walls.Line(index, a, b, tier, List.of());
+        // gatehouses where laid streets cross the line
+        var edges = livingrealms.settlement.plan.Walls.edges(probe);
+        java.util.TreeMap<Integer, List<Integer>> hits = new java.util.TreeMap<>();
+        for (var p : s.plots) {
+            if (!p.typeId.equals("road")) continue;
+            Blueprint bp = p.blueprint();
+            if (bp == null) continue;
+            for (int i = 0; i < bp.size(); i++) {
+                if (bp.state(i).isAir()) continue;
+                int dx = p.origin.getX() + bp.lx(i) - s.center.getX(), dz = p.origin.getZ() + bp.lz(i) - s.center.getZ();
+                if (Math.abs(livingrealms.settlement.plan.Walls.level(probe, dx, dz)) > 1) continue;
+                int best = -1, bt = 0, bd = Integer.MAX_VALUE;
+                for (var e : edges) for (int t = 0; t <= e.len(); t++) {
+                    int d = Math.abs(e.x(t) - dx) + Math.abs(e.z(t) - dz);
+                    if (d < bd) { bd = d; best = e.index(); bt = t; }
+                }
+                hits.computeIfAbsent(best, k -> new ArrayList<>()).add(bt);
+            }
+        }
+        List<Integer> gates = new ArrayList<>();
+        for (var en : hits.entrySet()) {
+            var e = edges.get(en.getKey());
+            List<Integer> ts = new ArrayList<>(en.getValue());
+            java.util.Collections.sort(ts);
+            int start = 0;
+            for (int i = 1; i <= ts.size(); i++) {
+                if (i < ts.size() && ts.get(i) - ts.get(i - 1) <= 16) continue;
+                int mid = (ts.get(start) + ts.get(i - 1)) / 2;
+                if (e.len() >= 20 && (gates.isEmpty() || gates.get(gates.size() - 1) / 10_000 != e.index() || mid - gates.get(gates.size() - 1) % 10_000 >= 18)) gates.add(e.index() * 10_000 + Math.max(10, Math.min(e.len() - 10, mid)));
+                start = i;
+            }
+        }
+        if (gates.isEmpty()) gates.add(edges.get(0).len() / 2);
+        return new livingrealms.settlement.plan.Walls.Line(index, a, b, tier, gates);
+    }
+
     private VxPlan() {}
 }

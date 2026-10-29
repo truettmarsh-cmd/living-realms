@@ -73,6 +73,11 @@ public final class CapitalCastles {
     public static boolean overlaps(Plot a, Plot b) {
         var aa=a.box(); var bb=b.box();
         if (aa.minX()>bb.maxX() || aa.maxX()<bb.minX() || aa.minZ()>bb.maxZ() || aa.maxZ()<bb.minZ()) return false;
+        // wall pieces take only their own columns
+        var ca=a.columns(); var cb=b.columns();
+        if (ca!=null && cb!=null) { for (long c : ca) if (cb.contains(c)) return true; return false; }
+        if (ca!=null) return a.covers(bb);
+        if (cb!=null) return b.covers(aa);
         return !(a.typeId.equals(ID) && inCourtyard(a,bb)) && !(b.typeId.equals(ID) && inCourtyard(b,aa));
     }
 

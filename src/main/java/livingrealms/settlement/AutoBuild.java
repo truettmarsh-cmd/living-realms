@@ -16,6 +16,7 @@ public final class AutoBuild {
     public static boolean pending(Plot p) { return p.active() || p.state == Plot.State.PLANNED; }
     public static boolean manualQueue(Settlement s) { return s.plots.stream().anyMatch(p -> pending(p) && !p.automatic); }
     public static boolean mayWork(Settlement s, Plot p) {
+        if (p.automatic && !s.autoWalls && Walls.isWallPiece(p)) return false;
         return s.isAi() || !p.automatic || s.autoBuild && !manualQueue(s);
     }
     public static String status(Settlement s) {
@@ -32,10 +33,13 @@ public final class AutoBuild {
         if (s.isAi() || !s.autoBuild || Autonomy.underAttack(level, s)) return;
         boolean home = level.hasChunkAt(s.center);
         if (home) { survey(level, s); payDebts(level, s, true); }
-        if (s.plots.stream().anyMatch(AutoBuild::pending)) return;
+        if (s.plots.stream().anyMatch(p -> pending(p) && mayWork(s, p) || pending(p) && !p.automatic)) return;
         if (!home) { away(s, level.random); return; }
         List<BuildingType> candidates = candidates(s, level.random);
         boolean ve = Realms.on() && !s.layout.isEmpty();
+        // the walls take every other turn once they are unlocked
+        boolean wallsFirst = !lastWasWall(s);
+        if (wallsFirst && walls(level, s)) return;
         if (ve && fromLayout(level, s, candidates)) return;
         TownPlan plan = s.plan();
         Terrain terrain = new WorldTerrain(level);
@@ -86,6 +90,36 @@ public final class AutoBuild {
                 }
             }
         }
+        if (!wallsFirst) walls(level, s);
+    }
+
+    static boolean lastWasWall(Settlement s) {
+        for (int i = s.plots.size() - 1; i >= 0; i--) {
+            Plot p = s.plots.get(i);
+            if (!p.automatic || p.typeId.equals("road")) continue;
+            return Walls.isWallPiece(p);
+        }
+        return false;
+    }
+
+    /** Plans the next gatehouse, tower or stretch of wall, if the town has walls coming and can pay for the piece. */
+    static boolean walls(ServerLevel level, Settlement s) {
+        if (!s.autoWalls || Walls.unlocked(s).isEmpty()) return false;
+        if (Realms.on() && !s.layout.isEmpty()) livingrealms.settlement.vx.VxPlan.walls(s);
+        Walls.Plan plan = Walls.next(new WorldTerrain(level), s);
+        if (plan == null) return false;
+        if (plan.blueprint() != null) {
+            long[] foundation = Construction.foundation(level, plan.blueprint(), plan.origin(), Rotation.NONE);
+            if (!affordable(s, plan.blueprint(), foundation)) { s.plan().wallBlocked = "waiting for materials"; return false; }
+        }
+        String err = Walls.queue(s, plan, true);
+        if (err != null) { s.plan().wallBlocked = err; return false; }
+        Plot p = s.plots.get(s.plots.size() - 1);
+        if (plan.blueprint() != null) s.log("Villagers began a " + plan.type().name.toLowerCase(Locale.ROOT) + " on the " + Walls.side(s, p.center()) + " side");
+        Walls.Line line = s.plan().wallLines().get(plan.piece().line());
+        int[] street = Walls.gateStreet(s, line, plan.piece());
+        if (street != null) pave(level, s, s.plan().connect(street[0], street[1], s.radius()), true);
+        return true;
     }
 
     /** Lays street lengths as road projects (automatic ones for player towns). Without a loaded world they are owed. */

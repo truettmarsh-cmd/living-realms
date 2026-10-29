@@ -47,7 +47,9 @@ public final class Simulation {
             Blueprint bp = p.blueprint();
             int beds = bp == null ? 0 : bp.beds;
             boolean levelBonus = !t.procedural();
-            if (t.category != Category.ROAD) d.buildings++;
+            boolean wallPiece = livingrealms.settlement.plan.Walls.isWallPiece(p);
+            // town-wall pieces are one work, not dozens of buildings
+            if (t.category != Category.ROAD && !wallPiece) d.buildings++;
             switch (t.category) {
                 // a bed sleeps two, plus a child or lodger per household
                 case HOUSING -> d.housing += Math.max(3, beds * 2 + 1) + (levelBonus ? (p.level - 1) * 2 : 0);
@@ -61,7 +63,7 @@ public final class Simulation {
                 case STORAGE -> d.capacity += 3000 * p.level;
                 case BARRACKS -> { d.garrisonCap += 6 * p.level; d.barracks += p.level; }
                 case TOWER -> d.garrisonCap += 2 * p.level;
-                case WALL -> d.garrisonCap += 1;
+                case WALL -> d.garrisonCap += wallPiece ? (t.id.equals(livingrealms.settlement.plan.Walls.WALL) ? 0 : 1) : 1;
                 case SMITHY -> d.smithyLevels += p.level;
                 case LIBRARY -> d.libraries += p.level;
                 case STABLE -> d.hasStables = true;

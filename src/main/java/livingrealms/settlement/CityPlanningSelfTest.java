@@ -156,7 +156,7 @@ public final class CityPlanningSelfTest {
         plan.frontage.put(s.plots.get(0).id, at.street());
         plan.founding(s.radius()).forEach(plan::paved);
         plan.connect(at.street(), at.along(), s.radius()).forEach(plan::paved);
-        int k = 0, placed = 1;
+        int k = 0, placed = 1, wallPieces = 0;
         for (Tier tier : new Tier[]{Tier.CAMP, Tier.HAMLET, Tier.VILLAGE, Tier.TOWN, Tier.CITY}) {
             s.tier = tier;
             for (int i = 0; i < perTier; i++) {
@@ -170,13 +170,35 @@ public final class CityPlanningSelfTest {
                 plan.connect(p.street(), p.along(), s.radius()).forEach(plan::paved);
                 placed++;
             }
+            wallPieces += planWalls(ground, s);
         }
         var bad = livingrealms.settlement.plan.PlanAudit.audit(s, plan, ground);
         check(bad.isEmpty(), "Plan audit: " + bad);
+        var badWalls = livingrealms.settlement.plan.PlanAudit.walls(s, plan, ground);
+        check(badWalls.isEmpty(), "Wall audit: " + badWalls);
+        for (var line : livingrealms.settlement.plan.Walls.unlocked(s))
+            check(livingrealms.settlement.plan.Walls.pieces(line).stream().allMatch(pc -> s.plots.stream().anyMatch(p -> p.blueprintKey.equals(pc.key(s)))),
+                    "Plan: every piece of wall line " + line.index() + " is planned");
+        check(livingrealms.settlement.plan.Walls.unlocked(s).size() == 2 && wallPieces > 40, "Plan: old-town and city walls by City rank: " + wallPieces + " pieces");
         List<String> out = new ArrayList<>();
         for (Plot p : s.plots) out.add(p.typeId + "@" + p.origin.toShortString() + "/" + p.rotation);
         LivingRealms.LOG.info("City plan test: {} buildings, {} streets paved, e.g. {}", placed, plan.laid.size(), out.subList(0, Math.min(6, out.size())));
         return out;
+    }
+
+    /** Plans every wall piece the town has unlocked, paving high streets out through their gatehouses. */
+    static int planWalls(livingrealms.settlement.plan.Terrain ground, Settlement s) {
+        int n = 0;
+        for (int w = 0; w < 400; w++) {
+            var wp = livingrealms.settlement.plan.Walls.next(ground, s);
+            if (wp == null) break;
+            String err = livingrealms.settlement.plan.Walls.queue(s, wp, true);
+            check(err == null, "Plan: wall piece " + wp.piece() + " accepted: " + err);
+            int[] street = livingrealms.settlement.plan.Walls.gateStreet(s, s.plan().wallLines().get(wp.piece().line()), wp.piece());
+            if (street != null) s.plan().connect(street[0], street[1], s.radius()).forEach(s.plan()::paved);
+            n++;
+        }
+        return n;
     }
 
     static void plans(ServerLevel level) {
@@ -289,7 +311,111 @@ public final class CityPlanningSelfTest {
             var restored = Settlement.load(s.save());
             check(restored.townPlan != null && restored.townPlan.laid.equals(s.plan().laid) && restored.townPlan.frontage.equals(s.plan().frontage)
                     && restored.townPlan.owed.equals(s.plan().owed), "Town plan survives reload");
+            walledTown(level, s);
         } finally { m.remove(s); }
+    }
+
+    /** Builds every queued project at once (test and tour support). */
+    public static void buildQueued(ServerLevel level, Settlement s) {
+        for (Plot p : new ArrayList<>(s.plots)) {
+            if (!AutoBuild.pending(p) || !AutoBuild.mayWork(s, p)) continue;
+            if (p.state == Plot.State.PLANNED) p.state = Plot.State.BUILDING;
+            for (int k = 0; k < p.totalSteps() + 200; k++) if (Construction.work(level, s, p) != Construction.Result.PLACED) break;
+            Simulation.finish(level, s, p);
+        }
+    }
+
+    /** Stocks a town with plenty of everything its buildings, roads and walls use. */
+    public static void stock(Settlement s) {
+        for (BuildingType t : BuildingCatalog.types().values()) {
+            Blueprint b = BuildingCatalog.blueprint(t.blueprintKey(1, s.style));
+            if (b != null) b.bill().forEach((item, n) -> { if (s.stock.count(item) < n + 200) s.stock.force(item, n + 400); });
+        }
+        s.stock.force(Blueprint.costItem(Construction.foundationBlock(s)), 5000);
+        var masonry = Blueprint.costItem(Procedural.masonry(s.style));
+        if (masonry != null && s.stock.count(masonry) < 20000) s.stock.force(masonry, 20000);
+        var parapet = Blueprint.costItem(Procedural.parapet(s.style));
+        if (parapet != null && s.stock.count(parapet) < 2000) s.stock.force(parapet, 2000);
+        for (var it : new net.minecraft.world.item.Item[]{net.minecraft.world.item.Items.LADDER, net.minecraft.world.item.Items.SPRUCE_PLANKS, net.minecraft.world.item.Items.GRAVEL,
+                net.minecraft.world.item.Items.COBBLESTONE, net.minecraft.world.item.Items.STONE_BRICKS})
+            if (s.stock.count(it) < 2000) s.stock.force(it, 2000);
+    }
+
+    /** Village rank with Fortifications: the old-town wall, its gatehouses and towers are queued, paid for and built. */
+    static void walledTown(ServerLevel level, Settlement s) {
+        s.tier = Tier.VILLAGE;
+        s.plots.removeIf(p -> AutoBuild.pending(p));
+        s.autoWalls = false;
+        stock(s);
+        for (int i = 0; i < 6; i++) { AutoBuild.think(level, s); buildQueued(level, s); }
+        check(s.plots.stream().noneMatch(livingrealms.settlement.plan.Walls::isWallPiece), "Auto walls off: no wall is planned");
+        check(livingrealms.settlement.plan.Walls.status(s).contains("off"), "Wall status says they are off");
+        s.autoWalls = true;
+        var line = livingrealms.settlement.plan.Walls.unlocked(s).get(0);
+        var all = livingrealms.settlement.plan.Walls.pieces(line);
+        int buildingsBefore = (int) s.plots.stream().filter(p -> !p.typeId.equals("road") && !livingrealms.settlement.plan.Walls.isWallPiece(p)).count();
+        boolean queuedSeen = false;
+        for (int i = 0; i < 300; i++) {
+            stock(s);
+            Simulation.recompute(s);
+            s.population = Math.max(1, s.d.housing - 1);
+            AutoBuild.think(level, s);
+            for (Plot p : s.plots) if (livingrealms.settlement.plan.Walls.isWallPiece(p) && p.state == Plot.State.BUILDING && p.automatic) {
+                queuedSeen = true;
+                check(!p.blueprint().bill().isEmpty() || p.totalSteps() <= 1, "A queued wall piece has a bill of materials");
+            }
+            buildQueued(level, s);
+            if (all.stream().allMatch(pc -> s.plots.stream().anyMatch(p -> p.blueprintKey.equals(pc.key(s)) && p.state == Plot.State.BUILT))) break;
+        }
+        check(queuedSeen, "Wall pieces are queued as ordinary construction projects");
+        long builtPieces = all.stream().filter(pc -> s.plots.stream().anyMatch(p -> p.blueprintKey.equals(pc.key(s)) && p.state == Plot.State.BUILT)).count();
+        check(builtPieces == all.size(), "The whole old-town wall is built: " + builtPieces + "/" + all.size() + " · " + livingrealms.settlement.plan.Walls.status(s));
+        int buildingsAfter = (int) s.plots.stream().filter(p -> !p.typeId.equals("road") && !livingrealms.settlement.plan.Walls.isWallPiece(p)).count();
+        check(buildingsAfter > buildingsBefore, "Houses and workshops keep coming between wall sections: " + buildingsBefore + " -> " + buildingsAfter);
+        Simulation.recompute(s);
+        check(s.d.buildings == buildingsAfter - s.plots.stream().filter(p -> !p.typeId.equals("road") && !livingrealms.settlement.plan.Walls.isWallPiece(p) && !p.standing()).count(),
+                "Wall pieces do not count as buildings for rank: " + s.d.buildings);
+        var flat = livingrealms.settlement.plan.Terrain.grid((x, z) -> 99, (x, z) -> false);
+        var bad = livingrealms.settlement.plan.PlanAudit.walls(s, s.plan(), flat);
+        check(bad.isEmpty(), "Built wall audit: " + bad);
+        // gates are open, paved and on the high streets; the walk is up on the wall; towers have ladders
+        int gates = 0;
+        for (Plot g : livingrealms.settlement.plan.Walls.gates(s)) {
+            gates++;
+            BlockPos mid = null;
+            for (var st : s.plan().streets) if (st.cls == livingrealms.settlement.plan.RoadClass.HIGH) {
+                int t = line.a() - livingrealms.settlement.plan.TownPlan.PLAZA;
+                BlockPos q = new BlockPos(st.x(t), 99, st.z(t));
+                if (g.columns().contains(BlockPos.asLong(q.getX(), 0, q.getZ()))) mid = q;
+            }
+            check(mid != null, "Gatehouse " + g.id + " stands on a high street");
+            check(Planning.ROAD_MATERIALS.containsValue(level.getBlockState(mid)), "Gate passage is paved: " + level.getBlockState(mid));
+            for (int y = 100; y <= 103; y++) check(level.getBlockState(mid.atY(y)).isAir(), "Gate passage is open at y " + y);
+            boolean arch = false;
+            for (int y = 104; y <= 106; y++) arch |= !level.getBlockState(mid.atY(y)).isAir();
+            check(arch, "The wall walk crosses over the gate");
+        }
+        check(gates == 4, "Four gatehouses, one per high street: " + gates);
+        Plot section = s.plots.stream().filter(p -> p.typeId.equals(livingrealms.settlement.plan.Walls.WALL) && p.columns().size() > 20).findFirst().orElseThrow();
+        long top = section.columns().stream().filter(k -> !level.getBlockState(new BlockPos(BlockPos.getX(k), 99 + livingrealms.settlement.plan.Walls.H, BlockPos.getZ(k))).isAir()).count();
+        check(top * 2 >= section.columns().size(), "The wall stands " + livingrealms.settlement.plan.Walls.H + " high");
+        boolean ladder = false;
+        for (Plot t : s.plots) if (t.typeId.equals(livingrealms.settlement.plan.Walls.TOWER)) {
+            var bp = t.blueprint();
+            for (int i = 0; i < bp.size() && !ladder; i++) if (bp.state(i).is(Blocks.LADDER) && level.getBlockState(bp.worldPos(i, t.origin, t.rotation)).is(Blocks.LADDER)) ladder = true;
+        }
+        check(ladder, "Towers have ladders up to the wall walk");
+        // raids: attackers gathered outside the east gate meet the defenders there
+        Plot east = livingrealms.settlement.plan.Walls.gateFacing(s, s.center.getX() + 90, s.center.getZ());
+        check(east != null && livingrealms.settlement.plan.Walls.side(s, east.center()).equals("east"), "Defenders hold the gate facing the attackers");
+        check(livingrealms.settlement.plan.Walls.gateFacing(s, s.center.getX() + 10, s.center.getZ()) == null, "Inside the walls the defenders hold the centre");
+        var restored = Settlement.load(s.save());
+        check(restored.autoWalls, "Auto walls setting survives reload");
+        long before = s.plots.stream().filter(livingrealms.settlement.plan.Walls::isWallPiece).count(), after = restored.plots.stream().filter(livingrealms.settlement.plan.Walls::isWallPiece).count();
+        check(before == after, "Wall pieces survive reload: " + before + " / " + after);
+        for (Plot p : restored.plots) if (livingrealms.settlement.plan.Walls.isWallPiece(p))
+            check(p.blueprint() != null && (!p.columns().isEmpty() || p.blueprint().size() == 1), "Wall piece " + p.id + " keeps its blueprint: " + p.blueprintKey + " " + (p.blueprint() == null ? "none" : p.blueprint().size()));
+        LivingRealms.LOG.info("Walled town: {} wall pieces, {} gates · {}", all.size(), gates, livingrealms.settlement.plan.Walls.status(s));
     }
 
     /** Test and tour support: grows a player town with automatic building, finishing each project at once. Returns plots placed. */

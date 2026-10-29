@@ -165,6 +165,25 @@ public final class Planning {
         return null;
     }
 
+    /** Territory and overlap checks for a wall piece: its own columns inside the land, clear of every other plot. */
+    @Nullable
+    public static String checkWall(Settlement s, Plot p) {
+        var cols = p.columns();
+        long r = s.radius() + 6;
+        for (long c : cols) {
+            long dx = BlockPos.getX(c) - s.center.getX(), dz = BlockPos.getZ(c) - s.center.getZ();
+            if (dx * dx + dz * dz > r * r) return "Outside the town's land";
+        }
+        for (Plot o : s.plots) {
+            if (o.state == Plot.State.DEMOLISHING || o.typeId.equals("road")) continue;
+            if (CapitalCastles.overlaps(p, o)) {
+                BuildingType ot = BuildingCatalog.get(o.typeId);
+                return "Overlaps " + (ot == null ? "a building" : ot.name);
+            }
+        }
+        return null;
+    }
+
     /** True if any paved column of a road project lies inside the footprint. */
     static boolean onRoad(Settlement s, BoundingBox box) {
         for (Plot o : s.plots) {
@@ -187,6 +206,8 @@ public final class Planning {
             if (o.typeId.equals("road")) continue;
             BoundingBox b = o.box();
             if (o.typeId.equals(CapitalCastles.ID) && CapitalCastles.inCourtyard(o, new BoundingBox(x, 0, z, x, 0, z))) continue;
+            var cols = o.columns();
+            if (cols != null) { if (cols.contains(BlockPos.asLong(x, 0, z))) return true; continue; }
             if (x >= b.minX() && x <= b.maxX() && z >= b.minZ() && z <= b.maxZ()) return true;
         }
         return false;

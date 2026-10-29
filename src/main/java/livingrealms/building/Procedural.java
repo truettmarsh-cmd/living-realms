@@ -32,6 +32,7 @@ public final class Procedural {
         KINDS.put("watchtower", 2);
         KINDS.put("wall", 1);
         KINDS.put("gatehouse", 1);
+        KINDS.put("wall_tower", 1);
         KINDS.put("farm_field", 2);
         KINDS.put("stables", 2);
         KINDS.put("tavern", 2);
@@ -66,6 +67,7 @@ public final class Procedural {
             case "watchtower" -> watchtower(b, level);
             case "wall" -> wall(b);
             case "gatehouse" -> gatehouse(b);
+            case "wall_tower" -> { b.clear(0, 1, 0, 6, 16, 6); tower(b, 1, 1, 5, 11); b.door(3, 1, 5, Direction.SOUTH); }
             case "farm_field" -> farmField(b, level);
             case "stables" -> stables(b, level);
             case "tavern" -> tavern(b, level);
@@ -96,6 +98,12 @@ public final class Procedural {
         if (s.contains("savanna") || s.contains("acacia")) return "savanna";
         return "plains";
     }
+
+    /** The settlement style's masonry, for town walls. */
+    public static BlockState masonry(String style) { return palette(style).stone(); }
+
+    /** The style's stone wall block (merlons, parapets). */
+    public static BlockState parapet(String style) { return palette(style).stoneWall().defaultBlockState(); }
 
     static P palette(String style) {
         return switch (styleFamily(style)) {

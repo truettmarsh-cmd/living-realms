@@ -31,6 +31,11 @@ public final class View {
         t.put("compat", livingrealms.compat.Compat.view(s, p));
         t.putBoolean("autoBuild", s.autoBuild);
         t.putString("autoBuildStatus", AutoBuild.status(s));
+        t.putBoolean("autoWalls", s.autoWalls);
+        t.putString("wallStatus", livingrealms.settlement.plan.Walls.status(s));
+        net.minecraft.nbt.ListTag walls = new net.minecraft.nbt.ListTag();
+        for (int[] line : livingrealms.settlement.plan.Walls.outlines(s)) walls.add(new net.minecraft.nbt.IntArrayTag(line));
+        t.put("walls", walls);
         t.putBoolean("autoResearch", s.autoResearch);
         t.putBoolean("autoTier", s.autoTier);
         t.putBoolean("autoTrain", s.autoTrain);

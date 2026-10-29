@@ -63,6 +63,37 @@ public final class Plot {
         return state == State.BUILT || state == State.UPGRADING || state == State.REPAIRING;
     }
 
+    private transient java.util.Set<Long> columns;
+    private transient BlockPos columnsAt;
+
+    /** Wall pieces only: the columns they really take (their boxes are mostly air along a chamfer); null for other plots. */
+    @Nullable
+    public java.util.Set<Long> columns() {
+        if (blueprintKey == null || !blueprintKey.startsWith("wall:")) return null;
+        if (columns == null || !origin.equals(columnsAt)) {
+            Blueprint b = blueprint();
+            java.util.Set<Long> out = new java.util.HashSet<>();
+            if (b != null) for (int i = 0; i < b.size(); i++)
+                if (!b.state(i).isAir()) out.add(BlockPos.asLong(origin.getX() + b.lx(i), 0, origin.getZ() + b.lz(i)));
+            columns = out;
+            columnsAt = origin;
+        }
+        return columns;
+    }
+
+    /** Footprint overlap, exact for wall pieces. */
+    public boolean covers(BoundingBox b) {
+        BoundingBox m = box();
+        if (m.maxX() < b.minX() || m.minX() > b.maxX() || m.maxZ() < b.minZ() || m.minZ() > b.maxZ()) return false;
+        var cols = columns();
+        if (cols == null) return true;
+        for (long c : cols) {
+            int x = BlockPos.getX(c), z = BlockPos.getZ(c);
+            if (x >= b.minX() && x <= b.maxX() && z >= b.minZ() && z <= b.maxZ()) return true;
+        }
+        return false;
+    }
+
     public BoundingBox box() {
         Blueprint b = blueprint();
         int w = b == null ? 1 : b.width(rotation), d = b == null ? 1 : b.depth(rotation), h = b == null ? 1 : b.sy;

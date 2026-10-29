@@ -19,6 +19,9 @@ public final class Zoning {
 
     public static Rule rule(BuildingType t, int radius, int alreadyBuilt) {
         int noisy = Math.max(24, (int) (0.45 * radius)), edge = Math.max(32, (int) (0.6 * radius));
+        // once a town can wall itself in, fields, woods and mines go outside the old-town wall, as they did
+        int outside = radius >= Tier.VILLAGE.radius ? Walls.standard().get(0).a() + Walls.BAND + 1 : 0;
+        edge = Math.max(edge, outside);
         int far = 10_000;
         return switch (t.category) {
             case CIVIC -> new Rule(0, 12, 0, false, false, 2, 0);
@@ -37,7 +40,7 @@ public final class Zoning {
             case LUMBER, MINE -> new Rule(edge, far, edge, false, true, 3, 1);
             // a camp's or hamlet's first fields may sit close; after that farms keep to the outskirts
             case FARM -> alreadyBuilt < 2 && radius <= Tier.HAMLET.radius ? new Rule(CORE, far, CORE + 4, false, true, 2, 1)
-                    : new Rule(Math.max(CORE, radius / 2), far, Math.max(CORE, radius / 2), false, true, 2, 1);
+                    : new Rule(Math.max(Math.max(CORE, radius / 2), outside), far, Math.max(Math.max(CORE, radius / 2), outside), false, true, 2, 1);
             case WALL, ROAD -> new Rule(0, far, radius, false, false, 0, 0);
         };
     }

@@ -181,7 +181,8 @@ public final class AiPlanner {
             if (!level.getBlockState(new BlockPos(x + w / 2, y, z + d / 2)).getFluidState().isEmpty()) continue;
             if (reserveCastle && CapitalCastles.reserved(s, x - 2, z - 2, x + w + 1, z + d + 1)) continue;
             if (overlaps(s, x - 2, z - 2, x + w + 1, z + d + 1)) continue;
-            if (s.plan().onStreet(new net.minecraft.world.level.levelgen.structure.BoundingBox(x, 0, z, x + w - 1, 0, z + d - 1), 1)) continue;
+            var footprint = new net.minecraft.world.level.levelgen.structure.BoundingBox(x, 0, z, x + w - 1, 0, z + d - 1);
+            if (s.plan().onStreet(footprint, 1) || s.plan().inWallBand(footprint)) continue;
             if (!open(level, x, y, z, w, d)) continue;
             return new BlockPos(x, y, z);
         }
@@ -191,8 +192,7 @@ public final class AiPlanner {
     static boolean overlaps(Settlement s, int x0, int z0, int x1, int z1) {
         for (Plot p : s.plots) {
             if (p.typeId.equals("road")) continue;
-            var b = p.box();
-            if (x0 <= b.maxX() && x1 >= b.minX() && z0 <= b.maxZ() && z1 >= b.minZ()) return true;
+            if (p.covers(new net.minecraft.world.level.levelgen.structure.BoundingBox(x0, 0, z0, x1, 0, z1))) return true;
         }
         return false;
     }

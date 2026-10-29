@@ -12,6 +12,10 @@ public interface Terrain {
     boolean loaded(int x0, int z0, int x1, int z1);
     /** No player builds, containers or village houses where the blueprint goes. */
     boolean clear(BlockPos origin, Blueprint bp, Rotation rot);
+    /** Depth of the water at a wet column (1 = a puddle, 3 or more = deep enough to defend a wall line). */
+    default int waterDepth(int x, int z) { return water(x, z) ? 3 : 0; }
+    /** Someone's build (not terrain, not a road) stands on this column. */
+    default boolean built(int x, int z) { return false; }
 
     /** Flat ground everywhere at the given height, optionally with water where {@code water} says. */
     static Terrain grid(java.util.function.IntBinaryOperator height, java.util.function.BiPredicate<Integer, Integer> water) {

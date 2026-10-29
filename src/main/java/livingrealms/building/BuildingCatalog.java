@@ -144,6 +144,7 @@ public final class BuildingCatalog {
         proc(out, "watchtower", "Watchtower", Category.TOWER, 2, "masonry", -1);
         proc(out, "wall", "Wall Section", Category.WALL, 3, "fortifications", -1);
         proc(out, "gatehouse", "Gatehouse", Category.WALL, 3, "fortifications", -1);
+        proc(out, "wall_tower", "Wall Tower", Category.WALL, 3, "fortifications", -1);
         proc(out, "chapel", "Chapel", Category.CHAPEL, 3, "architecture", -1);
         proc(out, "market", "Market Square", Category.MARKET, 3, "trade", -1);
         proc(out, "stables", "Stables", Category.STABLE, 3, "cavalry", -1);
