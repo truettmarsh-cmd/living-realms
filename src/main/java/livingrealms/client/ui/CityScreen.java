@@ -865,6 +865,19 @@ public class CityScreen extends Screen {
                 if (ui.over(sx + 6, ly, side - 12, 16)) ui.tip(v().getString("wallStatus"),
                         "Villagers build the dashed wall line: gatehouses on the high streets, towers, then the wall, from the stockpile.",
                         "Old-town wall at Village rank with Fortifications; city wall at City rank. Your own plans come first.");
+                ly += 20;
+            }
+            if (ly + 16 <= cy + ch - 4) {
+                // the look villagers build in: cycles the families, then back to whatever the biome says
+                String[] families = {"plains", "desert", "savanna", "taiga", "snowy", "biome"};
+                String cur = new ResourceLocation(v().getString("style").isEmpty() ? "minecraft:plains" : v().getString("style")).getPath();
+                int at = Arrays.asList(families).indexOf(cur);
+                String next = families[(at + (Screen.hasShiftDown() ? families.length - 1 : 1) + families.length) % families.length];
+                ui.button("townStyle", sx + 6, ly, side - 12, 16, ui.clip("Town style: " + BuildingCatalog.pretty(cur), side - 20),
+                        Style.SECONDARY, true, () -> act("style", tag("family", next)));
+                if (ui.over(sx + 6, ly, side - 12, 16)) ui.tip("Town style: " + BuildingCatalog.pretty(cur),
+                        "The look villagers build in: houses, walls and street paving. Set from the biome when the town was founded.",
+                        "Click for " + (next.equals("biome") ? "the biome's own style" : BuildingCatalog.pretty(next)) + " (shift-click goes back). Standing buildings keep their look.");
             }
         }
     }
