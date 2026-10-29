@@ -140,6 +140,15 @@ These folders can be overridden or extended with data packs:
 - `data/<ns>/livingrealms_research/*.json`: research nodes.
 - `data/<ns>/livingrealms_smithing/*.json`: smithing patterns (material, pieces, costs, required research and `requires_mod`).
 - `data/<ns>/livingrealms_buildings/*.json`: tweaks to auto-discovered buildings, keyed by `"template"` (name, category, tier, research, or `"hide": true`).
+- `data/<ns>/livingrealms_styles/*.json`: which palette family (`plains`, `desert`, `savanna`, `taiga`, `snowy`) a template style or biome id belongs to (`"families"`, `ns:*` for a whole namespace), and template styles the villagers never build on their own (`"exclude"`, e.g. festive or fantasy villages). Unlisted styles fall back to name rules.
+
+### Town styles
+
+A town takes the village style of the biome at its charter: plains, desert (also badlands), savanna (also jungle), taiga (also swamps, windswept and stony mountains) or snowy (snowy biomes, groves, frozen peaks). On a river, beach or sea it follows the land around it. Auto build then uses only that style: Living Realms' own buildings, walls and streets in the style's materials, and village buildings of the same style from vanilla and installed mods. If none of a needed kind exists, the nearest style is used (snowy and taiga borrow from each other, as do desert and savanna). The city action `style` (`family`: one of the five, or `biome`) changes it.
+
+### Third-party buildings
+
+Village buildings from installed mods are read from those mods at runtime; Living Realms bundles none of them. Styles are filed by default for ChoiceTheorem's Overhauled Village (CTOV, CC BY-NC-ND 4.0), Towns and Towers (CC BY-NC-SA 4.0), Repurposed Structures (LGPL-3.0) and Dungeons and Taverns' jungle and swamp villages (all rights reserved). Credit and thanks to their authors. Spawners and command blocks in templates are never placed.
 
 ## Building from source
 

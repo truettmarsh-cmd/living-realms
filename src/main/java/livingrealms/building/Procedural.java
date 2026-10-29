@@ -90,14 +90,45 @@ public final class Procedural {
              Block stoneWall, BlockState path, Block carpet, Block wool, Block bed, Block banner, Block wallBanner,
              BlockState log) {}
 
+    /** The five palettes, as the vanilla village styles they follow. */
+    public static final List<String> FAMILIES = List.of("plains", "desert", "savanna", "taiga", "snowy");
+
+    /** The palette for a settlement or template style: a village style, a biome id or a mod's style name. */
     public static String styleFamily(String style) {
-        String s = style.toLowerCase();
+        String s = style == null ? "" : style.toLowerCase(java.util.Locale.ROOT);
+        String mapped = BuildingCatalog.mappedFamily(s);
+        if (mapped != null) return mapped;
         if (s.contains("desert") || s.contains("badlands") || s.contains("mesa") || s.contains("pueblo") || s.contains("oasis")) return "desert";
-        if (s.contains("snow") || s.contains("ice") || s.contains("igloo") || s.contains("viking")) return "snowy";
-        if (s.contains("taiga") || s.contains("spruce") || s.contains("polish") || s.contains("mountain") || s.contains("swiss")) return "taiga";
-        if (s.contains("savanna") || s.contains("acacia")) return "savanna";
+        if (s.contains("snow") || s.contains("ice") || s.contains("igloo") || s.contains("viking") || s.contains("frozen") || s.contains("grove")
+                || s.contains("jagged")) return "snowy";
+        // warm and wet: timber and terracotta rather than sandstone
+        if (s.contains("savanna") || s.contains("acacia") || s.contains("jungle") || s.contains("bamboo")) return "savanna";
+        // cold, wet or high: spruce and cobble
+        if (s.contains("taiga") || s.contains("spruce") || s.contains("polish") || s.contains("mountain") || s.contains("swiss")
+                || s.contains("peaks") || s.contains("windswept") || s.contains("swamp") || s.contains("mangrove")) return "taiga";
         return "plains";
     }
+
+    /** The style a town founded here takes: the vanilla village style of the biome at its centre. A charter on a river,
+     *  a beach or the sea follows the land round it instead. */
+    public static String biomeStyle(net.minecraft.world.level.LevelReader level, BlockPos center) {
+        String here = biomeId(level, center);
+        if (!neutral(here)) return "minecraft:" + styleFamily(here);
+        Map<String, Integer> votes = new HashMap<>();
+        for (int i = 0; i < 8; i++) {
+            String b = biomeId(level, center.offset((int) Math.round(Math.cos(i * Math.PI / 4) * 32), 0, (int) Math.round(Math.sin(i * Math.PI / 4) * 32)));
+            if (!neutral(b)) votes.merge(styleFamily(b), 1, Integer::sum);
+        }
+        String best = styleFamily(here);
+        for (String f : FAMILIES) if (votes.getOrDefault(f, 0) > votes.getOrDefault(best, 0)) best = f;
+        return "minecraft:" + best;
+    }
+
+    static String biomeId(net.minecraft.world.level.LevelReader level, BlockPos p) {
+        return level.getBiome(p).unwrapKey().map(k -> k.location().toString()).orElse("minecraft:plains");
+    }
+
+    static boolean neutral(String biome) { return biome.contains("river") || biome.contains("beach") || biome.contains("ocean"); }
 
     /** The settlement style's masonry, for town walls. */
     public static BlockState masonry(String style) { return palette(style).stone(); }

@@ -117,6 +117,101 @@ public final class CityPlanningSelfTest {
         } finally { m.remove(s); }
         plans(level);
         grownTown(level, owner, stranger);
+        styles(level, owner);
+    }
+
+    // ------------------------------------------------------------------ the town's look follows its biome
+
+    static void styles(ServerLevel level, net.minecraft.server.level.ServerPlayer owner) {
+        String[][] map = {{"minecraft:plains", "plains"}, {"minecraft:sunflower_plains", "plains"}, {"minecraft:forest", "plains"},
+                {"minecraft:desert", "desert"}, {"minecraft:badlands", "desert"}, {"minecraft:eroded_badlands", "desert"},
+                {"minecraft:savanna", "savanna"}, {"minecraft:windswept_savanna", "savanna"}, {"minecraft:jungle", "savanna"},
+                {"minecraft:taiga", "taiga"}, {"minecraft:old_growth_spruce_taiga", "taiga"}, {"minecraft:swamp", "taiga"},
+                {"minecraft:windswept_hills", "taiga"}, {"minecraft:snowy_taiga", "snowy"}, {"minecraft:snowy_plains", "snowy"},
+                {"minecraft:ice_spikes", "snowy"}, {"minecraft:grove", "snowy"}, {"minecraft:frozen_peaks", "snowy"}};
+        for (String[] b : map) check(Procedural.styleFamily(b[0]).equals(b[1]), b[0] + " builds in the " + b[1] + " style, not " + Procedural.styleFamily(b[0]));
+        // founding: the charter takes the style of the biome at its centre
+        var m = SettlementManager.get(level.getServer());
+        BlockPos at = new BlockPos(6000, 0, -6000);
+        level.getChunk(at.getX() >> 4, at.getZ() >> 4);
+        at = new BlockPos(at.getX(), Construction.ground(level, at.getX(), at.getZ()) + 1, at.getZ());
+        level.setBlock(at, livingrealms.Registry.CHARTER.get().defaultBlockState(), 3);
+        livingrealms.Registry.CHARTER.get().setPlacedBy(level, at, level.getBlockState(at), owner, new net.minecraft.world.item.ItemStack(livingrealms.Registry.CHARTER_ITEM.get()));
+        Settlement founded = m.at(level.dimension(), at);
+        check(founded != null && founded.center.equals(at), "A placed charter founds a town");
+        String biome = level.getBiome(at).unwrapKey().map(k -> k.location().toString()).orElse("?");
+        check(founded.style.equals(Procedural.biomeStyle(level, at)) && Procedural.FAMILIES.contains(Procedural.styleFamily(founded.style))
+                && founded.style.equals("minecraft:" + Procedural.styleFamily(founded.style)), "Founding takes the biome's style: " + founded.style + " on " + biome);
+        if (!biome.contains("river") && !biome.contains("beach") && !biome.contains("ocean"))
+            check(Procedural.styleFamily(founded.style).equals(Procedural.styleFamily(biome)), "The centre's biome decides: " + founded.style + " on " + biome);
+        m.remove(founded);
+        level.removeBlock(at, false);
+        // a snowy-taiga town only ever considers its own style's templates (or, failing that, taiga ones), never the desert's
+        long desertTemplates = BuildingCatalog.types().values().stream().filter(t -> !t.procedural() && Procedural.styleFamily(t.style).equals("desert")).count();
+        check(desertTemplates > 0, "The catalog has desert templates to keep out");
+        Map<String, Integer> byStyle = new TreeMap<>();
+        for (BuildingType t : BuildingCatalog.types().values()) if (!t.procedural())
+            byStyle.merge((BuildingCatalog.excludedStyle(t.style) ? "excluded" : Procedural.styleFamily(t.style)) + " " + t.style, 1, Integer::sum);
+        LivingRealms.LOG.info("City planning test: templates by family and style {}", byStyle);
+        for (String style : new String[]{"minecraft:snowy_taiga", "minecraft:snowy"}) {
+            Settlement snowy = new Settlement(); snowy.owner = owner.getUUID(); snowy.center = new BlockPos(6000, 100, 6000); snowy.name = "Snow test";
+            snowy.style = style; snowy.tier = Tier.CAPITAL; snowy.d.hasTownHall = true;
+            snowy.research.addAll(livingrealms.research.ResearchTree.nodes().keySet());
+            Set<String> seen = new HashSet<>(), wrong = new TreeSet<>();
+            int templates = 0;
+            for (int i = 0; i < 200; i++) for (BuildingType t : AutoBuild.candidates(snowy, level.random)) {
+                String fam = Procedural.styleFamily(t.style);
+                if (!t.procedural() && !fam.equals("snowy") && !fam.equals("taiga")) wrong.add(t.id);
+                if (!t.procedural()) { templates++; seen.add(fam); }
+            }
+            check(wrong.isEmpty(), style + " town considered " + wrong);
+            check(templates > 0 && seen.contains("snowy"), "A " + style + " town still builds snowy village houses");
+            String cottage = BuildingCatalog.get("livingrealms:cottage").blueprintKey(1, snowy.style);
+            check(cottage.endsWith("/snowy"), "Procedural buildings take the snowy palette: " + cottage);
+        }
+        // the style map: mods' styles filed by data, festive and far-off styles never chosen by the villagers
+        check(Procedural.styleFamily("kaisyn:meadow_swiss").equals("taiga") && Procedural.styleFamily("ctov:mountain_alpine").equals("snowy")
+                && Procedural.styleFamily("ctov:mesa").equals("desert") && Procedural.styleFamily("minecraft:cherry_grove").equals("plains"),
+                "The style map files mods' styles");
+        BuildingType festive = new BuildingType("tpl/ctov/test", "Test", Category.HOUSING, "ctov:halloween", "Halloween", List.of("tpl:none"), 1, 1, null, -1, 0, "Test", null);
+        BuildingType plainsCtov = new BuildingType("tpl/ctov/test2", "Test", Category.HOUSING, "ctov:plains", "Plains", List.of("tpl:none"), 1, 1, null, -1, 0, "Test", null);
+        check(!BuildingCatalog.fits(festive, "minecraft:plains") && BuildingCatalog.fits(plainsCtov, "minecraft:plains")
+                && !BuildingCatalog.fits(plainsCtov, "minecraft:snowy"), "Excluded styles are never auto-built; other mods' styles are, in their family");
+        // template safety: spawners are never copied, a pool-less edge jigsaw is the entrance
+        CompoundTag tpl = new CompoundTag();
+        var size = new net.minecraft.nbt.ListTag(); for (int v : new int[]{5, 3, 5}) size.add(net.minecraft.nbt.IntTag.valueOf(v)); tpl.put("size", size);
+        var pal = new net.minecraft.nbt.ListTag();
+        pal.add(net.minecraft.nbt.NbtUtils.writeBlockState(Blocks.SPAWNER.defaultBlockState()));
+        pal.add(net.minecraft.nbt.NbtUtils.writeBlockState(Blocks.JIGSAW.defaultBlockState().setValue(net.minecraft.world.level.block.JigsawBlock.ORIENTATION, net.minecraft.core.FrontAndTop.WEST_UP)));
+        pal.add(net.minecraft.nbt.NbtUtils.writeBlockState(Blocks.COBBLESTONE.defaultBlockState()));
+        tpl.put("palette", pal);
+        var blocks = new net.minecraft.nbt.ListTag();
+        int[][] cells = {{2, 1, 2, 0}, {0, 1, 3, 1}, {0, 0, 0, 2}, {4, 0, 4, 2}};
+        for (int[] b : cells) {
+            CompoundTag bt = new CompoundTag(); var pos = new net.minecraft.nbt.ListTag();
+            for (int k = 0; k < 3; k++) pos.add(net.minecraft.nbt.IntTag.valueOf(b[k]));
+            bt.put("pos", pos); bt.putInt("state", b[3]);
+            if (b[3] == 1) { CompoundTag jn = new CompoundTag(); jn.putString("pool", "minecraft:empty"); jn.putString("name", "minecraft:jungle_house"); jn.putString("final_state", "minecraft:air"); bt.put("nbt", jn); }
+            blocks.add(bt);
+        }
+        tpl.put("blocks", blocks);
+        Blueprint read = Blueprint.fromTemplate("tpl:test", tpl);
+        boolean spawner = false;
+        for (int i = 0; i < read.size(); i++) spawner |= read.state(i).is(Blocks.SPAWNER);
+        check(!spawner, "Template spawners are not copied");
+        check(read.front(net.minecraft.world.level.block.Rotation.NONE) == net.minecraft.core.Direction.WEST, "An edge jigsaw to an empty pool marks the entrance: " + read.front(net.minecraft.world.level.block.Rotation.NONE));
+        check(Procedural.masonry("minecraft:desert").is(Blocks.CUT_SANDSTONE) && Procedural.masonry("minecraft:snowy").is(Blocks.STONE_BRICKS),
+                "Walls are of the style's masonry");
+        check(livingrealms.settlement.plan.RoadClass.HIGH.material(Tier.CITY, "minecraft:desert").equals("sandstone")
+                && livingrealms.settlement.plan.RoadClass.STREET.material(Tier.CITY, "minecraft:snowy").equals("gravel")
+                && Planning.ROAD_MATERIALS.containsKey("sandstone"), "Streets are paved in the style's materials");
+        // saves from before the style was kept, and those that kept a biome id, still load
+        Settlement old = new Settlement(); old.owner = owner.getUUID(); old.center = new BlockPos(6000, 100, 6000); old.name = "Old save";
+        CompoundTag tag = old.save(); tag.remove("style");
+        Settlement loaded = Settlement.load(tag);
+        check(loaded.style.equals("minecraft:plains") && Procedural.styleFamily(loaded.style).equals("plains"), "A save without a style loads as plains: " + loaded.style);
+        old.style = "minecraft:snowy_taiga";
+        check(Settlement.load(old.save()).style.equals("minecraft:snowy_taiga"), "A saved biome style survives reload");
     }
 
     /** A paved road block within 4 blocks straight out from the building's front wall at its door. */

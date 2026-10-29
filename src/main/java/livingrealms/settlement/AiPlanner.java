@@ -101,8 +101,7 @@ public final class AiPlanner {
                 if (dd < best) { best = dd; to = q; }
             }
         }
-        boolean desert = Procedural.styleFamily(s.style).equals("desert");
-        String material = RoadClass.LANE.material(s.tier, desert);
+        String material = RoadClass.LANE.material(s.tier, s.style);
         BlockPos step = out.relative(front.getOpposite(), 2);
         for (BlockPos[] leg : new BlockPos[][]{{step, out}, {out, to}}) {
             if (leg[0].distSqr(leg[1]) < 1 || crossesWall(s, leg[0], leg[1]) || Planning.road(level, s, leg[0], leg[1], 2, material) != null) continue;
@@ -146,13 +145,12 @@ public final class AiPlanner {
     @Nullable
     static BuildingType chooseType(RandomSource r, Settlement s, Category c) {
         List<BuildingType> own = new ArrayList<>(), family = new ArrayList<>(), proc = new ArrayList<>();
-        String fam = Procedural.styleFamily(s.style);
         for (BuildingType t : BuildingCatalog.types().values()) {
             if (t.category != c || s.cannotBuild(t) != null) continue;
             if (t.id.equals(CapitalCastles.ID) || t.id.equals("livingrealms:town_hall") || t.category == Category.WALL) continue;
             if (t.procedural()) proc.add(t);
             else if (t.style.equals(s.style)) own.add(t);
-            else if (Procedural.styleFamily(t.style).equals(fam) && t.style.startsWith("minecraft:")) family.add(t);
+            else if (BuildingCatalog.fits(t, s.style)) family.add(t);
         }
         if (!own.isEmpty() && (proc.isEmpty() || r.nextInt(4) > 0)) return own.get(r.nextInt(own.size()));
         if (!family.isEmpty() && (proc.isEmpty() || r.nextBoolean())) return family.get(r.nextInt(family.size()));

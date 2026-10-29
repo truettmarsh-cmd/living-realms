@@ -136,6 +136,7 @@ public final class Realms {
         s.name = VxBridge.villageName(c);
         s.dim = Level.OVERWORLD;
         s.center = c;
+        s.style = livingrealms.building.Procedural.biomeStyle(level, c);
         s.founded = level.getGameTime();
         s.structureKey = "village_recruits:village";
         s.vxFaction = owner;

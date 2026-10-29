@@ -83,7 +83,7 @@ public class CharterBlock extends BaseEntityBlock {
         s.center = pos;
         s.owner = player.getUUID();
         s.ownerName = player.getGameProfile().getName();
-        s.style = sl.getBiome(pos).unwrapKey().map(k -> k.location().toString()).orElse("minecraft:plains");
+        s.style = livingrealms.building.Procedural.biomeStyle(sl, pos);
         s.founded = sl.getGameTime();
         s.population = 4;
         s.baseHousing = 6; // the founders' tents, until there are houses

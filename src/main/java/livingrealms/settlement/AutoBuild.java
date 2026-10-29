@@ -71,7 +71,7 @@ public final class AutoBuild {
             if (s.cannotBuild(t) != null) continue;
             Blueprint bp = BuildingCatalog.blueprint(t.blueprintKey(1, s.style));
             if (bp == null || !affordable(s, bp, new long[0])) continue;
-            if (++sitesTried > 8) return;
+            if (++sitesTried > 8) break;
             for (int attempt = 0; attempt < 3; attempt++) {
                 BlockPos at = AiPlanner.zonedSite(level, s, t, bp);
                 if (at == null) continue;
@@ -124,8 +124,7 @@ public final class AutoBuild {
             var e = plan.edge();
             int gx = s.center.getX() + e.x(plan.piece().tc()), gz = s.center.getZ() + e.z(plan.piece().tc());
             BlockPos in = new BlockPos(gx - 8 * e.ux(), s.center.getY(), gz - 8 * e.uz()), out = new BlockPos(gx + 8 * e.ux(), s.center.getY(), gz + 8 * e.uz());
-            boolean desert = Procedural.styleFamily(s.style).equals("desert");
-            if (s.contains(in) && s.contains(out) && Planning.road(level, s, in, out, 3, RoadClass.STREET.material(s.tier, desert)) == null) {
+            if (s.contains(in) && s.contains(out) && Planning.road(level, s, in, out, 3, RoadClass.STREET.material(s.tier, s.style)) == null) {
                 Plot road = s.plots.get(s.plots.size() - 1);
                 road.automatic = true;
                 road.priority = -2;
@@ -137,7 +136,6 @@ public final class AutoBuild {
     /** Lays street lengths as road projects (automatic ones for player towns). Without a loaded world they are owed. */
     public static void pave(ServerLevel level, Settlement s, List<TownPlan.Paving> pavings, boolean automatic) {
         TownPlan plan = s.plan();
-        boolean desert = Procedural.styleFamily(s.style).equals("desert");
         for (TownPlan.Paving pv : pavings) {
             Street st = pv.street();
             if (pv.to() <= pv.from()) { plan.paved(pv); continue; }
@@ -146,7 +144,7 @@ public final class AutoBuild {
                 plan.owed.merge(st.id, pv.to(), Math::max);
                 continue;
             }
-            String err = Planning.road(level, s, a, b, st.cls.width, st.cls.material(s.tier, desert));
+            String err = Planning.road(level, s, a, b, st.cls.width, st.cls.material(s.tier, s.style));
             if (err == null) {
                 Plot road = s.plots.get(s.plots.size() - 1);
                 road.automatic = automatic;
@@ -235,16 +233,14 @@ public final class AutoBuild {
             }
         }
         if (rest != null && rest.distSqr(restEnd) >= 4) {
-            boolean desert = Procedural.styleFamily(s.style).equals("desert");
-            if (Planning.road(level, s, rest, restEnd, 3, (slot.primary ? RoadClass.HIGH : RoadClass.STREET).material(s.tier, desert)) == null) {
+            if (Planning.road(level, s, rest, restEnd, 3, (slot.primary ? RoadClass.HIGH : RoadClass.STREET).material(s.tier, s.style)) == null) {
                 Plot road = s.plots.get(s.plots.size() - 1);
                 road.automatic = true;
                 road.priority = -2;
             }
         }
         if (a.distSqr(b) < 4) return;
-        boolean desert = Procedural.styleFamily(s.style).equals("desert");
-        String material = (slot.primary ? RoadClass.HIGH : RoadClass.STREET).material(s.tier, desert);
+        String material = (slot.primary ? RoadClass.HIGH : RoadClass.STREET).material(s.tier, s.style);
         if (Planning.road(level, s, a, b, 3, material) == null) {
             Plot road = s.plots.get(s.plots.size() - 1);
             road.automatic = true;
@@ -320,13 +316,23 @@ public final class AutoBuild {
             if (hall != null) candidates.add(hall);
         } else {
             Category need = AiPlanner.decide(random, s);
+            List<BuildingType> offStyle = new ArrayList<>();
             for (BuildingType t : BuildingCatalog.types().values()) {
                 if (t.category == Category.CIVIC || t.category == Category.ROAD || t.category == Category.WALL
                         || t.id.equals(CapitalCastles.ID) || s.cannotBuild(t) != null) continue;
-                candidates.add(t);
+                // the town's own look: procedural buildings and templates of its style family only
+                if (BuildingCatalog.fits(t, s.style)) candidates.add(t);
+                else if (t.category == need) offStyle.add(t);
             }
             Collections.shuffle(candidates, new Random(random.nextLong()));
             candidates.sort(Comparator.comparingInt(t -> t.category == need ? 0 : 1));
+            // nothing of the needed kind in the town's style: the nearest style's (never a far one), after everything in style
+            if (candidates.stream().noneMatch(t -> t.category == need)) {
+                String kin = BuildingCatalog.kin(Procedural.styleFamily(s.style));
+                offStyle.removeIf(t -> !Procedural.styleFamily(t.style).equals(kin) || BuildingCatalog.excludedStyle(t.style));
+                Collections.shuffle(offStyle, new Random(random.nextLong()));
+                candidates.addAll(offStyle);
+            }
         }
         return candidates;
     }
