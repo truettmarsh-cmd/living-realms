@@ -116,6 +116,7 @@ public final class CityPlanningSelfTest {
             check(!AutoBuild.clear(level,probe,empty,net.minecraft.world.level.block.Rotation.NONE),"Automatic siting checks upper containers across the full height");
         } finally { m.remove(s); }
         plans(level);
+        slopeLot(level, owner.getUUID());
         grownTown(level, owner, stranger);
     }
 
@@ -228,6 +229,38 @@ public final class CityPlanningSelfTest {
         // gentle slope with a steep hill to the north-east
         plannedTown(livingrealms.settlement.plan.Terrain.grid((x, z) -> 64 + (x - 5000) / 6 + Math.max(0, Math.min(x - 5040, 5000 - z - 40)) / 2,
                 (x, z) -> false), c, owner, 8);
+        // hills: lots of up to 6 blocks' relief are levelled (cut and fill), the hall levels the middle, streets stop short of cliffs
+        var steep = livingrealms.settlement.plan.Terrain.grid((x, z) -> 64 + (x - 5000) / 3, (x, z) -> false);
+        List<String> hill = plannedTown(steep, c, owner, 8);
+        long hillBuildings = hill.stream().filter(e -> { var t = BuildingCatalog.get(e.substring(0, e.indexOf('@'))); return t != null && t.category != Category.WALL; }).count();
+        long flatBuildings = a.stream().filter(e -> { var t = BuildingCatalog.get(e.substring(0, e.indexOf('@'))); return t != null && t.category != Category.WALL; }).count();
+        LivingRealms.LOG.info("City plan test: {} buildings on the 1-in-3 slope, {} on the flat", hillBuildings, flatBuildings);
+        check(hillBuildings >= 20 && hillBuildings * 10 >= flatBuildings * 7, "Plan: a town on a 1-in-3 slope still fills its streets: " + hillBuildings + " of " + flatBuildings + " on the flat");
+        check(hill.get(0).startsWith("livingrealms:town_hall"), "Plan: the hall levels the sloping middle");
+        check(hill.equals(plannedTown(steep, c, owner, 8)), "Plan: the same slope town every time");
+        var probe = new livingrealms.settlement.plan.TownPlan(c, 1);
+        var cliff = livingrealms.settlement.plan.Terrain.grid((x, z) -> x >= 5060 ? 94 : 64, (x, z) -> false);
+        int east = probe.reach(cliff, probe.streets.get(7), Tier.CAPITAL.radius, new HashMap<>()), west = probe.reach(cliff, probe.streets.get(6), Tier.CAPITAL.radius, new HashMap<>());
+        check(east > 20 && east < 45, "Plan: the east high street stops short of a 30-block cliff: " + east);
+        check(west == probe.open(probe.streets.get(6), Tier.CAPITAL.radius), "Plan: the west high street runs on: " + west);
+        var lake = livingrealms.settlement.plan.Terrain.grid((x, z) -> 64, (x, z) -> x >= 5030 && x <= 5070);
+        var memo = new HashMap<Integer, Integer>();
+        int toLake = probe.reach(lake, probe.streets.get(7), Tier.CAPITAL.radius, memo);
+        check(toLake >= 0 && toLake < 15, "Plan: a high street stops at a lake: " + toLake);
+        boolean ringSkipped = false;
+        for (var st : probe.streets) if (st.parent == 7 && st.parentAt > toLake) { check(probe.reach(lake, st, Tier.CAPITAL.radius, memo) == -1, "Plan: ring street " + st.id + " beyond the lake is skipped"); ringSkipped = true; }
+        check(ringSkipped, "Plan: ring streets off a cut-short high street are skipped");
+        int[] profile = new int[40];
+        for (int i = 0; i < 40; i++) profile[i] = i < 20 ? 64 : i < 34 ? 70 : 70 + (i - 33) / 2;
+        profile[8] = 69;
+        int[] graded = livingrealms.settlement.plan.Street.grade(profile);
+        int worst = 0;
+        for (int i = 0; i < 40; i++) {
+            if (i > 0) check(Math.abs(graded[i] - graded[i - 1]) <= 1, "Graded road steps one block at most: " + Arrays.toString(graded));
+            if (i != 8) worst = Math.max(worst, Math.abs(graded[i] - profile[i]));
+        }
+        check(worst <= 3 && graded[0] == 64 && graded[8] <= 65 && graded[39] == profile[39] && graded[30] == 70,
+                "Graded road: a 6-block cliff becomes a ramp, a lone bump is levelled, gentle ground is followed: " + Arrays.toString(graded));
         // a 7-wide river 30 blocks south
         List<String> river = plannedTown(livingrealms.settlement.plan.Terrain.grid((x, z) -> 64, (x, z) -> Math.abs(z - 5030) <= 3), c, owner, 8);
         check(river.size() >= 20, "Plan: a river town still grows: " + river.size());
@@ -251,6 +284,69 @@ public final class CityPlanningSelfTest {
             var bp = BuildingCatalog.blueprint(t.blueprintKey(1, "minecraft:plains"));
             check(bp != null && bp.front() == net.minecraft.core.Direction.WEST, "Vanilla plains_small_house_1 entrance faces west: " + (bp == null ? null : bp.front()));
         }
+    }
+
+    /**
+     * A cottage on a lot with 4 blocks of relief in the world: accepted, dug out on the high side, built up on the low
+     * side; built, it stands on solid ground with its door clear and level with the ground outside; a road over a
+     * 4-block cliff steps one block at a time.
+     */
+    static void slopeLot(ServerLevel level, UUID owner) {
+        BlockPos c = new BlockPos(1400, 100, 1400);
+        java.util.function.IntUnaryOperator gy = x -> 96 + Math.max(0, Math.min(8, (x - 1396) / 2)) + (x >= 1408 ? 4 : 0);
+        for (int x = c.getX() - 30; x <= c.getX() + 30; x++) for (int z = c.getZ() - 30; z <= c.getZ() + 30; z++) {
+            level.getChunk(x >> 4, z >> 4);
+            int g = gy.applyAsInt(x);
+            for (int y = 88; y <= 120; y++) level.setBlock(new BlockPos(x, y, z), (y < g ? Blocks.DIRT : y == g ? Blocks.GRASS_BLOCK : Blocks.AIR).defaultBlockState(), 2);
+        }
+        Settlement s = new Settlement(); s.owner = owner; s.center = c; s.name = "Slope test";
+        s.research.addAll(livingrealms.research.ResearchTree.nodes().keySet());
+        var m = SettlementManager.get(level.getServer()); m.add(s);
+        try {
+            stock(s);
+            s.d.hasTownHall = true;
+            var cottage = BuildingCatalog.get("livingrealms:cottage");
+            var bp = BuildingCatalog.blueprint(cottage.blueprintKey(1, s.style));
+            var rot = bp.facing(net.minecraft.core.Direction.SOUTH);
+            int w = bp.width(rot), d = bp.depth(rot), x0 = 1398, z0 = 1395;
+            var box = new net.minecraft.world.level.levelgen.structure.BoundingBox(x0, 0, z0, x0 + w - 1, 0, z0 + d - 1);
+            int relief = gy.applyAsInt(box.maxX()) - gy.applyAsInt(box.minX());
+            check(relief >= 4, "Slope lot has 4+ blocks of relief: " + relief);
+            BlockPos at = s.plan().ground(new livingrealms.settlement.plan.WorldTerrain(level), cottage, bp, rot, box);
+            check(at != null, "A lot with " + relief + " blocks of relief is accepted for levelling");
+            check(at.getY() > gy.applyAsInt(box.minX()) && at.getY() < gy.applyAsInt(box.maxX()), "The floor goes in between the low and high sides: " + at.getY());
+            String err = Planning.plan(level, s, cottage, at, rot, false);
+            check(err == null, "Slope lot plan accepted: " + err);
+            Plot p = s.plots.get(s.plots.size() - 1);
+            check(p.cut.length > 0 && p.foundation.length > 0, "Levelling is part of the project: " + p.cut.length + " dug, " + p.foundation.length + " built up");
+            var restored = Settlement.load(s.save());
+            check(restored.plots.get(restored.plots.size() - 1).cut.length == p.cut.length, "Earthworks survive reload");
+            int y = p.origin.getY(), dug = p.cut.length, built = p.foundation.length;
+            buildQueued(level, s);
+            check(p.state == Plot.State.BUILT, "Slope cottage built: " + p.state);
+            var b = p.box();
+            for (int[] k : new int[][]{{b.minX(), b.minZ()}, {b.maxX(), b.minZ()}, {b.minX(), b.maxZ()}, {b.maxX(), b.maxZ()}})
+                check(!level.getBlockState(new BlockPos(k[0], y - 1, k[1])).canBeReplaced(), "No floating corner at " + k[0] + "," + k[1]);
+            for (int x = b.minX() - 1; x <= b.maxX() + 1; x += b.getXSpan() + 1) for (int z = b.minZ(); z <= b.maxZ(); z++) {
+                check(level.getBlockState(new BlockPos(x, y + 1, z)).isAir() && level.getBlockState(new BlockPos(x, y + 2, z)).isAir(), "Walls not buried at " + x + "," + z);
+                check(!level.getBlockState(new BlockPos(x, y, z)).canBeReplaced(), "Margin level with the floor at " + x + "," + z);
+            }
+            BlockPos door = bp.doorWorld(p.origin, p.rotation), out = door.relative(bp.front(p.rotation));
+            check(level.getBlockState(door).getBlock() instanceof net.minecraft.world.level.block.DoorBlock, "Door stands at " + door);
+            check(level.getBlockState(out).isAir() && level.getBlockState(out.above()).isAir() && !level.getBlockState(out.below()).canBeReplaced(), "Door opens onto a level apron at " + out);
+            check(level.getBlockState(new BlockPos(b.maxX() + 2, y + 1, (b.minZ() + b.maxZ()) / 2)).is(Construction.foundationBlock(s).getBlock()), "Retaining wall on the high side");
+            // a lane over the ramp and a 4-block cliff
+            check(Planning.road(level, s, new BlockPos(1390, 0, 1389), new BlockPos(1414, 0, 1389), 1, "cobblestone") == null, "Lane over the cliff accepted");
+            buildQueued(level, s);
+            int prev = Integer.MIN_VALUE;
+            for (int x = 1390; x <= 1414; x++) {
+                int top = Construction.ground(level, x, 1389);
+                check(level.getBlockState(new BlockPos(x, top, 1389)).is(Blocks.COBBLESTONE), "Lane paved at " + x);
+                if (prev != Integer.MIN_VALUE) check(Math.abs(top - prev) <= 1, "Lane steps one block at most at " + x + ": " + prev + " -> " + top);
+                prev = top;
+            }
+            LivingRealms.LOG.info("Slope lot: relief {}, floor {}, {} dug, {} built up", relief, y, dug, built);
+        } finally { m.remove(s); }
     }
 
     // ------------------------------------------------------------------ a planned town in the world

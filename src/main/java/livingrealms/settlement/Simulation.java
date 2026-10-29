@@ -752,6 +752,7 @@ public final class Simulation {
                 p.paid = 0;
                 p.status = "";
                 p.foundation = new long[0];
+                p.cut = new long[0];
                 s.dirty = true;
             }
         }
@@ -789,6 +790,7 @@ public final class Simulation {
         p.builder = null;
         p.status = "";
         p.foundation = new long[0];
+        p.cut = new long[0];
         s.dirty = true;
     }
 

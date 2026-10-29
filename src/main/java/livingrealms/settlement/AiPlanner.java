@@ -183,7 +183,8 @@ public final class AiPlanner {
             int[] hs = {Construction.ground(level, x, z), Construction.ground(level, x + w - 1, z), Construction.ground(level, x, z + d - 1),
                     Construction.ground(level, x + w - 1, z + d - 1), Construction.ground(level, x + w / 2, z + d / 2)};
             int min = Arrays.stream(hs).min().getAsInt(), max = Arrays.stream(hs).max().getAsInt();
-            if (max - min > (w * d > 120 ? 3 : 2)) continue;
+            // the lot is levelled when it is built (cut and fill): moderate slopes will do
+            if (max - min > TownPlan.RELIEF - 1) continue;
             Arrays.sort(hs);
             int y = hs[2];
             if (!level.getBlockState(new BlockPos(x + w / 2, y, z + d / 2)).getFluidState().isEmpty()) continue;

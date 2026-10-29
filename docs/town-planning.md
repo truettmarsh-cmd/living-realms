@@ -12,7 +12,7 @@ How automatic building lays out a town: `settlement/plan` (`TownPlan`, `Street`,
 | High streets | 5 | North, south, east and west from the middle of each market-place side to the edge |
 | Ring streets | 3 | Square rings 34, 62, 94 and 128 blocks out; each side leaves its high street both ways |
 
-A street opens as far as its centre line lies two blocks inside `Settlement.radius()`. Paving material rises with the tier (`RoadClass.material`): path and gravel for camps, cobblestone and stone bricks for towns and cities, gravel in deserts.
+A street opens as far as its centre line lies two blocks inside `Settlement.radius()`, and only as far as the ground lets it (`TownPlan.reach`): it stops short of a cliff, of ground so steep that grading it would need more than 6 blocks of cut or fill, of more than 12 columns of deep water (narrower rivers are bridged), and of unloaded ground; a ring street whose high street stops before it branches off is skipped. Builds over the line (gatehouses) and stretches already paved never shorten it. Paving material rises with the tier (`RoadClass.material`): path and gravel for camps, cobblestone and stone bricks for towns and cities, gravel in deserts.
 
 ## Lots
 
@@ -21,9 +21,21 @@ For each building, `TownPlan.place` tries both sides of every open street, every
 - The building is rotated so its front (`Blueprint.front`: the `building_entrance` jigsaw of a village template, else the wall nearest its doors; procedural buildings face +Z) faces the street.
 - Its front wall stands 0 to 3 blocks off the road edge (by trade, with a little jitter), and the lot is sized for the building's largest level so it can be enlarged. `Planning.upgrade` keeps the front wall in place and grows the building backwards and to both sides (`TownPlan.grownOrigin`).
 - The lot must lie inside the town's land, outside the market place and castle ring (±20; only market, tavern, chapel, library and decorations may front the market place, and not in the kingdom's capital), off every street of the skeleton, and clear of every other plot's grown footprint by the trade's side gap.
-- Candidates are scored by district, street class and neighbours, then checked against the ground: loaded, dry, height spread at most 2 (3 for large footprints, 5 for mines, lumber camps, towers and chapels) and free of player builds.
+- Candidates are scored by district, street class and neighbours, then checked against the ground: loaded, dry, free of player builds, and at most 6 blocks of relief across the lot (8 for lumber camps, towers, chapels and the hall; mines, which sink into the ground, 5 without levelling).
 
 The street is then paved from the market place to the lot (`TownPlan.connect`), parents first, so the road network is always connected.
+
+## Hills (`Construction.earthworks`)
+
+A sloping lot is levelled as part of the building project, paid like the foundation (`Plot.cut` is dug first, then `Plot.foundation` built up, then the blueprint):
+
+- The floor goes in at the height of the ground outside the door, as far as at most 4 blocks of cut on the high side and 5 of fill on the low side allow, so the door opens onto the street.
+- Everything natural above the floor is dug out of the footprint and a one-block margin round it (whole trees in it); under the building and on the margin the low side is built up to the floor in the foundation block (cobblestone, sandstone in deserts), so nothing floats and the walls stand on a plinth.
+- One block further out, where the ground rises two or more above the floor, its face becomes a retaining wall of the foundation block.
+- A level apron (3 wide, 5 for wide fronts) runs out of the door and steps a block at a time down or up to the ground toward the street.
+- Streets, roads and other plots are never touched. The Capital Castle levels its own walls and the margin outside them and leaves its courtyard as it is; its four corners may now differ by up to 10.
+
+**Roads** (`Planning.road`) are graded along their length (`Street.grade`: least cut and fill with no step over one block between rows), level across each row, built up on the foundation block or cut into the slope (up to 10 deep), with plank bridges over water rather than dams.
 
 ## Districts (`Zoning`, distances from the centre, R = radius)
 
@@ -45,9 +57,9 @@ Houses lose score within 12 blocks of noisy trades.
 
 ## Other paths
 
-- **Town Hall** goes in the middle of the market place with room to reach level 6; the market place and the first stretch of each high street are paved with it.
+- **Town Hall** goes in the middle of the market place with room to reach level 6, its site levelled like any lot; if even that fails it is nudged up to two blocks toward a more level spot that still fronts the market place. The market place and the first stretch of each high street are paved with it.
 - **Off-screen.** While the town is loaded, `AutoBuild.survey` keeps four 17×17 lots along the streets on file (inner and outer). `away` plans a building on one that suits its district, facing its street, and owes the street until the ground loads.
-- **Fallback.** With no fitting lot, an open site in the building's district is used, its door turned toward the centre, with a lane straight out of the door to the nearest road.
+- **Fallback.** With no fitting lot, an open site in the building's district (at most 5 blocks of relief, levelled the same way) is used, its door turned toward the centre, with a lane straight out of the door to the nearest road.
 - **Manual plans** are unchanged, except that a building may not stand on a paved street (`Planning.checkSite`: "Blocks a street").
 - **AI towns** use the same plan. Existing towns keep everything; new lots fit around their buildings.
 - **Village Expansion** layouts replace the skeleton when present: see [village-expansion.md](village-expansion.md).
@@ -79,8 +91,8 @@ Wall pieces overlap-check by their real columns (a chamfer's box is mostly air),
 
 ## Not yet done
 
-Walls are not built for AI towns, there is no early timber palisade, and a Village Expansion street laid after the wall is fitted does not get a new gate. Tier-up repaving of laid streets, terrain-following (A*) street routes and City Map lot overlays are left for later.
+Walls are not built for AI towns, there is no early timber palisade, and a Village Expansion street laid after the wall is fitted does not get a new gate. Tier-up repaving of laid streets, streets that bend round a hill (A* routes) instead of stopping short, stairs and slabs on graded roads and City Map lot overlays are left for later.
 
 ## Tests
 
-`./gradlew runServer -PcityPlanningTest -PcityPlanningTestDir=<fresh dir>` grows planned towns to City rank on synthetic ground (flat, slope with a hill, a river, a lake) and audits them with `PlanAudit`: hall central and facing south, every building facing its street within 3 blocks of the road, its street paved to its door and joined to the market place, no overlaps (including room to grow), districts kept, nothing in water, the same town every time. It then grows a town in the world and checks doors, roads at every door, street blocking, upgrades, off-screen lots and reload. Every synthetic town is also walled to City rank and checked by `PlanAudit.walls`: each line closed (except deep water and cliffs), every paved high street through an open, paved gatehouse, no piece on a building, street or the castle ring, no lot in a band, the walk never stepping more than one block, the same walls every time. In the world, the old-town wall is queued, paid and built at Village rank and its gates checked block by block. `CityPlanningTour` (`-PcityPlanningTour`) photographs a grown town.
+`./gradlew runServer -PcityPlanningTest -PcityPlanningTestDir=<fresh dir>` grows planned towns to City rank on synthetic ground (flat, slope with a hill, a river, a lake) and audits them with `PlanAudit`: hall central and facing south, every building facing its street within 3 blocks of the road, its street paved to its door and joined to the market place, no overlaps (including room to grow), districts kept, nothing in water, the same town every time. On a 1-in-3 slope the hall still levels the middle and the town fills its streets nearly as well as on the flat; a high street stops short of a 30-block cliff and of a lake, and the ring streets beyond are skipped; `Street.grade` turns a cliff into a ramp and keeps to gentle ground. In the world a cottage on a lot with 4 blocks of relief is accepted, dug out and built up; built, its corners stand on solid ground, its walls are clear, its door opens onto a level apron, the high side has a retaining wall, and a lane over a 4-block cliff steps one block at a time. It then grows a town in the world and checks doors, roads at every door, street blocking, upgrades, off-screen lots and reload. Every synthetic town is also walled to City rank and checked by `PlanAudit.walls`: each line closed (except deep water and cliffs), every paved high street through an open, paved gatehouse, no piece on a building, street or the castle ring, no lot in a band, the walk never stepping more than one block, the same walls every time. In the world, the old-town wall is queued, paid and built at Village rank and its gates checked block by block. `CityPlanningTour` (`-PcityPlanningTour`) photographs a grown town.
