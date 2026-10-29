@@ -34,6 +34,42 @@ public final class Street {
 
     public BoundingBox corridor() { return corridor(0, length); }
 
+    /**
+     * A road surface over a ground profile that never steps more than one block between neighbours, moving as little
+     * earth as it can (least total cut and fill, then the gentlest worst case): a cliff becomes a ramp half cut into the
+     * top and half built out from the bottom, a lone bump or dip is levelled.
+     */
+    public static int[] grade(int[] g) {
+        int n = g.length;
+        if (n == 0) return g;
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+        for (int v : g) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+        lo -= 2; hi += 2;
+        int k = hi - lo + 1;
+        long[] cost = new long[k], next = new long[k];
+        byte[][] from = new byte[n][k];
+        for (int y = 0; y < k; y++) cost[y] = dig(g[0] - lo - y);
+        for (int i = 1; i < n; i++) {
+            for (int y = 0; y < k; y++) {
+                long best = Long.MAX_VALUE; byte b = 0;
+                for (int d = -1; d <= 1; d++) {
+                    int p = y + d;
+                    if (p >= 0 && p < k && cost[p] < best) { best = cost[p]; b = (byte) d; }
+                }
+                next[y] = best + dig(g[i] - lo - y);
+                from[i][y] = b;
+            }
+            long[] t = cost; cost = next; next = t;
+        }
+        int y = 0;
+        for (int j = 1; j < k; j++) if (cost[j] < cost[y]) y = j;
+        int[] h = new int[n];
+        for (int i = n - 1; i >= 0; i--) { h[i] = y + lo; if (i > 0) y += from[i][y]; }
+        return h;
+    }
+
+    private static long dig(int d) { return 64L * Math.abs(d) + (long) d * d; }
+
     /** Along-distance of a column projected onto this street. */
     public int along(int x, int z) {
         return alongX() ? (x - ax) * dir.getStepX() : (z - az) * dir.getStepZ();

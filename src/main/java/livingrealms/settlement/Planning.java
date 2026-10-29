@@ -69,7 +69,12 @@ public final class Planning {
         if (err != null) return err;
         p.id = s.nextId++;
         p.state = Plot.State.BUILDING;
-        p.foundation = level == null ? new long[0] : Construction.foundation(level, bp, o, rot);
+        if (level != null) {
+            // the lot is levelled as part of the project: dug out, built up, an apron at the door
+            Construction.Earthworks works = Construction.earthworks(level, s, t, bp, o, rot);
+            p.foundation = works.fill();
+            p.cut = works.cut();
+        }
         p.unsited = level == null;
         p.priority = t.category == Category.CIVIC ? 10 : 0;
         s.plots.add(p);
@@ -101,7 +106,14 @@ public final class Planning {
         return null;
     }
 
-    /** A road of the given width from a to b following the ground. */
+    /** Most a road digs down into a hillside before it climbs over instead. */
+    static final int ROAD_DIG = 10;
+
+    /**
+     * A road of the given width from a to b following the ground, graded so it never steps more than one block between
+     * neighbouring rows: each row is level across, cut into the ground or built up on the foundation block where the
+     * ground is too steep, with plank bridges over water.
+     */
     @Nullable
     public static String road(ServerLevel level, Settlement s, BlockPos a, BlockPos b, int width, String material) {
         BlockState surface = ROAD_MATERIALS.getOrDefault(material, Blocks.DIRT_PATH.defaultBlockState());
@@ -111,7 +123,8 @@ public final class Planning {
         if (len > 128) return "Too long (128 blocks at most)";
         if (!s.contains(a) || !s.contains(b)) return "Outside the town's land";
         width = Math.max(1, Math.min(7, width));
-        Map<Long, Integer> cols = new LinkedHashMap<>();
+        // column -> {ground, row}
+        Map<Long, int[]> cols = new LinkedHashMap<>();
         double nx = -dz / Math.hypot(dx, dz), nz = dx / Math.hypot(dx, dz);
         for (int i = 0; i <= len; i++) {
             double cx = a.getX() + dx * (double) i / len, cz = a.getZ() + dz * (double) i / len;
@@ -120,38 +133,58 @@ public final class Planning {
                 for (double sub = 0; sub <= 0.5; sub += 0.5) {
                     int x = (int) Math.floor(cx + nx * (off + sub) + 0.5), z = (int) Math.floor(cz + nz * (off + sub) + 0.5);
                     if (insideBuilding(s, x, z)) continue;
-                    cols.computeIfAbsent(BlockPos.asLong(x, 0, z), k -> Construction.ground(level, x, z));
+                    int row = i;
+                    cols.computeIfAbsent(BlockPos.asLong(x, 0, z), k -> new int[]{Construction.soil(level, x, z), row});
                 }
             }
         }
         // keep off generated villages' houses and anything else built
         cols.entrySet().removeIf(e -> {
-            BlockState g = level.getBlockState(new BlockPos(BlockPos.getX(e.getKey()), e.getValue(), BlockPos.getZ(e.getKey())));
+            BlockState g = level.getBlockState(new BlockPos(BlockPos.getX(e.getKey()), e.getValue()[0], BlockPos.getZ(e.getKey())));
             return !Construction.natural(g) && !ROAD_MATERIALS.containsValue(g) && !g.is(Blocks.SPRUCE_PLANKS);
         });
         if (cols.isEmpty()) return "Nothing to pave";
-        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        // the ground along the road (each row's middle height), then graded
+        List<List<Integer>> rows = new ArrayList<>();
+        for (int i = 0; i <= len; i++) rows.add(new ArrayList<>());
+        for (int[] v : cols.values()) rows.get(v[1]).add(v[0]);
+        int[] g = new int[len + 1];
+        int last = Integer.MIN_VALUE;
+        for (int i = 0; i <= len; i++) {
+            List<Integer> r = rows.get(i);
+            if (r.isEmpty()) { g[i] = last; continue; }
+            r.sort(null);
+            g[i] = last = r.get(r.size() / 2);
+        }
+        for (int i = len; i >= 0; i--) if (g[i] == Integer.MIN_VALUE) g[i] = i < len ? g[i + 1] : last;
+        int[] grade = livingrealms.settlement.plan.Street.grade(g);
+        BlockState bank = Construction.foundationBlock(s), air = Blocks.AIR.defaultBlockState();
+        List<int[]> abs = new ArrayList<>();
+        List<BlockState> states = new ArrayList<>();
         for (var e : cols.entrySet()) {
-            int x = BlockPos.getX(e.getKey()), z = BlockPos.getZ(e.getKey()), y = e.getValue();
-            minX = Math.min(minX, x); maxX = Math.max(maxX, x);
-            minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
-            minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+            int x = BlockPos.getX(e.getKey()), z = BlockPos.getZ(e.getKey()), gy = e.getValue()[0], h = grade[e.getValue()[1]];
+            boolean wet = !level.getBlockState(new BlockPos(x, gy, z)).getFluidState().isEmpty();
+            // water crossings become plank bridges, never dams
+            if (wet) h = Math.max(h, gy);
+            else for (int y = gy + 1; y < h; y++) { abs.add(new int[]{x, y, z}); states.add(bank); }
+            abs.add(new int[]{x, h, z});
+            states.add(wet ? Blocks.SPRUCE_PLANKS.defaultBlockState() : surface);
+            int top = Math.max(h + 3, Math.min(gy + 1, h + ROAD_DIG));
+            for (int y = h + 1; y <= top; y++) { abs.add(new int[]{x, y, z}); states.add(air); }
+        }
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (int[] q : abs) {
+            minX = Math.min(minX, q[0]); maxX = Math.max(maxX, q[0]);
+            minY = Math.min(minY, q[1]); maxY = Math.max(maxY, q[1]);
+            minZ = Math.min(minZ, q[2]); maxZ = Math.max(maxZ, q[2]);
         }
         List<Blueprint.Entry> entries = new ArrayList<>();
-        for (var e : cols.entrySet()) {
-            int x = BlockPos.getX(e.getKey()) - minX, z = BlockPos.getZ(e.getKey()) - minZ, y = e.getValue() - minY;
-            BlockPos ground = new BlockPos(x + minX, e.getValue(), z + minZ);
-            BlockState below = level.getBlockState(ground);
-            // water crossings become plank bridges
-            BlockState here = below.getFluidState().isEmpty() ? surface : Blocks.SPRUCE_PLANKS.defaultBlockState();
-            entries.add(new Blueprint.Entry(x, y, z, here));
-            for (int up = 1; up <= 3; up++) entries.add(new Blueprint.Entry(x, y + up, z, Blocks.AIR.defaultBlockState()));
-        }
+        for (int i = 0; i < abs.size(); i++) entries.add(new Blueprint.Entry(abs.get(i)[0] - minX, abs.get(i)[1] - minY, abs.get(i)[2] - minZ, states.get(i)));
         Plot p = new Plot();
         p.id = s.nextId;
         p.typeId = "road";
         p.blueprintKey = "road:" + s.id + ":" + p.id;
-        Blueprint bp = new Blueprint(p.blueprintKey, maxX - minX + 1, maxY - minY + 4, maxZ - minZ + 1, entries);
+        Blueprint bp = new Blueprint(p.blueprintKey, maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1, entries);
         BuildingCatalog.putBlueprint(bp);
         p.customBlueprint = bp.toTag();
         p.origin = new BlockPos(minX, minY, minZ);
@@ -202,7 +235,21 @@ public final class Planning {
         return false;
     }
 
-    static boolean insideBuilding(Settlement s, int x, int z) {
+    /** Columns paved by road projects overlapping the area. */
+    public static java.util.Set<Long> roadColumns(Settlement s, BoundingBox area) {
+        java.util.Set<Long> out = new java.util.HashSet<>();
+        for (Plot o : s.plots) {
+            if (!o.typeId.equals("road") || o.state == Plot.State.DEMOLISHING) continue;
+            BoundingBox rb = o.box();
+            if (rb.maxX() < area.minX() || rb.minX() > area.maxX() || rb.maxZ() < area.minZ() || rb.minZ() > area.maxZ()) continue;
+            Blueprint bp = o.blueprint();
+            if (bp == null) continue;
+            for (int i = 0; i < bp.size(); i++) if (!bp.state(i).isAir()) out.add(BlockPos.asLong(o.origin.getX() + bp.lx(i), 0, o.origin.getZ() + bp.lz(i)));
+        }
+        return out;
+    }
+
+    public static boolean insideBuilding(Settlement s, int x, int z) {
         for (Plot o : s.plots) {
             if (o.typeId.equals("road")) continue;
             BoundingBox b = o.box();
@@ -234,13 +281,16 @@ public final class Planning {
             probe.rotation = p.rotation;
             String err = checkSite(s, probe, p);
             if (err != null) return err;
+            BoundingBox standing = p.box();
             p.origin = grown;
             p.blueprintKey = key;
             p.automatic = false;
             p.state = Plot.State.UPGRADING;
             p.placed = 0;
             p.paid = 0;
-            p.foundation = Construction.foundation(level, bp, p.origin, p.rotation);
+            Construction.Earthworks works = Construction.earthworks(level, s, t, bp, p.origin, p.rotation, standing);
+            p.foundation = works.fill();
+            p.cut = works.cut();
             s.log("Builders are enlarging the " + t.name + " to level " + (p.level + 1));
         } else {
             Map<net.minecraft.world.item.Item, Integer> fee = renovationFee(p.level);

@@ -9,6 +9,8 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
 /** Capital projects use ordinary paid villager construction, never instant placement. */
 public final class CapitalCastles {
     public static final String ID = "livingrealms:capital_castle";
+    /** Most the four corners of the central district may differ: the castle's earthworks level the rest. */
+    public static final int LEVEL = 10;
 
     public static void tick(ServerLevel level, Settlement s) {
         if (!s.capital || s.tier != Tier.CAPITAL || !level.hasChunkAt(s.center)) return;
@@ -35,8 +37,9 @@ public final class CapitalCastles {
         int[] heights = {Construction.ground(level, x, z), Construction.ground(level, x+40,z),
                 Construction.ground(level,x,z+40), Construction.ground(level,x+40,z+40)};
         java.util.Arrays.sort(heights);
-        if (heights[3] - heights[0] > 4) return "Level the four corners of the central 41 x 41 district";
-        BlockPos origin = new BlockPos(x, heights[2], z);
+        // the walls are levelled as they are built (dug into the high side, on a foundation on the low side)
+        if (heights[3] - heights[0] > LEVEL) return "Level the four corners of the central 41 x 41 district";
+        BlockPos origin = new BlockPos(x, (heights[1] + heights[2] + 1) / 2, z);
         why = site(level, s, t, origin, Rotation.NONE);
         if (why != null) return why;
         why = Planning.plan(level, s, t, origin, Rotation.NONE, s.isAi());

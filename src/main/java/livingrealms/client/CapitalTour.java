@@ -244,15 +244,35 @@ public final class CapitalTour {
             int y = Construction.ground(level, s.center.getX() + x, s.center.getZ() + z);
             lo = Math.min(lo, y); hi = Math.max(hi, y);
         }
-        int gaps = 0, pieces = 0, raised = 0, buildings = 0;
+        int gaps = 0, pieces = 0, buildings = 0, onStreets = 0;
+        var plan = s.plan();
         for (Plot p : s.plots) {
             if (Walls.isWallPiece(p)) { pieces++; if (p.blueprint() != null && p.blueprint().size() <= 1) gaps++; continue; }
             if (p.typeId.equals("road") || p.state != Plot.State.BUILT) continue;
             buildings++;
-            if (p.foundation != null && java.util.Arrays.stream(p.foundation).sum() > 0) raised++;
+            if (plan.frontage.containsKey(p.id)) onStreets++;
         }
-        LOG.info("Capital tour terrain: ground {} to {} within the city wall; {} buildings, {} on built-up foundations; {} wall pieces, {} left open for water or cliff; {}",
-                lo, hi, buildings, raised, pieces, gaps, Walls.status(s));
+        // steps of more than one block between neighbouring paved road columns
+        int cliffs = 0, roadCols = 0;
+        java.util.Map<Long, Integer> road = new java.util.HashMap<>();
+        for (Plot p : s.plots) {
+            if (!p.typeId.equals("road") || p.blueprint() == null) continue;
+            Blueprint bp = p.blueprint();
+            for (int i = 0; i < bp.size(); i++) if (!bp.state(i).isAir()) {
+                BlockPos w = bp.worldPos(i, p.origin, p.rotation);
+                road.merge(BlockPos.asLong(w.getX(), 0, w.getZ()), w.getY(), Math::max);
+            }
+        }
+        for (var e : road.entrySet()) {
+            int x = BlockPos.getX(e.getKey()), z = BlockPos.getZ(e.getKey());
+            roadCols++;
+            for (int[] d : new int[][]{{1, 0}, {0, 1}}) {
+                Integer o = road.get(BlockPos.asLong(x + d[0], 0, z + d[1]));
+                if (o != null && Math.abs(o - e.getValue()) > 1) { cliffs++; break; }
+            }
+        }
+        LOG.info("Capital tour terrain: ground {} to {} within the city wall; {} buildings, {} on its streets, {} off-street; lots refused {} steep, {} wet, {} built on; {} levelled; road columns {}, {} with a step over 1; {} wall pieces, {} left open for water or cliff; {}",
+                lo, hi, buildings, onStreets, buildings - onStreets, plan.refusedSteep, plan.refusedWet, plan.refusedBlocked, plan.levelled, roadCols, cliffs, pieces, gaps, Walls.status(s));
     }
 
     /** Window size (in framebuffer pixels) and GUI scale for each pass, and which pages each pass shows. */

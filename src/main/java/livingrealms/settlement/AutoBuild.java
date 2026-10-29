@@ -52,7 +52,7 @@ public final class AutoBuild {
             if (++sitesTried > 8) break;
             TownPlan.Placement at = plan.place(terrain, s, t);
             if (at == null) continue;
-            long[] foundation = Construction.foundation(level, bp, at.origin().below(t.sink), at.rot());
+            long[] foundation = Construction.earthworks(level, s, t, bp, at.origin().below(t.sink), at.rot()).fill();
             if (!affordable(s, bp, foundation)) continue;
             if (Planning.plan(level, s, t, at.origin(), at.rot(), false) == null) {
                 Plot p = s.plots.get(s.plots.size() - 1);
@@ -78,7 +78,7 @@ public final class AutoBuild {
                 Rotation rot = AiPlanner.towardCentre(s, bp, at);
                 BlockPos origin = at.below(t.sink);
                 if (!clear(level, origin, bp, rot)) continue;
-                long[] foundation = Construction.foundation(level, bp, origin, rot);
+                long[] foundation = Construction.earthworks(level, s, t, bp, origin, rot).fill();
                 if (!affordable(s, bp, foundation)) continue;
                 if (Planning.plan(level, s, t, at, rot, false) == null) {
                     Plot p = s.plots.get(s.plots.size() - 1);
@@ -189,7 +189,7 @@ public final class AutoBuild {
                 BlockPos at = new BlockPos(x, Construction.ground(level, x + w / 2, z + d / 2), z);
                 BlockPos origin = at.below(t.sink);
                 if (!clear(level, origin, bp, fit.rot())) continue;
-                long[] foundation = Construction.foundation(level, bp, origin, fit.rot());
+                long[] foundation = Construction.earthworks(level, s, t, bp, origin, fit.rot()).fill();
                 if (!affordable(s, bp, foundation) || Planning.plan(level, s, t, at, fit.rot(), false) != null) continue;
                 Plot p = s.plots.get(s.plots.size() - 1);
                 p.automatic = true;
@@ -344,7 +344,8 @@ public final class AutoBuild {
         return bill.entrySet().stream().allMatch(e -> s.stock.count(e.getKey()) >= e.getValue());
     }
 
-    /** Check every block, including containers and upper floors; do not flatten player-built structures. */
+    /** Check every block, including containers and upper floors; do not flatten player-built structures. Bare ground (soil,
+     * rock, sand, snow) in the bottom layers is fine: the lot is dug out to level it ({@link TownPlan#CUT}). */
     public static boolean clear(ServerLevel level, BlockPos origin, Blueprint bp, Rotation rot) {
         return clearBox(level, origin, bp.width(rot), bp.depth(rot), bp.sy);
     }
@@ -354,7 +355,8 @@ public final class AutoBuild {
             BlockPos pos = origin.offset(x, y, z);
             var state = level.getBlockState(pos);
             if (state.hasBlockEntity() || state.is(net.minecraft.tags.BlockTags.LOGS)) return false;
-            if (y > 0 && !state.isAir() && !state.canBeReplaced() && !state.is(net.minecraft.tags.BlockTags.LEAVES)) return false;
+            if (y > 0 && !state.isAir() && !state.canBeReplaced() && !state.is(net.minecraft.tags.BlockTags.LEAVES)
+                    && (y > TownPlan.CUT + 2 || !Construction.ground(state))) return false;
             if (!Construction.natural(state) && !(y == 0 && Planning.ROAD_MATERIALS.containsValue(state))) return false;
         }
         return true;

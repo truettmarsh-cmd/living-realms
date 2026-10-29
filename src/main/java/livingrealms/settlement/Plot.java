@@ -22,11 +22,13 @@ public final class Plot {
     public BlockPos origin;
     public Rotation rotation = Rotation.NONE;
     public State state = State.PLANNED;
-    /** Build steps done: foundation blocks first, then the blueprint. */
+    /** Build steps done: earthworks (cut, then foundation blocks) first, then the blueprint. */
     public int placed;
     /** Steps paid for while nobody was near; placed as soon as the area loads. */
     public int paid;
     public long[] foundation = new long[0];
+    /** Ground dug out of the lot to level it, before the foundation: cut first, then built up, then the blueprint. */
+    public long[] cut = new long[0];
     public int priority;
     public boolean ai;
     public boolean automatic;
@@ -51,7 +53,7 @@ public final class Plot {
 
     public int totalSteps() {
         Blueprint b = blueprint();
-        return foundation.length + (b == null ? 0 : b.size());
+        return cut.length + foundation.length + (b == null ? 0 : b.size());
     }
 
     public boolean active() {
@@ -122,6 +124,7 @@ public final class Plot {
         t.putInt("placed", placed);
         t.putInt("paid", paid);
         t.putLongArray("found", foundation);
+        if (cut.length > 0) t.putLongArray("cut", cut);
         t.putInt("prio", priority);
         t.putBoolean("ai", ai);
         t.putBoolean("automatic", automatic);
@@ -143,6 +146,7 @@ public final class Plot {
         p.placed = t.getInt("placed");
         p.paid = t.getInt("paid");
         p.foundation = t.getLongArray("found");
+        p.cut = t.getLongArray("cut");
         p.priority = t.getInt("prio");
         p.ai = t.getBoolean("ai");
         p.automatic = t.getBoolean("automatic");
@@ -156,9 +160,10 @@ public final class Plot {
     public CompoundTag toClient() {
         CompoundTag t = save();
         t.remove("found");
+        t.remove("cut");
         t.remove("custom");
         t.putInt("total", totalSteps());
-        t.putInt("foundN", foundation.length);
+        t.putInt("foundN", cut.length + foundation.length);
         t.putString("status", status);
         return t;
     }

@@ -3,6 +3,7 @@ package livingrealms.building;
 import livingrealms.settlement.Plot;
 import livingrealms.settlement.Settlement;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
@@ -36,14 +37,15 @@ public final class Construction {
     public static Step step(Settlement s, Plot p, int i) {
         Blueprint bp = p.blueprint();
         if (bp == null) return null;
-        int f = p.foundation.length;
+        int c = p.cut.length, f = c + p.foundation.length;
         if (p.state == Plot.State.DEMOLISHING) {
             // tear down from the top: walk the blueprint backwards, skipping clearing steps
             int j = bp.size() - 1 - i;
             if (j < 0) return null;
             return new Step(bp.worldPos(j, p.origin, p.rotation), Blocks.AIR.defaultBlockState());
         }
-        if (i < f) return new Step(BlockPos.of(p.foundation[i]), foundationBlock(s));
+        if (i < c) return new Step(BlockPos.of(p.cut[i]), Blocks.AIR.defaultBlockState());
+        if (i < f) return new Step(BlockPos.of(p.foundation[i - c]), foundationBlock(s));
         int j = i - f;
         if (j >= bp.size()) return null;
         return new Step(bp.worldPos(j, p.origin, p.rotation), bp.worldState(j, p.rotation));
@@ -149,12 +151,15 @@ public final class Construction {
     public static void site(ServerLevel level, Settlement s, Plot p) {
         if (!p.unsited || !loaded(level, p)) return;
         Blueprint bp = p.blueprint();
-        long[] f = bp == null ? new long[0] : foundation(level, bp, p.origin, p.rotation);
+        Earthworks e = bp == null ? new Earthworks(new long[0], new long[0]) : earthworks(level, s, BuildingCatalog.get(p.typeId), bp, p.origin, p.rotation);
+        long[] f = e.fill();
         Item base = Blueprint.costItem(foundationBlock(s));
         if (base != null && !s.isAi()) s.stock.takeUpTo(base, f.length);
         p.foundation = f;
-        if (p.placed > 0) p.placed += f.length;
-        p.paid += f.length;
+        p.cut = e.cut();
+        int n = f.length + e.cut().length;
+        if (p.placed > 0) p.placed += n;
+        p.paid += n;
         p.unsited = false;
     }
 
@@ -216,6 +221,142 @@ public final class Construction {
         long[] arr = new long[out.size()];
         for (int i = 0; i < arr.length; i++) arr[i] = out.get(i);
         return arr;
+    }
+
+    /** Dug out (air) and built up (foundation block) to level a lot, in building order. */
+    public record Earthworks(long[] cut, long[] fill) {}
+
+    /** How far above its floor a building's lot and margin are dug out (whole trees in the margin go). */
+    static final int DIG = 6;
+
+    /**
+     * Levels a building's lot for the floor at {@code origin}: the foundation under it; everything natural above the
+     * floor dug out of its footprint and a one-block margin; a plinth of the foundation block on that margin where the
+     * ground is lower; a retaining wall of it one further out where the ground rises behind; and a level apron at the door
+     * that steps a block at a time down (or up) to the ground toward the street. Streets, roads and other plots are left
+     * alone. Buildings sunk into the ground (mines) and wall pieces only get the foundation. The Capital Castle keeps its
+     * courtyard as it is: only its own walls and the margin outside them are levelled.
+     */
+    public static Earthworks earthworks(ServerLevel level, Settlement s, @Nullable BuildingType t, Blueprint bp, BlockPos origin, Rotation rot) {
+        return earthworks(level, s, t, bp, origin, rot, null);
+    }
+
+    /** With {@code standing}, the ground a building being enlarged already stands on is left as it is. */
+    public static Earthworks earthworks(ServerLevel level, Settlement s, @Nullable BuildingType t, Blueprint bp, BlockPos origin, Rotation rot, @Nullable BoundingBox standing) {
+        long[] base = foundation(level, bp, origin, rot);
+        if (t == null || t.sink > 0 || t.category == Category.WALL || t.category == Category.ROAD) return new Earthworks(new long[0], base);
+        boolean castle = t.id.equals(livingrealms.settlement.CapitalCastles.ID);
+        int y = origin.getY(), w = bp.width(rot), d = bp.depth(rot);
+        BoundingBox box = new BoundingBox(origin.getX(), y, origin.getZ(), origin.getX() + w - 1, y, origin.getZ() + d - 1);
+        Set<Long> roads = livingrealms.settlement.Planning.roadColumns(s, box.inflatedBy(3));
+        // Village Expansion towns keep to their own streets, not our skeleton
+        boolean skeleton = !(livingrealms.settlement.Realms.on() && !s.layout.isEmpty());
+        java.util.function.BiPredicate<Integer, Integer> free = (x, z) -> !roads.contains(BlockPos.asLong(x, 0, z))
+                && !(skeleton && s.plan().onStreet(new BoundingBox(x, 0, z, x, 0, z), 0)) && !livingrealms.settlement.Planning.insideBuilding(s, x, z);
+        Set<Long> cut = new HashSet<>(), fill = new HashSet<>(), apron = new HashSet<>();
+        for (long l : base) fill.add(l);
+        // footprint: the castle's own wall columns, else the whole box
+        Set<Long> foot = new HashSet<>();
+        if (castle) { for (int i = 0; i < bp.size(); i++) if (!bp.state(i).isAir()) { BlockPos q = bp.worldPos(i, origin, rot); foot.add(BlockPos.asLong(q.getX(), 0, q.getZ())); } }
+        else for (int x = box.minX(); x <= box.maxX(); x++) for (int z = box.minZ(); z <= box.maxZ(); z++) foot.add(BlockPos.asLong(x, 0, z));
+        // (a building's box is levelled right through: some leave the ground bare between their walls and their edge)
+        Set<Long> floored = new HashSet<>();
+        for (int i = 0; i < bp.size(); i++) if (bp.ly(i) == 0 && !bp.state(i).isAir()) { BlockPos q = bp.worldPos(i, origin, rot); floored.add(BlockPos.asLong(q.getX(), 0, q.getZ())); }
+        for (long c : foot) {
+            int x = BlockPos.getX(c), z = BlockPos.getZ(c);
+            if (standing != null && standing.isInside(x, standing.minY(), z)) continue;
+            if (castle || floored.contains(c)) dig(level, x, z, y + 1, cut); else level(level, x, z, y, cut, fill);
+        }
+        // the apron: level with the floor outside the door, then a block at a time toward the ground
+        Direction front = bp.front(rot);
+        BlockPos door = bp.doorWorld(origin, rot);
+        int floor = door.getY() - 1, half = (front.getAxis() == Direction.Axis.Z ? w : d) >= 13 ? 2 : 1;
+        Direction lat = front.getClockWise();
+        int ex = switch (front) { case WEST -> box.minX(); case EAST -> box.maxX(); default -> door.getX(); };
+        int ez = switch (front) { case NORTH -> box.minZ(); case SOUTH -> box.maxZ(); default -> door.getZ(); };
+        int h = floor;
+        apronLoop:
+        for (int k = 1; k <= 8; k++) {
+            int cx = ex + front.getStepX() * k, cz = ez + front.getStepZ() * k;
+            if (!free.test(cx, cz)) break;
+            int g = soil(level, cx, cz);
+            if (k >= 2) { if (Math.abs(g - h) <= 1) break; h += Integer.signum(g - h); }
+            for (int l = -half; l <= half; l++) {
+                int x = cx + lat.getStepX() * l, z = cz + lat.getStepZ() * l;
+                if (!free.test(x, z)) { if (l == 0) break apronLoop; continue; }
+                apron.add(BlockPos.asLong(x, 0, z));
+                level(level, x, z, h, cut, fill);
+            }
+        }
+        // the margin: dug or built up to the floor; a retaining wall where the ground rises beyond it
+        for (int x = box.minX() - 2; x <= box.maxX() + 2; x++) for (int z = box.minZ() - 2; z <= box.maxZ() + 2; z++) {
+            if (box.isInside(x, y, z)) continue;
+            long c = BlockPos.asLong(x, 0, z);
+            if (apron.contains(c) || !free.test(x, z)) continue;
+            boolean inner = x >= box.minX() - 1 && x <= box.maxX() + 1 && z >= box.minZ() - 1 && z <= box.maxZ() + 1;
+            if (inner) { level(level, x, z, y, cut, fill); continue; }
+            int g = soil(level, x, z);
+            if (g >= y + 2) for (int yy = y + 1; yy <= Math.min(g, y + DIG); yy++) {
+                BlockState st = level.getBlockState(new BlockPos(x, yy, z));
+                if (ground(st) && !st.isAir() && !st.canBeReplaced() && st.getFluidState().isEmpty()) fill.add(BlockPos.asLong(x, yy, z));
+            }
+        }
+        fill.removeAll(cut);
+        return new Earthworks(sorted(cut, false), sorted(fill, true));
+    }
+
+    /** A column dug out above {@code y} or built up to it with the foundation block (at most 12 deep). */
+    static void level(ServerLevel level, int x, int z, int y, Set<Long> cut, Set<Long> fill) {
+        int g = soil(level, x, z);
+        if (g > y || level.getBlockState(new BlockPos(x, g + 1, z)).is(BlockTags.LOGS)) dig(level, x, z, y + 1, cut);
+        for (int yy = Math.max(g + 1, y - 12); yy <= y; yy++) {
+            BlockState st = level.getBlockState(new BlockPos(x, yy, z));
+            if (st.canBeReplaced() || st.is(BlockTags.LEAVES) || st.getBlock() instanceof LiquidBlock) fill.add(BlockPos.asLong(x, yy, z));
+        }
+    }
+
+    /** Bare ground from {@code from} up, {@link #DIG} high, and the whole trunk of a tree (logs that end in leaves). */
+    static void dig(ServerLevel level, int x, int z, int from, Set<Long> cut) {
+        int top = ground(level, x, z) + 1, to = Math.min(top, from + DIG - 1);
+        boolean tree = false;
+        for (int yy = from; yy <= top + 1 && !tree; yy++) {
+            if (!level.getBlockState(new BlockPos(x, yy, z)).is(BlockTags.LOGS)) continue;
+            int up = yy;
+            while (level.getBlockState(new BlockPos(x, up, z)).is(BlockTags.LOGS)) up++;
+            tree = level.getBlockState(new BlockPos(x, up, z)).is(BlockTags.LEAVES);
+            if (!tree) return;
+        }
+        if (tree) to = top;
+        for (int yy = from; yy <= to; yy++) {
+            BlockState st = level.getBlockState(new BlockPos(x, yy, z));
+            if (!st.isAir() && st.getFluidState().isEmpty() && !st.hasBlockEntity() && (ground(st) || tree && st.is(BlockTags.LOGS))) cut.add(BlockPos.asLong(x, yy, z));
+        }
+    }
+
+    /** Bare ground that may be dug away or faced to level a lot: soil, rock, sand, gravel, snow and plants, never what
+     * anyone built (village houses use sandstone, terracotta, ice and logs, so those stay). */
+    public static boolean ground(BlockState s) {
+        if (s.canBeReplaced() || s.getBlock() instanceof BushBlock || s.is(BlockTags.LEAVES)) return true;
+        return s.is(BlockTags.DIRT) || s.is(BlockTags.BASE_STONE_OVERWORLD) || s.is(BlockTags.SAND) || s.is(Blocks.GRAVEL) || s.is(Blocks.CLAY)
+                || s.is(BlockTags.SNOW) || s.is(Blocks.SNOW_BLOCK);
+    }
+
+    /** Top of the ground itself at x,z: below any tree, plants or snow. */
+    public static int soil(ServerLevel level, int x, int z) {
+        int y = ground(level, x, z);
+        while (y > level.getMinBuildHeight()) {
+            BlockState st = level.getBlockState(new BlockPos(x, y, z));
+            if (!(st.isAir() || st.is(BlockTags.LOGS) || st.is(BlockTags.LEAVES) || st.canBeReplaced() && st.getFluidState().isEmpty())) break;
+            y--;
+        }
+        return y;
+    }
+
+    /** Positions ordered bottom-up (each block has something under it) or top-down (nothing left hanging over a dig). */
+    static long[] sorted(Set<Long> set, boolean up) {
+        long[] a = set.stream().sorted((p, q) -> up ? Integer.compare(BlockPos.getY(p), BlockPos.getY(q)) : Integer.compare(BlockPos.getY(q), BlockPos.getY(p)))
+                .mapToLong(Long::longValue).toArray();
+        return a;
     }
 
     /** Ground height (y of the top solid block) at x,z. */

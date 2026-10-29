@@ -33,6 +33,11 @@ public final class TownPlan {
     public static final int[] RINGS = {34, 62, 94, 128};
     /** The hall's own precinct inside the market place. */
     public static final int PRECINCT = 12;
+    /** Levelling a lot: at most this much dug out on the high side and built up on the low side, and this much relief
+     * across the lot (more for hillside trades and the hall, which may be nudged a little to find it). */
+    public static final int CUT = 4, FILL = 5, RELIEF = 6, HILLSIDE_RELIEF = 8, HALL_RELIEF = 8, HALL_NUDGE = 2;
+    /** A street stops short of ground that would need more than this much cut or fill, or of more deep water than this. */
+    public static final int STREET_EARTH = 6, STREET_WET = 12;
 
     public BlockPos center;
     public long seed;
@@ -49,6 +54,8 @@ public final class TownPlan {
     public transient String wallBlocked = "";
     /** Which street each automatically placed plot fronts, by plot id. */
     public final Map<Integer, Integer> frontage = new HashMap<>();
+    /** Lots turned down for the ground since loading (steep, wet, built on) and lots taken that had to be levelled (not saved). */
+    public transient int refusedSteep, refusedWet, refusedBlocked, levelled;
 
     public record Site(BlockPos corner, int size, Direction front, int street, int along) {}
 
@@ -198,8 +205,9 @@ public final class TownPlan {
         }
         boolean capitalRing = s.capital;
         List<Candidate> cands = new ArrayList<>();
+        Map<Integer, Integer> reach = new HashMap<>();
         for (Street st : streets) {
-            int open = open(st, radius);
+            int open = reach(terrain, st, radius, reach);
             if (open < 0) continue;
             if (st.cls == RoadClass.PLAZA && (capitalRing || !(t.category == Category.MARKET || t.category == Category.TAVERN
                     || t.category == Category.CHAPEL || t.category == Category.LIBRARY || t.category == Category.DECOR))) continue;
@@ -250,19 +258,31 @@ public final class TownPlan {
 
     private record Candidate(Street st, Direction side, int a, Rotation rot, BoundingBox lot, BoundingBox first, double score) {}
 
-    /** Town hall: in the middle of the market place, facing south down the high street, room left to grow. */
+    /**
+     * Town hall: in the middle of the market place, facing south down the high street, room left to grow. On uneven
+     * ground the site is levelled; failing that it shifts a block or two toward the most level spot that still fronts
+     * the market place.
+     */
     @Nullable
     private Placement hall(Terrain terrain, Settlement s, BuildingType t, Blueprint bp) {
         Rotation rot = bp.facing(Direction.SOUTH);
         Blueprint max = biggest(t, s.style);
         int wm = max.width(rot), dm = max.depth(rot), w = bp.width(rot), d = bp.depth(rot);
-        int x0 = center.getX() - wm / 2, z0 = center.getZ() - dm / 2;
-        BoundingBox b1 = new BoundingBox(x0 + (wm - w) / 2, 0, z0 + dm - d, x0 + (wm - w) / 2 + w - 1, 0, z0 + dm - 1);
-        for (Plot p : s.plots)
-            if (!p.typeId.equals("road") && p.state != Plot.State.DEMOLISHING && (Walls.isWallPiece(p) ? p.covers(new BoundingBox(x0 - 1, 0, z0 - 1, x0 + wm, 0, z0 + dm))
-                    : grownBox(s, p).intersects(x0 - 1, z0 - 1, x0 + wm, z0 + dm))) return null;
-        BlockPos at = ground(terrain, t, bp, rot, b1);
-        return at == null ? null : new Placement(at, rot, 1, PLAZA + 2, Direction.SOUTH);
+        List<int[]> nudges = new ArrayList<>();
+        for (int dx = -HALL_NUDGE; dx <= HALL_NUDGE; dx++) for (int dz = -1; dz <= HALL_NUDGE; dz++) nudges.add(new int[]{dx, dz});
+        nudges.sort(Comparator.comparingInt(n -> n[0] * n[0] + n[1] * n[1]));
+        for (int[] n : nudges) {
+            int x0 = center.getX() - wm / 2 + n[0], z0 = center.getZ() - dm / 2 + n[1];
+            BoundingBox b1 = new BoundingBox(x0 + (wm - w) / 2, 0, z0 + dm - d, x0 + (wm - w) / 2 + w - 1, 0, z0 + dm - 1);
+            boolean taken = false;
+            for (Plot p : s.plots)
+                if (!p.typeId.equals("road") && p.state != Plot.State.DEMOLISHING && (Walls.isWallPiece(p) ? p.covers(new BoundingBox(x0 - 1, 0, z0 - 1, x0 + wm, 0, z0 + dm))
+                        : grownBox(s, p).intersects(x0 - 1, z0 - 1, x0 + wm, z0 + dm))) { taken = true; break; }
+            if (taken) continue;
+            BlockPos at = ground(terrain, t, bp, rot, b1);
+            if (at != null) return new Placement(at, rot, 1, PLAZA + 2, Direction.SOUTH);
+        }
+        return null;
     }
 
     BoundingBox precinct() {
@@ -332,26 +352,77 @@ public final class TownPlan {
         return false;
     }
 
-    /** Fit ground for the level 1 building: loaded, dry, level enough and free of other builds; returns its origin. */
+    /**
+     * Fit ground for the level 1 building: loaded, dry, free of other builds, and level enough to terrace (at most
+     * {@link #CUT} dug out, {@link #FILL} built up). The floor goes in at the level of the ground outside its door as far
+     * as that allows, so the door opens onto the street. Returns its origin.
+     */
     @Nullable
-    static BlockPos ground(Terrain terrain, BuildingType t, Blueprint bp, Rotation rot, BoundingBox b) {
+    public BlockPos ground(Terrain terrain, BuildingType t, Blueprint bp, Rotation rot, BoundingBox b) {
         if (!terrain.loaded(b.minX() - 1, b.minZ() - 1, b.maxX() + 1, b.maxZ() + 1)) return null;
         List<Integer> hs = new ArrayList<>();
         for (int x = b.minX(); x <= b.maxX(); x += 2) for (int z = b.minZ(); z <= b.maxZ(); z += 2) {
-            if (terrain.water(x, z)) return null;
+            if (terrain.water(x, z)) { refusedWet++; return null; }
             hs.add(terrain.height(x, z));
         }
         for (int[] c : new int[][]{{b.maxX(), b.minZ()}, {b.minX(), b.maxZ()}, {b.maxX(), b.maxZ()}}) {
-            if (terrain.water(c[0], c[1])) return null;
+            if (terrain.water(c[0], c[1])) { refusedWet++; return null; }
             hs.add(terrain.height(c[0], c[1]));
         }
         Collections.sort(hs);
-        int spread = hs.get(hs.size() - 1) - hs.get(0);
+        int lo = hs.get(0), hi = hs.get(hs.size() - 1), spread = hi - lo, y;
         boolean hillside = t.category == Category.MINE || t.category == Category.LUMBER || t.category == Category.TOWER || t.category == Category.CHAPEL;
-        if (spread > (hillside ? 5 : b.getXSpan() * b.getZSpan() > 120 ? 3 : 2)) return null;
-        BlockPos at = new BlockPos(b.minX(), hs.get(hs.size() / 2), b.minZ());
-        if (!terrain.clear(at.below(t.sink), bp, rot)) return null;
+        if (t.sink > 0) {
+            // a mine's shaft goes down from the ground as it lies
+            if (spread > 5) { refusedSteep++; return null; }
+            y = hs.get(hs.size() / 2);
+        } else {
+            if (spread > (t.id.equals("livingrealms:town_hall") ? HALL_RELIEF : hillside ? HILLSIDE_RELIEF : RELIEF)) { refusedSteep++; return null; }
+            BlockPos out = bp.doorWorld(new BlockPos(b.minX(), 0, b.minZ()), rot).relative(bp.front(rot));
+            int front = terrain.water(out.getX(), out.getZ()) ? hs.get(hs.size() / 2) : terrain.height(out.getX(), out.getZ());
+            y = Math.max(Math.max(lo, hi - CUT), Math.min(Math.min(hi, lo + FILL), front));
+        }
+        BlockPos at = new BlockPos(b.minX(), y, b.minZ());
+        if (!terrain.clear(at.below(t.sink), bp, rot)) { refusedBlocked++; return null; }
+        if (spread >= 3) levelled++;
         return at;
+    }
+
+    /**
+     * How far along a street can be laid over the ground, up to {@code open}: short of ground so steep that grading it
+     * (no step over one block) would need more than {@link #STREET_EARTH} of cut or fill, of more than
+     * {@link #STREET_WET} columns of deep water, and of unloaded ground. A street whose parent stops before it branches
+     * off is not reached at all (-1).
+     */
+    public int reach(Terrain terrain, Street st, int radius, Map<Integer, Integer> memo) {
+        Integer m = memo.get(st.id);
+        if (m != null) return m;
+        int open = st.cls == RoadClass.PLAZA ? st.length : open(st, radius);
+        if (st.parent >= 0 && reach(terrain, streets.get(st.parent), radius, memo) < st.parentAt) open = -1;
+        int r = open, run = 0, t = 0;
+        int[] g = new int[Math.max(0, open + 1)];
+        for (; t <= open; t++) {
+            int x = st.x(t), z = st.z(t);
+            if (!terrain.loaded(x, z, x, z)) { r = t - 1; break; }
+            // gatehouses and other builds over the line are not ground
+            if (t > 0 && terrain.built(x, z)) { g[t] = g[t - 1]; run = 0; continue; }
+            run = terrain.waterDepth(x, z) >= 3 ? run + 1 : 0;
+            if (run > STREET_WET) { r = t - run - 1; break; }
+            g[t] = terrain.height(x, z);
+            // a cliff (or the edge of the world): too sudden to grade, the street stops before it
+            boolean cliff = false;
+            for (int j = Math.max(0, t - 24); j < t && !cliff; j++) cliff = Math.abs(g[t] - g[j]) > t - j + 2 * STREET_EARTH;
+            if (cliff) { r = Math.min(r, t - 3); break; }
+        }
+        if (t > 1 && st.cls != RoadClass.PLAZA) {
+            int[] h = Street.grade(Arrays.copyOf(g, Math.min(t, g.length)));
+            for (int i = 0; i < h.length; i++) if (Math.abs(h[i] - g[i]) > STREET_EARTH) { r = Math.min(r, i - 3); break; }
+        }
+        // what is already paved stays open
+        if (open >= 0) r = Math.max(r, Math.min(open, laid.getOrDefault(st.id, -1)));
+        r = Math.max(-1, r);
+        memo.put(st.id, r);
+        return r;
     }
 
     // ------------------------------------------------------------------ paving
@@ -408,9 +479,10 @@ public final class TownPlan {
         for (Plot p : s.plots) if (!p.typeId.equals("road") && p.state != Plot.State.DEMOLISHING && !Walls.isWallPiece(p)) taken.add(grownBox(s, p));
         for (Site o : sites) taken.add(new BoundingBox(o.corner.getX(), 0, o.corner.getZ(), o.corner.getX() + o.size - 1, 0, o.corner.getZ() + o.size - 1));
         List<Object[]> cands = new ArrayList<>();
+        Map<Integer, Integer> reach = new HashMap<>();
         for (Street st : streets) {
             if (st.cls == RoadClass.PLAZA) continue;
-            int open = open(st, radius);
+            int open = reach(terrain, st, radius, reach);
             for (Direction side : new Direction[]{st.dir.getClockWise(), st.dir.getCounterClockWise()}) {
                 for (int a = 3; a + size - 1 <= open; a += 4) {
                     BoundingBox lot = square(st, side, a, size);
@@ -437,7 +509,7 @@ public final class TownPlan {
             }
             if (wet) continue;
             Collections.sort(hs);
-            if (hs.get(hs.size() - 1) - hs.get(0) > 3) continue;
+            if (hs.get(hs.size() - 1) - hs.get(0) > RELIEF) continue;
             Street st = (Street) c[1];
             Direction side = (Direction) c[2];
             int a = (int) c[3];
