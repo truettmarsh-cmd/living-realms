@@ -341,7 +341,7 @@ public final class Walls {
             }
             if (p.kind == Kind.TOWER) {
                 type = TOWER;
-                tower(terrain, blocks, foot, 0, e, stone, true);
+                tower(terrain, blocks, foot, Integer.MIN_VALUE, e, stone, true);
             } else {
                 type = GATE;
                 int walk = Integer.MIN_VALUE;

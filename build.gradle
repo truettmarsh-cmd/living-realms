@@ -41,6 +41,9 @@ minecraft {
             if (project.hasProperty('warTour')) property 'livingrealms.warTour', 'true'
             // ./gradlew runClient -PtownRingTour -PrunDir=<dir> [-PvillageExpansion] : town ring and map claim, before and after a rank-up (see TownRingTour)
             if (project.hasProperty('townRingTour')) property 'livingrealms.townRingTour', 'true'
+            // ./gradlew runClient -PcapitalTour -PrunDir=<fresh dir> : a fully grown Capital with walls and castle, screenshots, then left open; -PcapitalTerrain instead builds it on generated hills (see CapitalTour)
+            if (project.hasProperty('capitalTour')) property 'livingrealms.capitalTour', 'true'
+            if (project.hasProperty('capitalTerrain')) property 'livingrealms.capitalTerrain', 'true'
         }
         server {
             args '--nogui'
