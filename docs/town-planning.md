@@ -52,10 +52,35 @@ Houses lose score within 12 blocks of noisy trades.
 - **AI towns** use the same plan. Existing towns keep everything; new lots fit around their buildings.
 - **Village Expansion** layouts replace the skeleton when present: see [village-expansion.md](village-expansion.md).
 
+## Walls (`plan/Walls`)
+
+A wall line is a square with chamfered corners round the centre: the columns with `max(|dx|-a, |dz|-a, |dx|+|dz|-b)` between -1 and 1 (three thick). Columns within 4 of a line (its band) never get lots, so the wall never has to cut through a building; ring streets stop two columns short of a line.
+
+| Line | a | b | Comes at | Where |
+|---|---|---|---|---|
+| Old-town wall | 38 | 72 | Village + Fortifications | 3 outside the first ring street (34); chamfers of 4 |
+| City wall | 98 | 174 | City | 3 outside the third ring street (94); chamfers of 22, inside the City radius |
+
+Older circuits stay as inner walls with their gates open, the way towns that outgrew their walls kept them. Fields, lumber camps and mines go outside the old-town wall once a town is a Village (`Zoning`).
+
+**Pieces**, in building order (each a paid project with a custom blueprint built from the ground it stands on):
+
+1. **Gatehouses** where each high street crosses (the middle of each straight side): two 5 × 5 towers either side of a passage as wide as the street (5), paved with the street's material (a plank deck over water), clear for 4 blocks, with the wall walk on an arch above. The high street is paved out through the gate.
+2. **Towers** at the corners (one in the middle of a short chamfer) and between them so no stretch is longer than 22 blocks (bow range, so each tower covers the wall face to the next). Towers project one block outward to flank the wall. Inside: a floor at walk height with openings onto the walk, a ladder on the town-side wall from the ground to the crenellated roof, and a door to the town.
+3. **Wall** between them: stone from the ground (or the bottom of shallow water) to the walk, which is 5 above the highest ground across the wall and raised so it never steps more than one block between neighbouring columns. Merlons on the outer edge. Columns over water 3 or more deep, or where the ground falls 6 or more blocks outward (a cliff), are left open. Where a building the plan did not place is in the way, the wall bows outward round it (at most 12 blocks) and back to meet the next tower.
+
+Wall pieces overlap-check by their real columns (a chamfer's box is mostly air), do not count as buildings for rank, and add one garrison place per tower or gate.
+
+**With Village Expansion** (`vx/VxPlan.walls`), lines are fitted when a rank is reached: the old-town wall as tight as possible round every building except fields, woods, mines and outlying towers; the city wall at least 20 further out. Both stay clear of every building and avoid streets that run along them. Gatehouses go where VE's streets (laid or planned) cross; streets crossing elsewhere are paved up to the wall on both sides, and lots whose street would have to breach the wall are skipped.
+
+**Player control.** City Map → Auto walls (per town, on by default) pauses automatic wall pieces and stops new ones. The City Map draws the planned lines dashed; the Architect view draws them on the ground. Player plans come first as with any automatic work.
+
+**Raids.** When the attackers gather outside a wall, the defenders' hold point becomes the inside of the gatehouse nearest them (`Walls.gateFacing`), and the raid status says which gate they hold.
+
 ## Not yet done
 
-Walls and gatehouses are not planned automatically; tier-up repaving of laid streets, terrain-following (A*) street routes and City Map lot overlays are left for later.
+Walls are not built for AI towns, there is no early timber palisade, and a Village Expansion street laid after the wall is fitted does not get a new gate. Tier-up repaving of laid streets, terrain-following (A*) street routes and City Map lot overlays are left for later.
 
 ## Tests
 
-`./gradlew runServer -PcityPlanningTest -PcityPlanningTestDir=<fresh dir>` grows planned towns to City rank on synthetic ground (flat, slope with a hill, a river, a lake) and audits them with `PlanAudit`: hall central and facing south, every building facing its street within 3 blocks of the road, its street paved to its door and joined to the market place, no overlaps (including room to grow), districts kept, nothing in water, the same town every time. It then grows a town in the world and checks doors, roads at every door, street blocking, upgrades, off-screen lots and reload. `CityPlanningTour` (`-PcityPlanningTour`) photographs a grown town.
+`./gradlew runServer -PcityPlanningTest -PcityPlanningTestDir=<fresh dir>` grows planned towns to City rank on synthetic ground (flat, slope with a hill, a river, a lake) and audits them with `PlanAudit`: hall central and facing south, every building facing its street within 3 blocks of the road, its street paved to its door and joined to the market place, no overlaps (including room to grow), districts kept, nothing in water, the same town every time. It then grows a town in the world and checks doors, roads at every door, street blocking, upgrades, off-screen lots and reload. Every synthetic town is also walled to City rank and checked by `PlanAudit.walls`: each line closed (except deep water and cliffs), every paved high street through an open, paved gatehouse, no piece on a building, street or the castle ring, no lot in a band, the walk never stepping more than one block, the same walls every time. In the world, the old-town wall is queued, paid and built at Village rank and its gates checked block by block. `CityPlanningTour` (`-PcityPlanningTour`) photographs a grown town.

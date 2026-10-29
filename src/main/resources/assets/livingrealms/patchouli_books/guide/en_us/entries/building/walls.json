@@ -1,0 +1,20 @@
+{
+  "name": "Town Walls",
+  "icon": "minecraft:stone_bricks",
+  "category": "livingrealms:building",
+  "sortnum": 3,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "At $(l)Village$() rank with $(l)Fortifications$() researched, villagers wall the town in: the $(l)old-town wall$() just outside the first ring street. At $(l)City$() rank a $(l)city wall$() follows further out; the old one stays as an inner wall.$(br2)Fields, woods and mines lie outside, as in real towns."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "A $(l)gatehouse$() stands where each high street meets the wall, its passage paved and open. $(l)Towers$() stand at the corners and no more than 22 blocks apart, with ladders up to the wall walk.$(br2)Walls follow the ground; deep water and cliffs are left to defend themselves."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Each gatehouse, tower and stretch of wall is a normal project in $(l)Projects$(), paid from the stockpile. Walls and buildings take turns.$(br2)$(l)City Map → Auto walls$() switches them off. The map shows the planned wall line dashed.$(br2)In a raid your defenders hold the gate the attackers gather at."
+    }
+  ]
+}
