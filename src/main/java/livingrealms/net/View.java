@@ -120,6 +120,8 @@ public final class View {
         ListTag log = new ListTag();
         s.log.forEach(l -> log.add(StringTag.valueOf(l)));
         t.put("log", log);
+        t.put("chronicle", livingrealms.chronicle.Chronicle.view(s));
+        t.put("fire", livingrealms.fire.Fires.view(s));
         ListTag blockers = new ListTag();
         s.tierBlockers().forEach(b -> blockers.add(StringTag.valueOf(b)));
         t.put("blockers", blockers);

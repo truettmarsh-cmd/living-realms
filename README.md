@@ -101,6 +101,11 @@ The City Manager's **Quests** page (last tab) follows a quest line from your fir
 
 Every town also keeps a **bounty board** of up to three: deliver what its builders are short of (or bread when the granary is low), slay hostile mobs near it, or walk a patrol of its border. Accept from the page (three at a time), deliver from your inventory; bounties expire after three days and pay emeralds that grow with the town's rank. The quest line is data (`data/<ns>/livingrealms_quests/*.json`). Details in [docs/quests.md](docs/quests.md); test with `./gradlew runServer -PquestTest -PquestTestDir=<fresh dir>`.
 
+## Town chronicle and fires
+
+- **Chronicle.** Every town keeps a dated history of notable events in short prose: its founding, rank-ups, the town hall and its first chapel, library, market or barracks, the walls and castle, raids and who led them, changes of rulers, wars and peace, heroes promoted and veterans fallen, and fires. Quiet stretches are folded into one line ("Days 12–30: the town grew quietly to 14 buildings"). Read it in **City Manager → Chronicle** (newest first or by year), get a **written book** copy from that page (1 emerald) or by using a blank book on the Town Hall. See [docs/chronicle.md](docs/chronicle.md).
+- **Fires.** Wooden buildings can catch fire (rarely; forges, crowding and raids add to the risk), and lightning, lava and dragons start real fires too. The bell rings, townsfolk form a bucket brigade, fire is never allowed past the town's land, and burnt buildings are queued for repair. A **Well** and the **Fire Watch** research lower the risk; stone buildings hardly burn. The Chronicle page shows the town's fire risk. Configurable and can be switched off (`[fires]` in the server config). See [docs/fires.md](docs/fires.md).
+
 ## Requirements
 
 - Minecraft 1.20.1, Forge 47+

@@ -90,6 +90,8 @@ public final class Settlement {
     /** Living Realms' own street plan (market place, high streets, ring streets), made on first use. */
     @Nullable public livingrealms.settlement.plan.TownPlan townPlan;
     public long founded;
+    /** The town's history (livingrealms.chronicle). */
+    public final livingrealms.chronicle.Chronicle.Log chronicle = new livingrealms.chronicle.Chronicle.Log();
     public long lastDay;
 
     /** Recomputed every simulation step; not saved. */
@@ -461,6 +463,7 @@ public final class Settlement {
         if (townPlan != null) t.put("townPlan", townPlan.save());
         t.putLong("founded", founded);
         t.putLong("lastDay", lastDay);
+        t.put("chronicle", chronicle.save());
         return t;
     }
 
@@ -528,6 +531,7 @@ public final class Settlement {
         if (t.contains("townPlan")) s.townPlan = livingrealms.settlement.plan.TownPlan.load(t.getCompound("townPlan"));
         s.founded = t.getLong("founded");
         s.lastDay = t.getLong("lastDay");
+        s.chronicle.load(t.getCompound("chronicle"));
         return s;
     }
 }

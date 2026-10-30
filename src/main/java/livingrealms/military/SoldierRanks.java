@@ -65,6 +65,7 @@ public final class SoldierRanks {
         String msg = promoted ? so.name + " was promoted to " + title(after) + " (skill rank " + after + ")"
                 : so.name + " reached skill rank " + after + " and earned a skill point";
         s.log(msg);
+        if (promoted) livingrealms.chronicle.Chronicle.promoted(s, so, titleIndex(after), title(after));
         MinecraftServer server = e != null && e.getServer() != null ? e.getServer() : ServerLifecycleHooks.getCurrentServer();
         ServerPlayer owner = server == null || s.owner == null ? null : server.getPlayerList().getPlayer(s.owner);
         if (owner != null) owner.sendSystemMessage(Component.literal(msg).withStyle(ChatFormatting.GOLD));

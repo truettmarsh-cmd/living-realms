@@ -274,6 +274,7 @@ public final class Raids {
         livingrealms.quest.Quests.raidEnded(server, m, raid, raid.held >= HOLD_TICKS);
         Settlement source = m.get(raid.source), target = m.get(raid.target);
         livingrealms.compat.Compat.raidEnded(server, raid, source);
+        livingrealms.chronicle.Chronicle.raidEnded(source, target, raid.held >= HOLD_TICKS, message);
         for (Settlement s : new Settlement[]{source, target}) if (s != null) {
             s.raidStatus = "";
             s.raidCooldown = server.overworld().getGameTime() + Config.RAID_COOLDOWN.get();

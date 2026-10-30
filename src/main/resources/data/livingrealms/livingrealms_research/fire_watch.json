@@ -1,0 +1,12 @@
+{
+ "name": "Fire Watch",
+ "branch": "Construction",
+ "cost": 50,
+ "requires": [
+  "masonry"
+ ],
+ "icon": "minecraft:water_bucket",
+ "x": 1,
+ "y": 4,
+ "description": "Watchmen and bucket drills: halves the town's fire risk and sends a bigger bucket brigade to every fire."
+}
