@@ -134,7 +134,8 @@ final class SiegeTrains {
         if (list == null || level == null) return;
         // a siege: the stretch being breached first (docs/sieges.md), then the centre, keeping off our own troops
         BlockPos objective = raid.siege.aim(target);
-        BlockPos at = raid.siege.bombarding() ? objective : livingrealms.military.BattleAI.firePoint(objective, attackers, defenders);
+        // while the wall stands, never onto our own ram crew: the wall beside the breach, or hold fire
+        BlockPos at = raid.siege.bombarding() ? raid.siege.bombardPoint(target, attackers) : livingrealms.military.BattleAI.firePoint(objective, attackers, defenders);
         for (CompatData.Engine x : list) {
             Entity crew = level.getEntity(x.crew());
             if (!(crew instanceof IStrategicFire fire)) continue;
@@ -142,12 +143,12 @@ final class SiegeTrains {
             BlockPos old = crew instanceof BowmanEntity b ? b.StrategicFirePos() : crew instanceof SiegeEngineerEntity se ? se.getStrategicFirePos() : null;
             if (at == null) {
                 fire.setShouldStrategicFire(false);
-                if (was) target.log("The siege engine outside " + target.name + " holds its fire: the attackers are in the way");
+                if (was) target.log("The siege engine outside " + target.name + " holds its fire: " + (raid.siege.bombarding() ? "the ram crew is at the wall" : "the attackers are in the way"));
             } else {
                 fire.setStrategicFirePos(at);
                 fire.setShouldStrategicFire(true);
                 if (!was || (old != null && (old.equals(target.center) != at.equals(target.center) || old.equals(objective) != at.equals(objective))))
-                    target.log(raid.siege.bombarding() ? "The siege engine pounds the " + raid.siege.where + " of " + target.name
+                    target.log(raid.siege.bombarding() ? (at.equals(objective) ? "The siege engine pounds the " : "The siege engine pounds the wall beside the ") + raid.siege.where + " of " + target.name
                             : at.equals(target.center) ? "The siege engine shells the centre of " + target.name
                             : "The siege engine shifts its fire onto the defenders, away from the attackers");
             }

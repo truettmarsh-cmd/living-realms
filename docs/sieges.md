@@ -61,11 +61,11 @@ Once the stores are empty the town is starving. The defenders lose regeneration,
 
 ## Siege engines (pack mods)
 
-With Siege Weapons or Medieval Siege Machines (`SiegeTrains`), the crews aim at the breach point (the wall top) until it is open, then at the centre with the old rules (`BattleAI.firePoint`). Each engine also speeds the breach.
+With Siege Weapons or Medieval Siege Machines (`SiegeTrains`), the crews aim at the breach point (the wall top) until it is open, then at the centre with the old rules (`BattleAI.firePoint`). Each engine also speeds the breach. While the wall stands, `Siege.bombardPoint` keeps the shot off the attackers' own troops: if any of them (the ram crew, usually) is within 10 blocks (`SPLASH`, horizontally) of the breach, the engines pound the same wall 11, 14 or 18 blocks to either side, the first spot clear of them, and hold fire when none is.
 
 ## Repairs
 
-When the raid ends, every broken gate or wall section is set to Repairing. This is what the Repair button does: a project of its own, paid from the stockpile (NPC towns: treasury), that the builders see to before choosing new work. The repair puts the blueprint's blocks back and clears the gate passage. The chronicle notes it.
+When the raid ends, every broken gate or wall section is set to Repairing as an **automatic** project at priority 15 (`REPAIR_PRIORITY`, above any player project), paid from the stockpile (NPC towns: treasury). It is the town's own work: it goes ahead whether automatic building or automatic walls are on or off and whatever the ruler has queued (`AutoBuild.mayWork`), and it never counts as a queued player project, so it does not hold up the ruler's projects or make them wait. Villagers choose no new automatic projects of their own until it is done. The repair puts the blueprint's blocks back and clears the gate passage. The chronicle notes it.
 
 ## NPC kingdoms
 
@@ -77,8 +77,9 @@ NPC raids go through `Raids.start`, so they get the same sieges. When choosing a
 
 - It builds a Village wall (`CityPlanningSelfTest.buildWalls`) round a player town.
 - It checks the weak point: the nearest gate, or an unfinished stretch, and that a capital's walls are stronger.
-- It saps a wall section (real blocks down, floor left), queues the repair and rebuilds it.
+- It saps a wall section (real blocks down, floor left), queues the repair (automatic, top priority, going ahead with automatic building off and beside a queued player project) and rebuilds it.
 - The NPC scheduler starts a raid on the town. The test checks that all four gates fill with iron bars, then Approach → Breach in the status and the City Manager view, a bowman posted on the wall and climbing it, the footman inside the gate, and save/reload (plus an old raid tag).
+- With the ram crew at the gate, siege engines aim at the wall beside it, at least 10 blocks from every attacker; with nobody there, at the breach.
 - The ram breaks the east gate (portcullis and arch down, the other gates still shut). The test checks tower volleys and the blockade eating food.
 - Then Assault → Hold → capture. The test checks that the gates reopen and that the gate is queued for repair and rebuilt with its passage open.
 - A second NPC kingdom blockades the now-NPC town, which starves and surrenders with its walls whole.
@@ -92,4 +93,3 @@ NPC raids go through `Raids.start`, so they get the same sieges. When choosing a
 - Ladders up the outside of the wall are not used. Wall sections are sapped.
 - Only the outermost walled line is besieged. An inner (old-town) wall keeps its gates open.
 - The climb onto the walls is a short teleport at the foot of the post.
-- Engines aim at the breach while the ram crew works there, so mod engines can hit their own crew.

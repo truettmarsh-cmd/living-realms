@@ -34,9 +34,11 @@ public final class QuestEvents {
         SettlementManager m = SettlementManager.get(server);
         QuestData data = QuestData.get(server);
         long now = server.overworld().getGameTime();
+        try { Bounties.escorts(data, m, server, now); } catch (Exception ex) { LivingRealms.LOG.error("Escort bounties failed", ex); }
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             try {
                 Bounties.patrol(data, m, p, now);
+                Bounties.beams(data, m, p);
                 if (tick % 40 == 7) Quests.poll(m, data, p);
             } catch (Exception ex) {
                 LivingRealms.LOG.error("Quest update for {} failed", p.getGameProfile().getName(), ex);

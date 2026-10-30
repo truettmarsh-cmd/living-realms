@@ -1,0 +1,28 @@
+{
+  "name": "Trade & Caravans",
+  "icon": "minecraft:emerald",
+  "category": "livingrealms:growth",
+  "sortnum": 3,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "title": "Goods and Prices",
+      "text": "Towns make goods from their land (wheat on the plains, sand and glass in the desert, spruce in the taiga) and from their workshops. A good a town is short of is dear there; one it has piled up is cheap. The City Manager's $(l)Trade$() page lists stock, need, price and output."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Routes",
+      "text": "Towns at peace within 768 blocks keep trade routes, each with its three nearest neighbours. When one side can spare what the other lacks, a caravan loads at the market for 30 seconds and sets out. The ruler can close a route, or ban the export of a good."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "On the Road",
+      "text": "Near you, a caravan is a real trader leading a pack animal, with a guard or two. It leaves by the paved high street that faces the other town, through its gate, and comes in by the other town's high street. The $(l)City Map$() draws each route toward its partner and shows caravans on the way."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Danger and Reward",
+      "text": "Long roads and roads past enemies risk ambush. Guards lower the risk, and walking with the caravan halves it (take the town's $(l)escort$() bounty to be paid for it). Killing another kingdom's caravan suspends trade; doing it twice means war. Every arrival pays the seller and makes both towns more prosperous, so they build and grow faster."
+    }
+  ]
+}

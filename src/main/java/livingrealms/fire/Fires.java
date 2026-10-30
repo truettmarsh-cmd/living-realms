@@ -150,7 +150,11 @@ public final class Fires {
 
     // ------------------------------------------------------------------ the server tick
 
+    /** The server whose saved fires are loaded into ACTIVE (FireData); a new server (a restart) loads its own. */
+    private static MinecraftServer resumed;
+
     public static void tick(MinecraftServer server, SettlementManager m, long tick) {
+        if (resumed != server) { resumed = server; ACTIVE.clear(); FireData.get(server); }
         if (!enabled()) { ACTIVE.clear(); return; }
         long now = server.overworld().getGameTime();
         STRIKES.removeIf(st -> now - st.at > 400);
@@ -548,6 +552,24 @@ public final class Fires {
         Fire last = LAST.get(s.id);
         if (last != null && !last.story.isEmpty()) t.putString("last", last.story);
         return t;
+    }
+
+    // ------------------------------------------------------------------ saving fires in progress (FireData)
+
+    /** Every fire still burning, for the world save. */
+    public static net.minecraft.nbt.ListTag saveAll() {
+        net.minecraft.nbt.ListTag l = new net.minecraft.nbt.ListTag();
+        for (Fire f : ACTIVE.values()) if (!f.done) l.add(FireData.tag(f));
+        return l;
+    }
+
+    /** Fires saved burning: watched again from the next look; the brigade re-forms round the fire still found there. */
+    public static void loadAll(net.minecraft.nbt.ListTag l) {
+        ACTIVE.clear();
+        for (int i = 0; i < l.size(); i++) {
+            Fire f = FireData.fire(l.getCompound(i));
+            if (f != null) ACTIVE.put(f.town, f);
+        }
     }
 
     private Fires() {}

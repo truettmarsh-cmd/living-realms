@@ -92,8 +92,38 @@ public final class TradeSelfTest {
         m.add(s); return s;
     }
 
+    /** Caravans take the paved high street out of town toward their partner, and the other town's in; unpaved towns go straight. */
+    private static void streets() {
+        var m = new SettlementManager();
+        Settlement a = town(m, null, "Streetford", "minecraft:plains", 20480, 0), b = town(m, null, "Roadmere", "minecraft:plains", 20880, 60);
+        a.tier = Tier.TOWN; b.tier = Tier.TOWN;
+        List<BlockPos> straight = CaravanRoad.route(a, b);
+        check(straight.size() == 2 && straight.get(0).equals(Trade.market(a, b)) && straight.get(1).equals(Trade.market(b, a)), "Without paved streets the road runs market to market");
+        var east = a.plan().streets.stream().filter(st -> st.cls == livingrealms.settlement.plan.RoadClass.HIGH && st.dir == net.minecraft.core.Direction.EAST).findFirst().orElseThrow();
+        var west = b.plan().streets.stream().filter(st -> st.cls == livingrealms.settlement.plan.RoadClass.HIGH && st.dir == net.minecraft.core.Direction.WEST).findFirst().orElseThrow();
+        a.plan().laid.put(east.id, 60); b.plan().laid.put(west.id, 20);
+        int ea = Math.min(60, a.plan().open(east, a.radius())), wb = Math.min(20, b.plan().open(west, b.radius()));
+        List<BlockPos> road = CaravanRoad.route(a, b);
+        check(road.size() == 6 && road.get(1).getX() == east.x(0) && road.get(2).getX() == east.x(ea) && road.get(2).getZ() == east.z(0)
+                && road.get(3).getX() == west.x(wb) && road.get(4).getX() == west.x(0), "The road follows each town's paved high street toward the other: " + road);
+        double len = CaravanRoad.length(road);
+        check(len >= Caravans.segmentDist(Trade.market(a, b), Trade.market(a, b), Trade.market(b, a)) && Math.abs(Caravans.distance(a, b) - len) < 1e-9,
+                "A trip's length is measured along that road: " + (int) len);
+        BlockPos onStreet = Caravans.at(a, b, (CaravanRoad.seg(road.get(0), road.get(1)) + 10) / len);
+        check(onStreet.getZ() == east.z(0) && onStreet.getX() > east.x(0) && onStreet.getX() < east.x(ea), "Early on, the caravan is on the high street: " + onStreet);
+        double p1 = Caravans.progressAt(a, b, onStreet.getX() + .5, onStreet.getZ() + .5, 0);
+        check(Math.abs(p1 * len - CaravanRoad.seg(road.get(0), road.get(1)) - 10) <= 1.5, "Its place along the road is found from where it stands: " + p1);
+        BlockPos market = Trade.market(a, b);
+        check(Caravans.progressAt(a, b, market.getX() + .5, market.getZ() + .5, p1) >= p1 - 7 / len, "Progress never jumps back to the start of a road that passes the market again");
+        b.plan().laid.remove(west.id);
+        check(CaravanRoad.route(a, b).size() == 4, "A town without a paved street toward the road is left straight from its market");
+        Settlement behind = town(m, null, "Backwater", "minecraft:plains", 20080, 0);
+        check(CaravanRoad.street(a, behind).stream().noneMatch(p -> p.getX() > a.center.getX()), "A street facing away from the partner is not taken");
+    }
+
     /** Production, prices, routes, a simulated caravan, ambushes, hostile acts, export bans and save/load, on a private ledger. */
     private static void economy(ServerLevel level) {
+        streets();
         MinecraftServer server = level.getServer();
         UUID a = UUID.randomUUID(), b = UUID.randomUUID();
         var m = new SettlementManager();

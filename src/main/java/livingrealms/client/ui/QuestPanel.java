@@ -130,12 +130,12 @@ final class QuestPanel {
         String time = left >= day ? (left / day) + "d " + (left % day * 24 / day) + "h left" : (left * 24 / day) + "h left";
         String status = b.getInt("reward") + " emeralds · " + time;
         if (kind.equals("DELIVER") && mine) status += " · carrying " + b.getInt("carried");
-        if (kind.equals("PATROL") && mine && !b.getString("next").isEmpty()) status = b.getString("next") + " · " + status;
+        if ((kind.equals("PATROL") || kind.equals("ESCORT")) && mine && !b.getString("next").isEmpty()) status = b.getString("next") + " · " + status;
         ui.text(ui.clip(status, room), x + 26, y + 14, GOLD_DK);
         int have = b.getInt("have"), need = Math.max(1, b.getInt("need"));
         int barW = Math.max(30, Math.min(120, room - 40));
         ui.bar(x + 26, y + 27, barW, 5, have / (float) need, BLUE, BLUE);
-        ui.text(have + "/" + need, x + 30 + barW, y + 25, MUTED);
+        ui.text(kind.equals("ESCORT") ? have + "% of the way" : have + "/" + need, x + 30 + barW, y + 25, MUTED);
         if (ui.over(x, y, bx - x - 4, BOUNTY_H - 3)) {
             List<String> tip = new ArrayList<>();
             tip.add(b.getString("title"));

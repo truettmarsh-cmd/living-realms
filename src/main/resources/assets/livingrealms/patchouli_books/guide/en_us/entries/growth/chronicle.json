@@ -1,0 +1,27 @@
+{
+  "name": "Chronicle & Fires",
+  "icon": "minecraft:written_book",
+  "category": "livingrealms:growth",
+  "sortnum": 4,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "title": "The Town Chronicle",
+      "text": "Every town writes down its history: its founding, ranks, great buildings, walls, raids and sieges, wars and peace, heroes, fires and first caravans. Quiet stretches become a single line. Read it on the City Manager's $(l)Chronicle$() page, newest first or by year."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The page's button writes the chronicle into a book for one emerald from the stockpile. You can also use a blank book on the Town Hall and the scribe copies it out for you."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Fire",
+      "text": "Wooden buildings can catch fire, smithies most of all, and lightning, lava, raiders and dragons start fires too. The bell rings and a bucket brigade of townsfolk runs to put it out. Fire never spreads beyond the town's land, and a fire still burning when the world is saved carries on, brigade and all, when it loads again."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Safer Towns",
+      "text": "Stone barely burns. A $(l)Well$() lowers the risk and adds hands to the brigade, and the $(l)Fire Watch$() research halves it again. Damaged buildings are queued for repair. The Chronicle page shows the town's fire risk and the buildings most at risk."
+    }
+  ]
+}

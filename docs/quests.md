@@ -64,9 +64,19 @@ is looked at:
 - **Slay** 4 + 2 × rank hostile mobs within the town's radius + 32 blocks, by the player or their town soldiers
   (counted while the player is online).
 - **Patrol** four posts at the town's edge (N/E/S/W, radius − 6): stand within 8 blocks of each. The page names the
-  next post.
+  next post; each post still to walk shows a beam of light (end-rod and green sparkle particles sent only to the
+  bounty's taker, within 192 blocks, so nothing is placed in the world) and a gold marker on the City Map (green once
+  walked).
+- **Escort** (`Bounties.escorts`, once a second): while one of the town's caravans is loading at its market, the board
+  also posts "Escort the caravan to X", beside the other three and without the posting gap. It can be taken while the
+  caravan loads or in the first third of its road. Each second on the road counts toward the escort when the taker is
+  within 16 blocks of the caravan (its trader, or its simulated place on the road); the taker then also counts as the
+  caravan's escort, halving its ambush odds like its ruler. It pays when the caravan arrives, if the taker walked with
+  it at least 60% of its time on the road and is at the destination town; it fails if the caravan arrives without
+  them or is lost. Reward 2 + rank + cargo value / 16 emeralds (at most 12). Saved with the bounty (`caravan`,
+  `dest`, `near`, `road`).
 
-Rewards are emeralds: delivery rank + amount / 32, slay 1 + 2 × rank, patrol 1 + rank. A player holds at most three
+Rewards are emeralds: delivery rank + amount / 32, slay 1 + 2 × rank, patrol 1 + rank, escort as above. A player holds at most three
 bounties, from any towns not at war with them. Bounties last three game days (`dayLength`); taking one gives it at
 least a day. After a bounty leaves the board the town waits a quarter day before posting another. Bounties taken
 elsewhere are listed under the board and can be delivered or abandoned from any town's page.
@@ -82,13 +92,14 @@ reward (hover for the flavour line), then the town's bounty board with Accept / 
 shipped line loads, a player is walked through all five chapters by changing settlement state, steps complete only in
 their chapter and in order, every reward is paid once (total emeralds checked), raid and kill hooks, save/load round
 trips (also of empty and damaged data), and bounty generation from builder shortages and hunger, rank scaling,
-delivery, slaying, patrol, the three-bounty limit, the posting gap and expiry.
+delivery, slaying, patrol (with the posts marked for the world and the City Map), escorts (posted while a caravan
+loads, paid for walking with it, unpaid when it walked alone, too late to join, ended when lost, saved and reloaded),
+the three-bounty limit, the posting gap and expiry.
 
 `./gradlew runClient -PquestUiTest -PrunDir=<fresh dir>` (QuestUiTour) seeds a town that has met chapter 1, takes two
 bounties and screenshots the toasts and the Quests page at two GUI scales.
 
 ## Not done
 
-- No "clear a nearby structure" bounty and no escort bounty.
-- Patrol posts are not marked in the world; the page and the action bar give coordinates.
+- No "clear a nearby structure" bounty.
 - Kills by a player's soldiers while the player is offline count for the quest line, not for slay bounties.

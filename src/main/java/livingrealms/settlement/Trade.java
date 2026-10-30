@@ -268,6 +268,8 @@ public final class Trade {
         public double lastX, lastZ;
         public int stuck;
         public long walkingSince;
+        /** Players walking with it for an escort bounty this second (they count as an escort, like the ruler). */
+        public final transient Set<UUID> escorts = new HashSet<>();
 
         public boolean done() { return status == Status.ARRIVED || status == Status.LOST; }
 
@@ -661,7 +663,20 @@ public final class Trade {
             rt.putInt("trips", r.trips); rt.putInt("lost", r.lost);
             Caravan c = null;
             for (Caravan x : m.trade.caravans) if (r.involves(x.from) && r.involves(x.to) && (c == null || x.since >= c.since)) c = x;
-            if (c != null) rt.put("caravan", describe(m, c, s, now));
+            if (c != null) {
+                CompoundTag ct = describe(m, c, s, now);
+                // for the City Map: where the caravan is now
+                ServerLevel lv = p.server.getLevel(s.dim);
+                BlockPos at = lv == null || c.done() ? null : Caravans.position(lv, m, c);
+                if (at != null) { ct.putInt("x", at.getX()); ct.putInt("z", at.getZ()); }
+                rt.put("caravan", ct);
+            }
+            // for the City Map: the road toward the partner, as x,z pairs
+            List<BlockPos> road = CaravanRoad.route(s, o);
+            int[] path = new int[road.size() * 2 + 2];
+            for (int i = 0; i < road.size(); i++) { path[2 * i] = road.get(i).getX(); path[2 * i + 1] = road.get(i).getZ(); }
+            path[path.length - 2] = o.center.getX(); path[path.length - 1] = o.center.getZ();
+            rt.putIntArray("path", path);
             routes.add(rt);
         }
         t.put("routes", routes);

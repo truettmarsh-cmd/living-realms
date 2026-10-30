@@ -1,0 +1,32 @@
+{
+  "name": "Sieges",
+  "icon": "minecraft:iron_bars",
+  "category": "livingrealms:kingdoms",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "title": "Walls Change Raids",
+      "text": "A raid on a town with a standing gatehouse or wall is a $(l)siege$(). The gates of the outer wall drop iron-bar portcullises, and the attackers march on the weak point: an unfinished gap, the nearest gate, or a stretch of wall."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Approach$(): the army forms up outside.$(li)$(l)Breach$(): a ram crew batters the gate, or sappers dig at the wall.$(li)$(l)Assault$(): they pour in through the breach.$(li)$(l)Hold$(): 60 seconds at the centre take the town.$(br)The raid bar shows the breach filling until the wall is open."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Defending",
+      "text": "Your bowmen climb onto the towers and wall walk nearest the breach, and your melee hold the inside of it. From Town rank the towers loose arrows of their own. Stone bricks and higher ranks make the walls slower to break; a capital's walls are the strongest."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Blockade",
+      "text": "An army camped outside your walls eats into your stores. When the food runs out the town starves, and after a minute of hunger it surrenders, unless its ruler is inside. Keep the granary full and stay home when the enemy comes."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Afterwards",
+      "text": "Broken gates and walls go to the top of the builders' queue as the town's own repairs, paid from the stockpile. They go ahead even with automatic building off, and your own projects are not held up. Siege engines from the siege mods never fire on their own ram crew: they pound the wall beside the breach or hold fire."
+    }
+  ]
+}

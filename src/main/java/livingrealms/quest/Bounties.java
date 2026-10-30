@@ -9,6 +9,11 @@ import livingrealms.settlement.AutoBuild;
 import livingrealms.settlement.Plot;
 import livingrealms.settlement.Settlement;
 import livingrealms.settlement.SettlementManager;
+import livingrealms.settlement.Caravans;
+import livingrealms.settlement.Trade;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -30,6 +35,9 @@ import java.util.*;
  */
 public final class Bounties {
     public static final int BOARD = 3, MAX_TAKEN = 3, PATROL_REACH = 8, SLAY_MARGIN = 32;
+    /** Escorts: how near the caravan counts as with it, how far along the road it can still be joined, the share of the trip to walk with it. */
+    public static final int ESCORT_REACH = 16;
+    public static final double LATE = 1 / 3.0, ESCORT_SHARE = 0.6;
     /** Generic stores a town asks for when nothing is short, by rank (Camp first). */
     static final Item[] STORES = {Items.OAK_LOG, Items.OAK_LOG, Items.COBBLESTONE, Items.COBBLESTONE, Items.IRON_INGOT, Items.IRON_INGOT};
 
@@ -56,7 +64,8 @@ public final class Bounties {
             if (p != null) Quests.notify(p, "Bounty expired", title(x) + " for " + s.name, Items.CLOCK, false);
             s.dirty = true;
         }
-        while (b.bounties.size() < BOARD && now >= b.nextPost) {
+        // escorts come and go with the caravans, beside the board's three
+        while (b.bounties.stream().filter(x -> x.kind != Kind.ESCORT).count() < BOARD && now >= b.nextPost) {
             Bounty x = make(s, b, now, rnd);
             if (x == null) break;
             b.bounties.add(x);
@@ -170,6 +179,7 @@ public final class Bounties {
             case DELIVER -> "Deliver " + x.need + " " + x.item.getDescription().getString();
             case SLAY -> "Slay " + x.need + " hostile mobs";
             case PATROL -> "Patrol the border";
+            case ESCORT -> "Escort the caravan to " + x.dest;
         };
     }
 
@@ -177,7 +187,8 @@ public final class Bounties {
         return switch (x.kind) {
             case DELIVER -> "Bring it in your inventory and press Deliver: " + x.reason + ".";
             case SLAY -> "Within " + (s.radius() + SLAY_MARGIN) + " blocks of the centre, by you or your soldiers: " + x.reason + ".";
-            case PATROL -> "Walk to the four marker posts at the town's edge (N/E/S/W): " + x.reason + ".";
+            case PATROL -> "Walk to the four marker posts at the town's edge (N/E/S/W), shown by beams of light and on the City Map: " + x.reason + ".";
+            case ESCORT -> "Meet it at the market and stay within " + ESCORT_REACH + " blocks of it until it reaches " + x.dest + ": " + x.reason + ".";
         };
     }
 
@@ -195,6 +206,10 @@ public final class Bounties {
         Bounty x = find(data, s, id);
         if (x == null) return "That bounty is gone";
         if (x.taker != null) return x.taker.equals(p.getUUID()) ? "You already took it" : "Taken by " + x.takerName;
+        if (x.kind == Kind.ESCORT) {
+            Trade.Caravan c = m.trade.caravan(x.caravan);
+            if (c == null || c.done() || c.progress > LATE) return "The caravan is too far down the road";
+        }
         if (data.taken(p.getUUID()).size() >= MAX_TAKEN) return "You already have " + MAX_TAKEN + " bounties; finish or abandon one";
         if (!p.getUUID().equals(s.owner) && m.state.war(p.getUUID(), s.kingdomId()) != null) return s.name + " is at war with you";
         x.taker = p.getUUID();
@@ -212,6 +227,8 @@ public final class Bounties {
         x.takerName = "";
         x.progress = 0;
         x.visited = 0;
+        x.near = 0;
+        x.road = 0;
         s.dirty = true;
         return null;
     }
@@ -242,7 +259,7 @@ public final class Bounties {
     static void complete(QuestData data, SettlementManager m, Settlement s, Bounty x, ServerPlayer p, long now) {
         Board b = data.board(s.id);
         if (!b.bounties.remove(x)) return;
-        b.nextPost = Math.max(b.nextPost, now + gap());
+        if (x.kind != Kind.ESCORT) b.nextPost = Math.max(b.nextPost, now + gap());
         Quests.give(p, new ItemStack(Items.EMERALD, x.reward));
         data.of(p.getUUID()).bump(QuestData.BOUNTIES, 1);
         s.log(p.getGameProfile().getName() + " completed a bounty: " + title(x));
@@ -286,6 +303,105 @@ public final class Bounties {
                 if (x.done()) { complete(data, m, s, x, p, now); break; }
                 p.displayClientMessage(net.minecraft.network.chat.Component.literal("Patrol post " + x.progress + "/" + x.need + " · " + s.name), true);
             }
+        }
+    }
+
+
+    // ------------------------------------------------------------------ escorts
+
+    /**
+     * Once a second: a town whose caravan is loading posts "escort our caravan" on its board (beside the other three);
+     * a taken escort counts the seconds its taker walks with the caravan, and ends when the caravan arrives (paid if the
+     * taker stayed with it most of the way and is there at the end) or is lost.
+     */
+    public static void escorts(QuestData data, SettlementManager m, MinecraftServer server, long now) {
+        escorts(data, m, server.getPlayerList()::getPlayer, server::getLevel, now);
+    }
+
+    public static void escorts(QuestData data, SettlementManager m, java.util.function.Function<UUID, ServerPlayer> players,
+                               java.util.function.Function<ResourceKey<Level>, ServerLevel> levels, long now) {
+        for (Trade.Caravan c : m.trade.caravans) {
+            if (c.status != Trade.Status.LOADING) continue;
+            Settlement from = m.get(c.from), to = m.get(c.to);
+            if (from == null || to == null || !offers(from)) continue;
+            Board b = data.board(from.id);
+            if (b.bounties.stream().anyMatch(x -> c.id.equals(x.caravan))) continue;
+            b.bounties.add(escort(from, to, c, now));
+            from.dirty = true;
+        }
+        for (var be : data.boards.entrySet()) {
+            Settlement s = m.get(be.getKey());
+            for (Bounty x : List.copyOf(be.getValue().bounties)) {
+                if (x.kind != Kind.ESCORT) continue;
+                Trade.Caravan c = m.trade.caravan(x.caravan);
+                ServerPlayer p = x.taker == null ? null : players.apply(x.taker);
+                if (s == null || c == null || c.status == Trade.Status.LOST) {
+                    be.getValue().bounties.remove(x);
+                    if (p != null) Quests.notify(p, "Escort failed", "The caravan " + (c == null ? "is gone" : "was lost: " + c.note), Items.BARRIER, false);
+                    continue;
+                }
+                if (c.status == Trade.Status.ARRIVED) {
+                    Settlement to = m.get(c.to);
+                    boolean there = p != null && to != null && p.level().dimension().equals(to.dim)
+                            && p.blockPosition().distSqr(to.center) <= (double) (to.radius() + ESCORT_REACH) * (to.radius() + ESCORT_REACH);
+                    if (p != null && there && x.near >= ESCORT_SHARE * Math.max(1, x.road)) { x.progress = x.need; complete(data, m, s, x, p, now); continue; }
+                    be.getValue().bounties.remove(x);
+                    if (p != null) Quests.notify(p, "Escort failed", "The caravan reached " + x.dest + " without you", Items.CLOCK, false);
+                    continue;
+                }
+                x.progress = (int) Math.round(c.progress * 100);
+                if (c.status != Trade.Status.ROAD) continue;
+                if (x.taker == null) { if (c.progress > LATE) be.getValue().bounties.remove(x); continue; }
+                x.road++;
+                ServerLevel level = levels.apply(s.dim);
+                BlockPos at = level == null ? null : Caravans.position(level, m, c);
+                boolean near = p != null && at != null && p.level() == level && !p.isSpectator()
+                        && p.distanceToSqr(at.getX() + .5, p.getY(), at.getZ() + .5) <= ESCORT_REACH * ESCORT_REACH;
+                if (near) { x.near++; c.escorts.add(p.getUUID()); } else if (p != null) c.escorts.remove(p.getUUID());
+                if (p != null && x.road % 5 == 1) p.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                        (near ? "Escorting the caravan to " : "Catch up with the caravan to ") + x.dest + " · " + x.progress + "% of the way"
+                                + (near || at == null ? "" : " · it is at " + at.getX() + ", " + at.getZ())), true);
+            }
+        }
+    }
+
+    static Bounty escort(Settlement from, Settlement to, Trade.Caravan c, long now) {
+        Bounty x = new Bounty();
+        x.kind = Kind.ESCORT;
+        x.caravan = c.id;
+        x.dest = to.name;
+        x.posted = now;
+        x.expires = now + lifetime();
+        x.need = 100;
+        x.reward = Math.min(12, 2 + from.tier.number() + (int) (c.value / 16));
+        x.reason = c.guards == 0 ? "it sets out unguarded with " + Trade.summary(c.cargo) : "it carries " + Trade.summary(c.cargo);
+        return x;
+    }
+
+    // ------------------------------------------------------------------ patrol posts in the world
+
+    /** Unvisited posts of a player's patrols in their dimension, within sight (for beams and the self-test). */
+    public static List<BlockPos> posts(QuestData data, SettlementManager m, ServerPlayer p, int range) {
+        List<BlockPos> out = new ArrayList<>();
+        for (var e : data.taken(p.getUUID())) {
+            Bounty x = e.getValue();
+            Settlement s = m.get(e.getKey());
+            if (x.kind != Kind.PATROL || s == null || !s.dim.equals(p.level().dimension())) continue;
+            for (int i = 0; i < x.points.size(); i++) {
+                BlockPos at = x.points.get(i);
+                if ((x.visited & 1 << i) == 0 && p.distanceToSqr(at.getX() + .5, p.getY(), at.getZ() + .5) <= (double) range * range) out.add(at);
+            }
+        }
+        return out;
+    }
+
+    /** A beam of light over each post the player still has to walk to, seen only by them. Nothing is placed in the world. */
+    public static void beams(QuestData data, SettlementManager m, ServerPlayer p) {
+        if (!(p.level() instanceof ServerLevel level)) return;
+        for (BlockPos at : posts(data, m, p, 192)) {
+            int y = level.hasChunkAt(at) ? level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at.getX(), at.getZ()) : (int) p.getY();
+            level.sendParticles(p, ParticleTypes.END_ROD, true, at.getX() + .5, y + 6, at.getZ() + .5, 16, .1, 4, .1, .01);
+            level.sendParticles(p, ParticleTypes.HAPPY_VILLAGER, true, at.getX() + .5, y + .5, at.getZ() + .5, 4, .6, .2, .6, 0);
         }
     }
 

@@ -28,6 +28,10 @@ No outbreaks start when the `doFireTick` gamerule is off.
 3. After `fires.brigadeDelay` ticks (default 200) the **bucket brigade** forms: the 4 nearest townsfolk (+2 with a well, +2 with Fire Watch) drop what they are doing and run to the fire; they and any of the town's soldiers standing near it each put out a fire block within reach every half second, two with a well or water nearby. If no townsfolk are loaded, unseen ones still pass buckets slowly.
 4. After `fires.maxFireTicks` (default 6000) anything still burning is put out.
 
+## Across restarts
+
+A fire still burning when the world saves is written to `data/livingrealms_fires.dat` (`FireData`, its own saved data; nothing is added to the settlement save): the town, cause, start time, watched area, the buildings it has touched and its counters. On the next start it is watched again from the first look; the fire blocks are found again in the world and the bucket brigade re-forms round them (it forms at once if `brigadeDelay` has already passed since the fire started). A missing or damaged file loads no fires.
+
 ## Afterwards
 
 Each building the fire touched is compared with its blueprint. If at least 2 blocks (or 1%) are gone, it is queued as a **repair** in Projects, and the builders put the missing blocks back from the stockpile, like any repair. The fire goes into the town log and, if anything was damaged, into the [chronicle](chronicle.md): small fires as "A fire started by ... damaged the bakery", three or more buildings (or a big blaze) as "The Great Fire of year N".
