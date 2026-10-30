@@ -570,6 +570,10 @@ public final class Trade {
             to.dirty = true;
         }
         Route r = from == null || to == null ? null : m.trade.route(from.id, to.id);
+        if (r != null && r.trips == 0 && from != null && to != null) {
+            livingrealms.chronicle.Chronicle.record(from, livingrealms.chronicle.Chronicle.Kind.TRADE, "The first caravan to " + to.name + " sold its goods, opening the road between the two towns.");
+            livingrealms.chronicle.Chronicle.record(to, livingrealms.chronicle.Chronicle.Kind.TRADE, "The first caravan from " + from.name + " arrived with " + summary(c.cargo) + ".");
+        }
         if (r != null) r.trips++;
     }
 

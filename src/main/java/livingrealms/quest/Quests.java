@@ -136,6 +136,10 @@ public final class Quests {
             if (!finished(pr, c)) break;
             if (pr.chapters.add(c.id())) {
                 boolean last = ci == line.size() - 1;
+                Settlement seat = seat(realm(m, p.getUUID()));
+                if (seat != null) livingrealms.chronicle.Chronicle.record(seat, livingrealms.chronicle.Chronicle.Kind.QUEST, last
+                        ? p.getName().getString() + " was crowned, and the realm rang its bells for three days."
+                        : p.getName().getString() + " saw the realm through " + c.title() + ".");
                 notify(p, last ? "Crowned!" : "Chapter complete", last ? "Long live the crown." : c.title(), last ? Items.GOLDEN_HELMET : c.icon(), true);
             }
         }
