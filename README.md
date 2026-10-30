@@ -15,6 +15,7 @@ Living Realms is an original mod. It does not include or modify code from Recrui
 - **Architect view.** A free camera over your town (Build → Architect view, shift + right-click in the air with the plans, or its key): fly around, place full hologram buildings and roads with green/red validity, the bill of materials, and your queued projects shown as ghosts.
 - **Living Realms Handbook**, a Patchouli guide given on first join (book + emerald to craft another).
 - **Keys.** City Manager is now **O**; rotate, raise, lower, Architect view and Recruit Command are all rebindable in Controls.
+- **City Manager pages in small windows.** When the page list no longer fits the sidebar (small windows, large GUI scales, or more pages), it turns into a grid of page icons with the names on hover. Screenshots of the Quests, Trade, Chronicle and City Map pages at several sizes, a caravan leaving by the high street and a siege's breach bar: `./gradlew runClient -PfeaturesUiTour -PrunDir=<fresh dir>` (`FeaturesUiTour`).
 
 ## Features
 

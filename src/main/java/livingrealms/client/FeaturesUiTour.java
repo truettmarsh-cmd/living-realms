@@ -135,8 +135,19 @@ public final class FeaturesUiTour {
     }
 
     static void page(Minecraft mc, String tab) {
-        if (mc.screen instanceof CityScreen city) city.tour(tab, 0, null);
+        if (mc.screen instanceof CityScreen city) {
+            city.tour(tab, 0, null);
+            // the Quests page scrolled down to the bounty board (the escort and the patrol)
+            if (tab.equals("QUESTS")) city.tourScroll("quests", 999);
+        }
+        // the mouse in the corner, so no tooltip covers the page
         GLFW.glfwSetCursorPos(mc.getWindow().getWindow(), 2, 2);
+        try {
+            for (String name : new String[]{"xpos", "ypos"}) {
+                var field = mc.mouseHandler.getClass().getDeclaredField(name);
+                field.setAccessible(true); field.setDouble(mc.mouseHandler, 2);
+            }
+        } catch (ReflectiveOperationException ex) { LOG.warn("Features UI tour could not move the mouse: {}", ex.toString()); }
     }
 
     private static void setup(ServerPlayer player) {
@@ -205,8 +216,8 @@ public final class FeaturesUiTour {
     private static void watchRoad(ServerPlayer p) {
         Settlement home = SettlementManager.get(p.server).get(homeId);
         BlockPos at = streetEnd.equals(BlockPos.ZERO) ? home.center.offset(40, 0, 0) : streetEnd;
-        // beside the paved high street, a little past the market, looking back toward the hall
-        p.teleportTo(p.serverLevel(), at.getX() - 6.5, p.serverLevel().getHeight(Heightmap.Types.MOTION_BLOCKING, at.getX() - 7, at.getZ() - 9) + 4, at.getZ() - 8.5, 120, 20);
+        // just outside the end of the paved high street, looking back along it toward the gate and the market
+        p.teleportTo(p.serverLevel(), at.getX() + 10.5, p.serverLevel().getHeight(Heightmap.Types.MOTION_BLOCKING, at.getX() + 10, at.getZ() - 5) + 3, at.getZ() - 4.5, 70, 12);
     }
 
     private static void besiege(MinecraftServer server, ServerPlayer p) {

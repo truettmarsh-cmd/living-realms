@@ -21,6 +21,23 @@ final class MapOverlays {
     /** ox, oy: screen position of the map's origin column; s: pixels per block. */
     static void draw(Imm ui, CompoundTag v, float ox, float oy, float s, int mx, int my, int mw, int mh) {
         List<String> tip = null;
+        // patrol posts of the bounties the player took here (under the route labels)
+        for (Tag t : v.getCompound("quests").getList("board", Tag.TAG_COMPOUND)) {
+            CompoundTag b = (CompoundTag) t;
+            if (!b.getBoolean("mine") || !b.getString("kind").equals("PATROL")) continue;
+            long[] posts = b.getLongArray("posts");
+            int visited = b.getInt("visited");
+            for (int i = 0; i < posts.length; i++) {
+                BlockPos p = BlockPos.of(posts[i]);
+                boolean done = (visited & 1 << i) != 0;
+                int x = (int) sx(ox, s, p.getX()), y = (int) sy(oy, s, p.getZ());
+                x = Math.max(mx + 5, Math.min(mx + mw - 5, x)); y = Math.max(my + 5, Math.min(my + mh - 5, y));
+                ui.round(x - 4, y - 4, 9, 9, 2, 0xE0101317);
+                ui.round(x - 3, y - 3, 7, 7, 2, done ? VISITED : POST);
+                if (ui.over(x - 4, y - 4, 9, 9)) tip = List.of("Patrol post " + (i + 1) + (done ? " · visited" : ""), p.getX() + ", " + p.getZ(),
+                        done ? "Walk to the others" : "Walk within 8 blocks of it; a beam of light marks it");
+            }
+        }
         for (Tag t : v.getCompound("trade").getList("routes", Tag.TAG_COMPOUND)) {
             CompoundTag r = (CompoundTag) t;
             int[] path = r.getIntArray("path");
@@ -58,23 +75,6 @@ final class MapOverlays {
                             c.getString("status") + " · " + Math.round(c.getDouble("progress") * 100) + "%" + (c.getBoolean("walking") ? " · walking" : ""),
                             c.getString("cargo"));
                 }
-            }
-        }
-        // patrol posts of the bounties the player took here
-        for (Tag t : v.getCompound("quests").getList("board", Tag.TAG_COMPOUND)) {
-            CompoundTag b = (CompoundTag) t;
-            if (!b.getBoolean("mine") || !b.getString("kind").equals("PATROL")) continue;
-            long[] posts = b.getLongArray("posts");
-            int visited = b.getInt("visited");
-            for (int i = 0; i < posts.length; i++) {
-                BlockPos p = BlockPos.of(posts[i]);
-                boolean done = (visited & 1 << i) != 0;
-                int x = (int) sx(ox, s, p.getX()), y = (int) sy(oy, s, p.getZ());
-                x = Math.max(mx + 5, Math.min(mx + mw - 5, x)); y = Math.max(my + 5, Math.min(my + mh - 5, y));
-                ui.round(x - 4, y - 4, 9, 9, 2, 0xE0101317);
-                ui.round(x - 3, y - 3, 7, 7, 2, done ? VISITED : POST);
-                if (ui.over(x - 4, y - 4, 9, 9)) tip = List.of("Patrol post " + (i + 1) + (done ? " · visited" : ""), p.getX() + ", " + p.getZ(),
-                        done ? "Walk to the others" : "Walk within 8 blocks of it; a beam of light marks it");
             }
         }
         if (tip != null) ui.tip(new ArrayList<>(tip));
