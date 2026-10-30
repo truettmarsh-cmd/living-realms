@@ -172,7 +172,7 @@ public final class Simulation {
         s.happiness += Math.signum(d.happinessTarget - s.happiness) * Math.min(Math.abs(d.happinessTarget - s.happiness), 40 * f);
         int housing = d.housing;
         if (!s.starving && s.happiness >= 45 && s.population < housing) {
-            s.growth += (1.5 + s.levels(Category.TAVERN) * 0.5) * f;
+            s.growth += (1.5 + s.levels(Category.TAVERN) * 0.5 + Trade.growthBonus(s)) * f;
         } else if (s.starving || s.happiness < 25) {
             s.growth -= 0.8 * f;
         }
@@ -727,7 +727,7 @@ public final class Simulation {
     }
 
     public static double speed(Settlement s) {
-        return (s.has("carpentry") ? 1.25 : 1) * (s.has("engineering") ? 1.4 : 1);
+        return (s.has("carpentry") ? 1.25 : 1) * (s.has("engineering") ? 1.4 : 1) * Trade.buildBonus(s);
     }
 
     public static List<Plot> activePlots(Settlement s) {

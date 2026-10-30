@@ -95,6 +95,10 @@ The City Manager's **Kingdom** page (last tab) keeps the kingdom's affairs: its 
 
 The warfare test (`-PwarfareTest`) and the Village Expansion test (`-PvillageExpansionTest`, with and without `-PvillageExpansion`) include these rules.
 
+## Trade and caravans
+
+Towns make goods from their land: plains towns wheat, bread and wool, taiga towns spruce logs and furs, snowy towns furs and packed ice, desert towns sand, glass and dyes, savanna towns acacia and terracotta; NPC towns' farms, mines and smithies add food and iron. Towns within 768 blocks of each other that are at peace (same kingdom, allied or neutral) keep trade routes. When one town has a surplus of something the other is short of (its building sites' materials, its research, what every household keeps), a caravan loads up and sets out; prices follow supply and need. Near a player the caravan is real: a wandering trader leading a laden donkey or llama, with a guard or two, walking market to market. Elsewhere its travel is simulated, and it is never lost just because it unloaded. Bandits and enemy raiders may ambush it (guards, and your own soldiers walking with it, make that less likely); killing a trader spills its goods and is a hostile act that suspends trade between the kingdoms, and a second one means war. Each arrival raises both towns' prosperity, which makes them build and grow a little faster. The City Manager's **Trade** page shows stock, prices and production, each route and its caravan, and lets the ruler close a route or ban a good's export. Details in [docs/trade.md](docs/trade.md); the trade test is `-PtradeTest`.
+
 ## Requirements
 
 - Minecraft 1.20.1, Forge 47+

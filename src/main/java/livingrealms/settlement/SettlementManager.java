@@ -25,6 +25,8 @@ public final class SettlementManager extends SavedData {
     public final Map<UUID, Strategy.Memory> memory = new HashMap<>();
     /** Wars, truces, tribute and the loyalty of conquered cities (Statecraft). */
     public final Statecraft state = new Statecraft();
+    /** Trade routes, caravans and each town's trade book (Trade). */
+    public final Trade trade = new Trade();
 
     public static SettlementManager get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(SettlementManager::load, SettlementManager::new, "livingrealms_settlements");
@@ -108,6 +110,7 @@ public final class SettlementManager extends SavedData {
             tag.put("warMemory", r);
         }
         if (!state.isEmpty()) tag.put("statecraft", state.save());
+        if (!trade.isEmpty()) tag.put("trade", trade.save());
         return tag;
     }
 
@@ -127,6 +130,7 @@ public final class SettlementManager extends SavedData {
         CompoundTag mem = tag.getCompound("warMemory");
         for (String k : mem.getAllKeys()) try { m.memory.put(UUID.fromString(k), Strategy.Memory.load(mem.getCompound(k))); } catch (IllegalArgumentException ignored) {}
         m.state.load(tag.getCompound("statecraft"));
+        m.trade.load(tag.getCompound("trade"));
         return m;
     }
 
