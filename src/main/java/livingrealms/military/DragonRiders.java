@@ -41,8 +41,10 @@ public final class DragonRiders {
     @Nullable
     public static Entity available(ServerLevel level, BlockPos at, UUID owner) {
         if (!installed() || owner == null) return null;
-        return level.getEntitiesOfClass(TamableAnimal.class, new AABB(at).inflate(48), e -> eligible(e, owner))
+        Entity near = level.getEntitiesOfClass(TamableAnimal.class, new AABB(at).inflate(48), e -> eligible(e, owner))
                 .stream().min(Comparator.comparingDouble(e -> e.distanceToSqr(at.getX(), at.getY(), at.getZ()))).orElse(null);
+        // the town's roost dragon answers wherever it perches (docs/dragons.md)
+        return near != null ? near : livingrealms.dragon.Roosts.forRider(level, at, owner);
     }
 
     public static boolean mount(Entity rider, Entity dragon) {

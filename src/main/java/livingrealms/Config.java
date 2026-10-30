@@ -87,6 +87,7 @@ public final class Config {
         b.pop();
         livingrealms.hardship.HardshipConfig.define(b);
         livingrealms.compat.CompatConfig.define(b);
+        livingrealms.dragon.DragonConfig.define(b);
         SPEC = b.build();
     }
 

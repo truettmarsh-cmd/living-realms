@@ -17,6 +17,7 @@ The town's risk is the sum, ×0.6 with a standing **Well**, ×0.5 with the **Fir
 - The daily chance (a lamp, a hearth, a candle, the bread oven; sparks from the forge in a smithy). Season-free. Only in loaded towns.
 - **Raids**: `fires.raidChancePerMinute` (default 0.05) while a town is being raided ("raiders' torches", or the besiegers' fire-pots when a siege weapons mod is installed).
 - **Lightning**: a bolt in a town starts watching the strike area.
+- **Dragon attacks and sorties** ([dragons](dragons.md)): a dragon flown at the town sets at most `dragons.maxFiresPerAttack` buildings alight through the same ignition, with the dragon as the cause ("a wild fire dragon's breath", "the dragonfire of Drakmoor").
 - **Lava, dragons and anything else** that makes vanilla fire: towns are checked one building every two seconds, and a fire found there is fought the same way (cause guessed from a recent strike, lava nearby or a dragon within 40 blocks).
 
 No outbreaks start when the `doFireTick` gamerule is off.

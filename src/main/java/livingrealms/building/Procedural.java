@@ -43,6 +43,7 @@ public final class Procedural {
         KINDS.put("well", 1);
         KINDS.put("garden", 1);
         KINDS.put("apothecary", 1);
+        KINDS.put(RoostBlueprint.KIND, 1);
     }
 
     /** Blocks below ground level (mine shafts). */
@@ -79,6 +80,7 @@ public final class Procedural {
             case "well" -> well(b);
             case "garden" -> garden(b);
             case "apothecary" -> apothecary(b);
+            case RoostBlueprint.KIND -> RoostBlueprint.make(b);
             default -> cottage(b, 1);
         }
         return b.build(key);

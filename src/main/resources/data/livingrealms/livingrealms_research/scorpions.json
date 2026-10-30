@@ -1,0 +1,17 @@
+{
+ "name": "Scorpions",
+ "branch": "Military",
+ "cost": 300,
+ "requires": [
+  "crossbows",
+  "fortifications"
+ ],
+ "icon": "minecraft:crossbow",
+ "x": 2,
+ "y": 10,
+ "description": "Mounts scorpions on wall towers, gatehouses and watchtowers (Town rank and up). They loose heavy bolts at dragons, raiders and other attackers; a bolt hurts a dragon three times as much.",
+ "items": {
+  "minecraft:iron_ingot": 24,
+  "minecraft:string": 16
+ }
+}

@@ -82,7 +82,7 @@ final class ChroniclePanel {
             String kind = e.getString("k");
             int kc = switch (kind) {
                 case "FIRE", "DISASTER", "RAID_LOST", "FALLEN", "REBELLION" -> RED;
-                case "WAR", "RAID_REPELLED", "RAID_WON", "RAID_FAILED", "SIEGE", "CONQUERED" -> ORANGE;
+                case "WAR", "RAID_REPELLED", "RAID_WON", "RAID_FAILED", "SIEGE", "CONQUERED", "DRAGON" -> ORANGE;
                 case "GROWTH", "NOTE" -> FAINT;
                 case "HERO", "RANK", "CAPITAL", "CASTLE", "FOUNDING" -> GOLD;
                 default -> BLUE;

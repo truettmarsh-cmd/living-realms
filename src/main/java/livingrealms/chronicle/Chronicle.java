@@ -83,6 +83,8 @@ public final class Chronicle {
         TRADE("Trade", "{0}"),
         /** (text) summary of a quiet stretch, written by the chronicle itself */
         GROWTH("Growth", "{0}"),
+        /** (text) for dragons: hatchings, attacks, dragons slain */
+        DRAGON("Dragon", "{0}"),
         /** (text) anything else, verbatim */
         NOTE("Note", "{0}");
 

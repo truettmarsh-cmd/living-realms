@@ -99,6 +99,7 @@ public final class Raids {
         Strategy.raidStarted(m, raid, server.overworld().getGameTime());
         Statecraft.raidStarted(server, m, raid, source, target);
         livingrealms.compat.Compat.raidStarted(server, raid, source, target);
+        livingrealms.dragon.Sorties.raidStarted(server, m, raid, source, target);
         Realms.onRaid(server, m, source, target);
         for (Settlement s : Kingdoms.cities(m, source)) s.raidCooldown = server.overworld().getGameTime() + Config.RAID_COOLDOWN.get();
         announce(server, source, "Marching on " + target.name + " with " + count + " soldiers.");
@@ -302,6 +303,7 @@ public final class Raids {
         m.raids.remove(raid);
         BattleAI.release(key(raid));
         Siege.end(server, raid, m.get(raid.target));
+        livingrealms.dragon.Sorties.raidEnded(raid);
         Strategy.raidEnded(m, raid, server.overworld().getGameTime());
         Statecraft.raidEnded(server, m, raid, raid.held >= HOLD_TICKS);
         livingrealms.quest.Quests.raidEnded(server, m, raid, raid.held >= HOLD_TICKS);

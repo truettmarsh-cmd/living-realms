@@ -125,6 +125,7 @@ public final class View {
         t.put("chronicle", livingrealms.chronicle.Chronicle.view(s));
         t.put("fire", livingrealms.fire.Fires.view(s));
         t.put("hardship", livingrealms.hardship.Hardships.view(s, p.server.overworld().getGameTime()));
+        t.put("dragons", livingrealms.dragon.Roosts.view(p.server, s));
         ListTag blockers = new ListTag();
         s.tierBlockers().forEach(b -> blockers.add(StringTag.valueOf(b)));
         t.put("blockers", blockers);

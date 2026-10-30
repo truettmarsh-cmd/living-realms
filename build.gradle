@@ -100,6 +100,11 @@ minecraft {
                 workingDirectory project.file(project.property('citizenTestDir'))
                 property 'livingrealms.citizenTest', 'true'
             }
+            // ./gradlew runServer -PdragonTest -PdragonTestDir=<fresh dir> [-Pintegrations] : dragon roosts, attacks, scorpions, sorties (see DragonSelfTest, docs/dragons.md)
+            if (project.hasProperty('dragonTest')) {
+                workingDirectory project.file(project.property('dragonTestDir'))
+                property 'livingrealms.dragonTest', 'true'
+            }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')
                 property 'livingrealms.militaryTest', 'true'
