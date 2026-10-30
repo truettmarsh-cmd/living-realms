@@ -87,7 +87,7 @@ Wall pieces overlap-check by their real columns (a chamfer's box is mostly air),
 
 **Player control.** City Map → Auto walls (per town, on by default) pauses automatic wall pieces and stops new ones. The City Map draws the planned lines dashed; the Architect view draws them on the ground. Player plans come first as with any automatic work.
 
-**Raids.** When the attackers gather outside a wall, the defenders' hold point becomes the inside of the gatehouse nearest them (`Walls.gateFacing`), and the raid status says which gate they hold.
+**Raids.** A raid on a walled town is a siege (gates shut, a breach, defenders on the walls, repairs afterwards): see [sieges.md](sieges.md).
 
 ## Not yet done
 

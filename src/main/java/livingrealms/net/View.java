@@ -183,7 +183,12 @@ public final class View {
             t.putInt("held", r.held);
             t.putInt("hold", Raids.HOLD_TICKS);
             t.putInt("elapsed", r.elapsed);
-            t.putInt("max", Raids.MAX_TICKS);
+            t.putInt("max", r.maxTicks());
+            if (r.siege.walled) {
+                t.putString("phase", r.siege.phase.label);
+                t.putString("breachAt", r.siege.where);
+                t.putFloat("breach", r.siege.progressFraction());
+            }
             t.putInt("soldiers", r.soldiers.size());
             t.putString("status", target == null ? s.raidStatus : target.raidStatus);
             return t;

@@ -55,6 +55,8 @@ At the rally point it gets Regeneration I, and it rejoins at 60% health. At most
 
 **Specials and perks.** Recruits are not `Enemy` mobs, so before this change several abilities ignored enemy soldiers: Taunt, Cleave, Dragonfire Strafe and the hard-fight check of Rally Cry. So did the on-kill perks (Victor's Breath, Battle Rhythm), kill XP and damage XP. `SoldierSpecials.hostile` now counts monsters plus the other side of any battle the soldier is enlisted in. Monsters only count as before.
 
+**Sieges.** Against a walled town the orders are adjusted by `Siege.plan`. The attackers form up at the weak point, and a ram crew holds at the gate. Defending archers take posts on the walls, and the melee hold inside the breach. See [sieges.md](sieges.md).
+
 ## Readability
 
 The City Manager's raid status line now reports soldiers falling back on either side, and defenders holding the centre. For example: `Raid in progress: 6 attackers (1 falling back); 3 local defenders, holding the centre`. Regrouping and siege fire changes go to the city log. Specials keep their existing particles and sounds.

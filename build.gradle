@@ -83,6 +83,11 @@ minecraft {
                 workingDirectory project.file(project.property('tradeTestDir'))
                 property 'livingrealms.tradeTest', 'true'
             }
+            // ./gradlew runServer -PsiegeTest -PsiegeTestDir=<fresh dir> : sieges of walled towns (see SiegeSelfTest, docs/sieges.md)
+            if (project.hasProperty('siegeTest')) {
+                workingDirectory project.file(project.property('siegeTestDir'))
+                property 'livingrealms.siegeTest', 'true'
+            }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')
                 property 'livingrealms.militaryTest', 'true'

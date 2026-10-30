@@ -71,6 +71,17 @@ public final class Hud {
         ui.text(ui.clip("⚔ " + title, w - 26 - ui.width(left)), x + 14, y + 6, accent);
         ui.right(left, x + w - 8, y + 6, Imm.MUTED);
         int held = r.getInt("held"), hold = Math.max(1, r.getInt("hold"));
+        String phase = r.getString("phase");
+        if (phase.equals("Approach") || phase.equals("Breach")) {
+            // a siege before the walls are breached: the bar shows the breach instead of the centre
+            float breach = r.getFloat("breach");
+            String what = phase.equals("Approach") ? "Approach · " + r.getString("breachAt") : "Breach " + (int) (breach * 100) + "%";
+            int lw = ui.width("Breach 100%") + 6;
+            ui.text(ui.clip(what, lw + 40), x + 14, y + 18, Imm.TEXT);
+            ui.bar(x + 14 + lw + 40, y + 20, w - 62 - lw, 5, breach, attacking ? Imm.GREEN : Imm.RED, attacking ? 0xFF4FA860 : 0xFFB84A4A);
+            ui.text(ui.clip(r.getString("status"), w - 22), x + 14, y + 29, Imm.FAINT);
+            return h;
+        }
         String centre = held > 0 ? "Centre held " + held / 20 + "/" + hold / 20 + " s" : "Centre contested";
         int lw = ui.width("Centre held 60/60 s") + 6;
         ui.text(centre, x + 14, y + 18, held > 0 ? Imm.TEXT : Imm.FAINT);
