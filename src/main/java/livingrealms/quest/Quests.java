@@ -11,6 +11,7 @@ import livingrealms.quest.QuestData.Progress;
 import livingrealms.settlement.*;
 import livingrealms.settlement.plan.Walls;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -279,7 +280,7 @@ public final class Quests {
         t.putInt("completed", pr.stat(QuestData.BOUNTIES));
         ListTag board = new ListTag();
         long day = Math.max(1, Bounties.day());
-        for (Bounty x : data.board(s.id).bounties) board.add(bounty(x, s, p, now, day));
+        for (Bounty x : data.board(s.id).bounties) board.add(bounty(m, x, s, p, now, day));
         t.put("board", board);
         // bounties taken in other towns
         ListTag elsewhere = new ListTag();
@@ -287,7 +288,7 @@ public final class Quests {
             if (e.getKey().equals(s.id)) continue;
             Settlement town = m.get(e.getKey());
             if (town == null) continue;
-            CompoundTag b = bounty(e.getValue(), town, p, now, day);
+            CompoundTag b = bounty(m, e.getValue(), town, p, now, day);
             b.putString("town", town.name);
             elsewhere.add(b);
         }
@@ -296,14 +297,14 @@ public final class Quests {
         return t;
     }
 
-    static CompoundTag bounty(Bounty x, Settlement s, ServerPlayer p, long now, long day) {
+    static CompoundTag bounty(SettlementManager m, Bounty x, Settlement s, ServerPlayer p, long now, long day) {
         CompoundTag b = new CompoundTag();
         b.putUUID("id", x.id);
         b.putString("kind", x.kind.name());
         b.putString("title", Bounties.title(x));
         b.putString("detail", Bounties.detail(x, s));
         b.putString("item", BuiltInRegistries.ITEM.getKey(x.kind == QuestData.Kind.DELIVER ? x.item
-                : x.kind == QuestData.Kind.SLAY ? Items.IRON_SWORD : Items.COMPASS).toString());
+                : x.kind == QuestData.Kind.SLAY ? Items.IRON_SWORD : x.kind == QuestData.Kind.ESCORT ? Items.LEAD : Items.COMPASS).toString());
         b.putInt("have", x.progress);
         b.putInt("need", x.need);
         b.putInt("reward", x.reward);
@@ -316,7 +317,15 @@ public final class Quests {
             for (ItemStack st : p.getInventory().items) if (st.getItem() == x.item && !st.hasTag()) carried += st.getCount();
             b.putInt("carried", carried);
         }
+        if (x.kind == QuestData.Kind.ESCORT) {
+            Trade.Caravan c = m.trade.caravan(x.caravan);
+            if (c != null) b.putString("next", c.status == Trade.Status.LOADING ? "Loading at the market, sets out in "
+                    + Math.max(1, (Caravans.LOAD_TICKS - (now - c.since)) / 20) + " s"
+                    : "On the road · with it " + (x.road == 0 ? 0 : x.near * 100 / x.road) + "% of the time (" + (int) (Bounties.ESCORT_SHARE * 100) + "% needed)");
+        }
         if (x.kind == QuestData.Kind.PATROL) {
+            b.putLongArray("posts", x.points.stream().mapToLong(BlockPos::asLong).toArray());
+            b.putInt("visited", x.visited);
             for (int i = 0; i < x.points.size(); i++) if ((x.visited & 1 << i) == 0) {
                 var at = x.points.get(i);
                 b.putString("next", "Next post " + at.getX() + ", " + at.getZ() + " (" + Walls.side(s, at) + ")");

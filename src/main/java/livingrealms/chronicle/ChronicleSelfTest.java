@@ -279,6 +279,8 @@ public final class ChronicleSelfTest {
         t0 = level.getGameTime();
     }
 
+    static boolean resumed;
+
     static int fireIn(BoundingBox b) {
         int n = 0;
         for (BlockPos p : BlockPos.betweenClosed(b.minX(), b.minY(), b.minZ(), b.maxX(), b.maxY(), b.maxZ()))
@@ -311,10 +313,22 @@ public final class ChronicleSelfTest {
         } else if (phase == 1 && age >= 60 + Fires.SCAN + 2) {
             check(!(level.getBlockState(bandFire).getBlock() instanceof BaseFireBlock) && f != null && f.contained > 0, "Fire at the town's edge put out at once");
             phase = 2;
+            // a restart mid-fire: the burning fire is saved with the world and watched again afterwards
+            int byCrewBefore = f.byCrew;
+            CompoundTag saved = new livingrealms.fire.FireData().save(new CompoundTag());
+            Fires.loadAll(new net.minecraft.nbt.ListTag());
+            check(Fires.active(town) == null && saved.getList("fires", 10).size() == 1, "A burning fire is written to the world save");
+            livingrealms.fire.FireData.load(saved);
+            Fires.Fire back = Fires.active(town);
+            check(back != null && back != f && back.cause.equals(f.cause) && back.started == f.started && back.zone.equals(f.zone)
+                    && back.touched.equals(f.touched) && back.contained == f.contained && back.crew.isEmpty() && back.byCrew == byCrewBefore,
+                    "After the restart the fire is watched again, with its cause, area and the buildings it touched");
+            resumed = true;
         } else if (phase == 2 && f == null) {
             Fires.Fire done = Fires.LAST.get(town.id);
             check(done != null && done.done, "The fire was declared out");
             check(maxBurning > 0, "It really burned (" + maxBurning + " blocks at most)");
+            check(!resumed || done.byCrew > 0, "The bucket brigade re-formed after the restart");
             check(done.byCrew > 0, "Firefighters put out fire blocks themselves (" + done.byCrew + " by the crew, " + done.byTown + " by unseen townsfolk)");
             check(fireIn(new BoundingBox(watch.minX(), watch.minY(), watch.minZ(), watch.maxX(), watch.maxY(), watch.maxZ())) == 0, "No fire left anywhere");
             check(!escaped, "No fire ever burned outside the town's land");

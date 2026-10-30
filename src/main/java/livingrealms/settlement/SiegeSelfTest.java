@@ -176,6 +176,16 @@ public final class SiegeSelfTest {
             Raids.Raid dummy = new Raids.Raid(); dummy.siege = sap;
             Siege.end(server, dummy, town);
             check(west.state == Plot.State.REPAIRING && town.log.stream().anyMatch(l -> l.contains("repair the west wall")), "The broken wall is queued for repair");
+            check(west.automatic && west.priority == Siege.REPAIR_PRIORITY && !AutoBuild.manualQueue(town), "The repair joins the automatic queue, not the ruler's projects");
+            boolean autoWas = town.autoBuild, wallsWas = town.autoWalls;
+            town.autoBuild = false; town.autoWalls = false;
+            check(AutoBuild.mayWork(town, west), "A siege repair goes ahead with automatic building and walls switched off");
+            Plot manualJob = new Plot(); manualJob.typeId = "livingrealms:cottage"; manualJob.state = Plot.State.PLANNED; manualJob.id = -77;
+            town.plots.add(manualJob);
+            check(AutoBuild.manualQueue(town) && AutoBuild.mayWork(town, west) && AutoBuild.mayWork(town, manualJob),
+                    "With a project of the ruler's queued, the repair and the project both go ahead");
+            town.plots.remove(manualJob);
+            town.autoBuild = autoWas; town.autoWalls = wallsWas;
             CityPlanningSelfTest.stock(town);
             CityPlanningSelfTest.buildQueued(level, town);
             check(west.state == Plot.State.BUILT && sapped.stream().noneMatch(p -> level.getBlockState(p).isAir()), "The builders rebuild the breach");
@@ -235,6 +245,11 @@ public final class SiegeSelfTest {
             BlockPos ram = sg.outside(town);
             List<BlockPos> gateBars = Siege.passage(town, line, eastGate).bars(), arch = Siege.passage(town, line, eastGate).arch();
             check(!arch.isEmpty() && arch.stream().noneMatch(p -> level.getBlockState(p).isAir()), "The gate arch stands over the passage");
+            moveAll(army, ram);
+            BlockPos shot = sg.bombardPoint(town, army);
+            check(sg.at.equals(sg.bombardPoint(town, List.of())), "With nobody at the wall, siege engines aim at the breach");
+            check(shot != null && !shot.equals(sg.at) && army.stream().allMatch(a -> Siege.horizontal(a, shot) >= Siege.SPLASH)
+                    && Siege.horizontal(army.get(0), shot) < 30, "With the ram crew at the breach, engines pound the wall beside it, clear of them: " + shot + " vs " + sg.at);
             int loops = 0, firstProgress = -1;
             while (!sg.breached && loops++ < 400) {
                 moveAll(army, ram);

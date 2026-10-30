@@ -100,14 +100,24 @@ public final class Caravans {
         tryWalk(level, m, c, from, to, now);
     }
 
+    /** Length of the road: along the towns' high streets where they are paved, straight across country (CaravanRoad). */
     static double distance(Settlement from, Settlement to) {
-        return Math.max(1, Math.sqrt(Trade.market(from, to).distSqr(Trade.market(to, from))));
+        return CaravanRoad.length(CaravanRoad.route(from, to));
     }
 
     /** Where along the road the caravan is. */
     static BlockPos at(Settlement from, Settlement to, double progress) {
-        BlockPos a = Trade.market(from, to), b = Trade.market(to, from);
-        return new BlockPos((int) Math.round(a.getX() + (b.getX() - a.getX()) * progress), a.getY(), (int) Math.round(a.getZ() + (b.getZ() - a.getZ()) * progress));
+        List<BlockPos> r = CaravanRoad.route(from, to);
+        return CaravanRoad.pointAt(r, progress * CaravanRoad.length(r));
+    }
+
+    /** Where the caravan is now: its trader while it walks, else the point its simulated travel has reached. */
+    @Nullable
+    public static BlockPos position(ServerLevel level, SettlementManager m, Trade.Caravan c) {
+        Settlement from = m.get(c.from), to = m.get(c.to);
+        if (from == null || to == null) return null;
+        Entity t = c.physical && c.trader != null ? level.getEntity(c.trader) : null;
+        return t != null ? t.blockPosition() : at(from, to, c.progress);
     }
 
     static boolean watched(ServerLevel level, BlockPos p) {
@@ -144,7 +154,8 @@ public final class Caravans {
         c.walkingSince = now;
         t.moveTo(g.getX() + .5, g.getY(), g.getZ() + .5, level.random.nextFloat() * 360, 0);
         t.setDespawnDelay(0);
-        t.setWanderTarget(Trade.market(to, from));
+        List<BlockPos> road = CaravanRoad.route(from, to);
+        t.setWanderTarget(CaravanRoad.pointAt(road, c.progress * CaravanRoad.length(road) + 12));
         t.setCustomName(Component.literal("Caravan of " + from.name));
         t.setPersistenceRequired();
         tag(t, c);
@@ -183,10 +194,11 @@ public final class Caravans {
         }
     }
 
-    static double progressAt(Settlement from, Settlement to, double x, double z) {
-        BlockPos b = Trade.market(to, from);
-        double left = Math.sqrt((b.getX() + .5 - x) * (b.getX() + .5 - x) + (b.getZ() + .5 - z) * (b.getZ() + .5 - z));
-        return Math.max(0, Math.min(1, 1 - left / distance(from, to)));
+    /** How far along the road a point is, never more than a few blocks behind the caravan's progress so far. */
+    static double progressAt(Settlement from, Settlement to, double x, double z, double progress) {
+        List<BlockPos> r = CaravanRoad.route(from, to);
+        double len = CaravanRoad.length(r);
+        return Math.max(0, Math.min(1, CaravanRoad.project(r, x, z, progress * len - 6) / len));
     }
 
     /** One second of a walking caravan. */
@@ -194,16 +206,21 @@ public final class Caravans {
         Entity e = c.trader == null ? null : level.getEntity(c.trader);
         if (!(e instanceof WanderingTrader t) || !t.isAlive() || !level.isPositionEntityTicking(t.blockPosition())) {
             // out of loaded land (or gone without a death): it travels on, simulated, from where it was last seen
-            c.progress = Math.max(c.progress, progressAt(from, to, c.lastX, c.lastZ));
+            c.progress = Math.max(c.progress, progressAt(from, to, c.lastX, c.lastZ, c.progress));
             dismiss(level, c);
             return;
         }
         BlockPos dest = Trade.market(to, from);
-        double dx = dest.getX() + .5 - t.getX(), dz = dest.getZ() + .5 - t.getZ(), left = Math.sqrt(dx * dx + dz * dz);
+        double fx = dest.getX() + .5 - t.getX(), fz = dest.getZ() + .5 - t.getZ();
         double moved = Math.sqrt((t.getX() - c.lastX) * (t.getX() - c.lastX) + (t.getZ() - c.lastZ) * (t.getZ() - c.lastZ));
         c.lastX = t.getX(); c.lastZ = t.getZ();
-        c.progress = Math.max(0, Math.min(1, 1 - left / dist));
-        if (left <= 4) {
+        // along the road: out by the high street, across country, in by the other town's high street
+        List<BlockPos> road = CaravanRoad.route(from, to);
+        double along = CaravanRoad.project(road, t.getX(), t.getZ(), c.progress * dist - 6);
+        c.progress = Math.max(0, Math.min(1, along / dist));
+        BlockPos ahead = CaravanRoad.pointAt(road, along + 12);
+        double dx = ahead.getX() + .5 - t.getX(), dz = ahead.getZ() + .5 - t.getZ(), left = Math.max(0.01, Math.sqrt(dx * dx + dz * dz));
+        if (fx * fx + fz * fz <= 16) {
             Trade.deliver(server, m, c, now);
             dismiss(level, c);
             return;
@@ -212,10 +229,9 @@ public final class Caravans {
         if (c.done()) return;
         boolean threat = threatened(level, t);
         // lead the way: a leg of a dozen blocks at a time, like a wandering trader heading for its target
-        t.setWanderTarget(dest);
+        t.setWanderTarget(ahead);
         if (t.getNavigation().isDone() && !threat) {
-            double step = Math.min(12, left);
-            BlockPos leg = ground(level, BlockPos.containing(t.getX() + dx / left * step, t.getY(), t.getZ() + dz / left * step));
+            BlockPos leg = ground(level, ahead);
             t.getNavigation().moveTo(leg.getX() + .5, leg.getY(), leg.getZ() + .5, 0.7);
         }
         // stuck on a river bank or a cliff: hop a few blocks on
@@ -257,7 +273,7 @@ public final class Caravans {
         UUID k = from.kingdomId();
         for (Entity e : level.getEntities(t, t.getBoundingBox().inflate(16))) {
             if (c.body(e.getUUID()) || !e.isAlive()) continue;
-            if (e instanceof ServerPlayer p && k.equals(p.getUUID())) return true;
+            if (e instanceof ServerPlayer p && (k.equals(p.getUUID()) || c.escorts.contains(p.getUUID()))) return true;
             if (RecruitsBridge.isRecruit(e) && k.equals(RecruitsBridge.owner(e))) return true;
         }
         return false;

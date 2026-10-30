@@ -43,6 +43,8 @@ minecraft {
             if (project.hasProperty('tour')) property 'livingrealms.tour', 'true'
             // ./gradlew runClient -PtradeUiTest -PrunDir=<fresh dir> : the Trade page and a caravan on the road (see TradeUiTour)
             if (project.hasProperty('tradeUiTest')) property 'livingrealms.tradeUiTest', 'true'
+            // ./gradlew runClient -PfeaturesUiTour -PrunDir=<fresh dir> : Quests, Trade, Chronicle, City Map routes, a caravan on the high street and a siege's breach bar (see FeaturesUiTour)
+            if (project.hasProperty('featuresUiTour')) property 'livingrealms.featuresUiTour', 'true'
             // ./gradlew runClient -PwarTour -PvillageExpansion -PpackMods -PrunDir=<fresh dir> : war and siege walkthrough (see WarTour)
             if (project.hasProperty('warTour')) property 'livingrealms.warTour', 'true'
             // ./gradlew runClient -PtownRingTour -PrunDir=<dir> [-PvillageExpansion] : town ring and map claim, before and after a rank-up (see TownRingTour)

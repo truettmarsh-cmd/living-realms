@@ -16,7 +16,7 @@ public final class Hud {
         boolean placing = Placement.mode != Placement.Mode.NONE;
         if (!placing && ClientState.raids.isEmpty()) return;
         UI.begin(g, -1, -1, 0);
-        int y = 8;
+        int y = 8 + ClaimPanelGap.top(); // below Villager Recruits' claim panel when it shows
         if (placing) y += placement(w, y) + 4;
         for (CompoundTag raid : ClientState.raids) {
             int rw = Math.min(260, w - 16);

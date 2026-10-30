@@ -16,7 +16,12 @@
     {
       "type": "patchouli:text",
       "title": "Town bounties",
-      "text": "Each town posts up to three bounties from what it needs:$(li)$(l)Deliver$() what its builders are short of, or bread when the granary is low. Carry it and press Deliver.$(li)$(l)Slay$() hostile mobs near the town (your soldiers' kills count).$(li)$(l)Patrol$() the four posts at the town's edge."
+      "text": "Each town posts up to three bounties from what it needs:$(li)$(l)Deliver$() what its builders are short of, or bread when the granary is low.$(li)$(l)Slay$() hostile mobs near the town.$(li)$(l)Patrol$() the four posts at the town's edge; beams of light and the City Map show where."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Escorts",
+      "text": "While one of its caravans loads at the market, a town also posts $(l)Escort our caravan$(). Take it, meet the caravan, and stay within 16 blocks of it for most of the road until it reaches its market. Walking with it halves the risk of an ambush."
     },
     {
       "type": "patchouli:text",

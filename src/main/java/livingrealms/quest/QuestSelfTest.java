@@ -91,6 +91,83 @@ public final class QuestSelfTest {
         return s;
     }
 
+    /** Escort bounties: posted while a caravan loads, paid for walking with it to its market, failed when left or lost. */
+    static int escorts(ServerLevel level, SettlementManager m, QuestData data, ServerPlayer p, Settlement home, Settlement dest, long now) {
+        UUID me = p.getUUID();
+        java.util.function.Function<UUID, ServerPlayer> players = id -> id.equals(me) ? p : null;
+        java.util.function.Function<net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level>, ServerLevel> levels = k -> level;
+        List<Bounty> board = data.board(home.id).bounties;
+        int others = (int) board.stream().filter(b -> b.kind != Kind.ESCORT).count();
+        Trade.Caravan c = caravan(m, home, dest, now);
+        Bounties.escorts(data, m, players, levels, now);
+        Bounty x = board.stream().filter(b -> b.kind == Kind.ESCORT).findFirst().orElse(null);
+        check(x != null && c.id.equals(x.caravan) && Bounties.title(x).equals("Escort the caravan to " + dest.name) && x.reward >= 2,
+                "A loading caravan posts an escort bounty: " + (x == null ? "none" : Bounties.title(x)));
+        Bounties.escorts(data, m, players, levels, now);
+        check(board.stream().filter(b -> b.kind == Kind.ESCORT).count() == 1 && board.stream().filter(b -> b.kind != Kind.ESCORT).count() == others,
+                "One escort per caravan, beside the board's other bounties");
+        check(Bounties.accept(data, m, home, p, x.id, now) == null, "Accept the escort");
+        CompoundTag ev = Quests.view(data, m, home, p, now).getList("board", Tag.TAG_COMPOUND).stream().map(t -> (CompoundTag) t)
+                .filter(t -> t.getString("kind").equals("ESCORT")).findFirst().orElse(new CompoundTag());
+        check(ev.getString("next").startsWith("Loading at the market") && ev.getString("item").equals("minecraft:lead"), "The page says the caravan is loading: " + ev.getString("next"));
+        CompoundTag saved = data.save(new CompoundTag());
+        Bounty back = QuestData.load(saved).board(home.id).bounties.stream().filter(b -> b.kind == Kind.ESCORT).findFirst().orElse(null);
+        check(back != null && c.id.equals(back.caravan) && back.dest.equals(dest.name) && me.equals(back.taker), "An escort bounty survives a reload");
+        // on the road, walking beside it
+        c.status = Trade.Status.ROAD;
+        int emeralds = count(p, Items.EMERALD);
+        for (int i = 0; i < 10; i++) {
+            c.progress = 0.05 + i * 0.09;
+            BlockPos at = Caravans.position(level, m, c);
+            p.setPos(at.getX() + 3, at.getY(), at.getZ() - 2);
+            Bounties.escorts(data, m, players, levels, now);
+        }
+        check(x.road == 10 && x.near == 10 && c.escorts.contains(me), "Walking with the caravan counts, and makes the player its escort: " + x.near + "/" + x.road);
+        p.setPos(home.center.getX() + 900, 100, home.center.getZ());
+        Bounties.escorts(data, m, players, levels, now);
+        check(x.road == 11 && x.near == 10 && !c.escorts.contains(me), "Wandering off does not count");
+        c.status = Trade.Status.ARRIVED; c.progress = 1;
+        p.setPos(dest.center.getX() + 2, 100, dest.center.getZ() + 2);
+        Bounties.escorts(data, m, players, levels, now);
+        check(!board.contains(x) && count(p, Items.EMERALD) == emeralds + x.reward, "Seen to its market, the escort is paid: " + x.reward);
+        // left to walk alone
+        Trade.Caravan c2 = caravan(m, home, dest, now);
+        Bounties.escorts(data, m, players, levels, now);
+        Bounty y = board.stream().filter(b -> c2.id.equals(b.caravan)).findFirst().orElseThrow();
+        check(Bounties.accept(data, m, home, p, y.id, now) == null, "Accept a second escort");
+        c2.status = Trade.Status.ROAD;
+        p.setPos(home.center.getX() + 900, 100, home.center.getZ());
+        for (int i = 0; i < 5; i++) { c2.progress = .1 + i * .2; Bounties.escorts(data, m, players, levels, now); }
+        c2.status = Trade.Status.ARRIVED;
+        p.setPos(dest.center.getX(), 100, dest.center.getZ());
+        Bounties.escorts(data, m, players, levels, now);
+        check(!board.contains(y) && count(p, Items.EMERALD) == emeralds + x.reward && y.near == 0, "A caravan that walked alone pays nothing");
+        // lost, and too late to join
+        Trade.Caravan c3 = caravan(m, home, dest, now);
+        Bounties.escorts(data, m, players, levels, now);
+        Bounty z = board.stream().filter(b -> c3.id.equals(b.caravan)).findFirst().orElseThrow();
+        c3.status = Trade.Status.ROAD; c3.progress = .5;
+        check(Bounties.accept(data, m, home, p, z.id, now) != null, "Too far down the road to join");
+        Bounties.escorts(data, m, players, levels, now);
+        check(!board.contains(z), "An untaken escort leaves the board once the caravan is well on its way");
+        Trade.Caravan c4 = caravan(m, home, dest, now);
+        Bounties.escorts(data, m, players, levels, now);
+        Bounty w = board.stream().filter(b -> c4.id.equals(b.caravan)).findFirst().orElseThrow();
+        check(Bounties.accept(data, m, home, p, w.id, now) == null, "Accept a third escort");
+        c4.status = Trade.Status.LOST; c4.note = "bandits";
+        Bounties.escorts(data, m, players, levels, now);
+        check(!board.contains(w) && data.taken(me).isEmpty(), "A lost caravan ends its escort");
+        return x.reward;
+    }
+
+    static Trade.Caravan caravan(SettlementManager m, Settlement from, Settlement to, long now) {
+        Trade.Caravan c = new Trade.Caravan();
+        c.from = from.id; c.to = to.id; c.since = now; c.value = 40;
+        c.cargo.put(Items.BREAD, 32);
+        m.trade.caravans.add(c);
+        return c;
+    }
+
     static List<String> ids(List<Step> steps) { return steps.stream().map(Step::id).toList(); }
 
     static int emeraldRewards(List<Chapter> line) {
@@ -241,6 +318,10 @@ public final class QuestSelfTest {
             Bounties.patrol(data, m, p, now);
         }
         check(patrol.progress == 3 && board.contains(patrol), "Three of four posts visited, each counted once");
+        check(Bounties.posts(data, m, p, 100000).equals(List.of(patrol.points.get(3))), "Only the post still to walk to is marked in the world");
+        CompoundTag posts = Quests.view(data, m, home, p, now).getList("board", Tag.TAG_COMPOUND).stream().map(t -> (CompoundTag) t)
+                .filter(t -> t.getString("kind").equals("PATROL")).findFirst().orElse(new CompoundTag());
+        check(posts.getLongArray("posts").length == 4 && posts.getInt("visited") == 0b111, "The City Map gets the four posts and which are walked");
         CompoundTag pv = Quests.view(data, m, home, p, now).getList("board", Tag.TAG_COMPOUND).getCompound(0);
         check(pv.getString("next").contains(String.valueOf(patrol.points.get(3).getX())), "The view names the next post");
         BlockPos last = patrol.points.get(3);
@@ -263,6 +344,7 @@ public final class QuestSelfTest {
         check(!board.contains(left) && board.contains(kept), "Untaken bounties expire; the taken one has its extra day");
         Bounties.refresh(data, m, home, kept.expires, rnd, null);
         check(!board.contains(kept) && data.taken(me).isEmpty(), "A taken bounty expires too");
+        int escortPaid = escorts(level, m, data, p, home, grand, now);
 
         // limit on bounties taken at once
         long t2 = later + Bounties.lifetime() + day;
@@ -357,7 +439,7 @@ public final class QuestSelfTest {
             if (ci > cj) throw new IllegalStateException("Step " + order.get(j) + " completed after a later chapter's " + order.get(i));
         }
         checks++;
-        int bountyEmeralds = deliver.reward + slay.reward + patrol.reward;
+        int bountyEmeralds = deliver.reward + slay.reward + patrol.reward + escortPaid;
         check(count(p, Items.EMERALD) == emeraldRewards(line) + bountyEmeralds, "Total emeralds = quest rewards + bounty rewards: "
                 + count(p, Items.EMERALD) + " vs " + (emeraldRewards(line) + bountyEmeralds));
         CompoundTag end = QuestData.load(data.save(new CompoundTag())).save(new CompoundTag());

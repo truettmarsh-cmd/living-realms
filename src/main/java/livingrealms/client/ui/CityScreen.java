@@ -286,16 +286,17 @@ public class CityScreen extends Screen {
         y += 36;
         ui.hline(x, y, w, LINE);
         y += 6;
-        // short windows: a one-line footer and tighter tabs, so the tabs never run into it
+        // short windows: a one-line footer and tighter tabs, then a grid of icons, so the tabs never run into it however many pages there are
         Tab[] tabs = Tab.values();
         boolean compact = py + ph - 46 - 6 - y < tabs.length * 21;
-        int fy = py + ph - (compact ? 20 : 46), pitch = Math.max(17, Math.min(21, (fy - 6 - y) / tabs.length));
+        int fy = py + ph - (compact ? 20 : 46);
+        TabLayout lay = TabLayout.of(tabs.length, w + 4, fy - 6 - y);
         var hotbar = Minecraft.getInstance().options.keyHotbarSlots;
         for (int i = 0; i < tabs.length; i++) {
             final Tab tt = tabs[i];
-            if (ui.iconButton("nav" + tt, x - 2, y, w + 4, pitch - 1, tt.icon, tt.label, tab == tt, () -> switchTab(tt)) && i < hotbar.length)
-                ui.tip(tt.label, "Shortcut: " + hotbar[i].getTranslatedKeyMessage().getString() + "  ·  Tab / Shift+Tab cycles pages");
-            y += pitch;
+            int bx = x - 2 + (i % lay.cols()) * lay.cellW(), by = y + (i / lay.cols()) * lay.pitch();
+            boolean over = ui.iconButton("nav" + tt, bx, by, lay.cellW() - (lay.grid() ? 1 : 0), lay.pitch() - 1, tt.icon, lay.grid() ? "" : tt.label, tab == tt, () -> switchTab(tt));
+            if (over) ui.tip(tt.label, (i < hotbar.length ? "Shortcut: " + hotbar[i].getTranslatedKeyMessage().getString() + "  ·  " : "") + "Tab / Shift+Tab cycles pages");
         }
         // footer: quick figures
         ui.hline(x, fy - 6, w, LINE);
@@ -751,6 +752,8 @@ public class CityScreen extends Screen {
             outline(ui, x0 - 1, z0 - 1, x1 + 1, z1 + 1, lerp(0xFFB0B0B0, 0xFFFFFFFF, pulse));
             outline(ui, x0, z0, x1, z1, lerp(0xFFB0B0B0, 0xFFFFFFFF, pulse));
         }
+        // trade routes, caravans and patrol posts (MapOverlays)
+        MapOverlays.draw(ui, v(), ox, oy, s, mapX, mapY, mapW, mapH);
         // the player
         var pl = Minecraft.getInstance().player;
         if (pl != null) {

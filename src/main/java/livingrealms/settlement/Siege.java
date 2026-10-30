@@ -250,6 +250,32 @@ public final class Siege {
     public BlockPos aim(Settlement s) { return bombarding() ? at : s.center; }
     public boolean bombarding() { return walled && !breached && phase.before(Phase.ASSAULT); }
 
+    /** Blocks round a siege engine's hit that our own soldiers must keep clear of. */
+    public static final int SPLASH = 10;
+    /** Priority of a siege repair in the builders' queue (player projects are 0 to 10). */
+    public static final int REPAIR_PRIORITY = 15;
+
+    /**
+     * Where siege engines aim while the wall stands: the breach, unless some of our own troops (the ram crew) are within
+     * splash of it; then the same wall a little to either side, clear of them; null (hold fire) when nowhere is clear.
+     */
+    @Nullable
+    public BlockPos bombardPoint(Settlement s, List<? extends net.minecraft.world.entity.Entity> friends) {
+        if (!bombarding()) return null;
+        Vec3 o = out(s);
+        double ax = -o.z, az = o.x; // along the wall
+        for (int d : new int[]{0, 11, -11, 14, -14, 18, -18}) {
+            BlockPos p = new BlockPos(at.getX() + (int) Math.round(ax * d), at.getY(), at.getZ() + (int) Math.round(az * d));
+            boolean clear = true;
+            for (var e : friends) {
+                double dx = e.getX() - (p.getX() + .5), dz = e.getZ() - (p.getZ() + .5);
+                if (e.isAlive() && dx * dx + dz * dz < SPLASH * SPLASH) { clear = false; break; }
+            }
+            if (clear) return p;
+        }
+        return null;
+    }
+
     static boolean insideLine(Walls.Line l, Settlement s, LivingEntity e) {
         return Walls.level(l, e.getBlockX() - s.center.getX(), e.getBlockZ() - s.center.getZ()) < -1;
     }
@@ -644,9 +670,10 @@ public final class Siege {
         for (int id : sg.damaged) {
             Plot p = target.plot(id);
             if (p == null || p.state != Plot.State.BUILT) continue;
-            // as the Repair button does: a project of its own, so the builders see to it before choosing new work
+            // the town's own work, first in the builders' queue: it neither waits for nor holds up the ruler's projects
             p.state = Plot.State.REPAIRING;
-            p.automatic = false;
+            p.automatic = true;
+            p.priority = REPAIR_PRIORITY;
             p.placed = 0;
             p.paid = 0;
             names.add(Walls.side(target, p.center()) + (p.typeId.equals(Walls.GATE) ? " gate" : p.typeId.equals(Walls.TOWER) ? " tower" : " wall"));

@@ -16,6 +16,8 @@ public final class AutoBuild {
     public static boolean pending(Plot p) { return p.active() || p.state == Plot.State.PLANNED; }
     public static boolean manualQueue(Settlement s) { return s.plots.stream().anyMatch(p -> pending(p) && !p.automatic); }
     public static boolean mayWork(Settlement s, Plot p) {
+        // the town's own repairs after a siege go ahead whatever the queue and the automatic-building switches say
+        if (p.automatic && p.state == Plot.State.REPAIRING) return true;
         if (p.automatic && !s.autoWalls && Walls.isWallPiece(p)) return false;
         return s.isAi() || !p.automatic || s.autoBuild && !manualQueue(s);
     }

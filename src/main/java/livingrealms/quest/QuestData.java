@@ -54,7 +54,7 @@ public final class QuestData extends SavedData {
         }
     }
 
-    public enum Kind { DELIVER, SLAY, PATROL }
+    public enum Kind { DELIVER, SLAY, PATROL, ESCORT }
 
     public static final class Bounty {
         public UUID id = UUID.randomUUID();
@@ -69,6 +69,10 @@ public final class QuestData extends SavedData {
         /** Patrol waypoints and which of them have been visited (bit i). */
         public final List<BlockPos> points = new ArrayList<>();
         public int visited;
+        /** Escort: the caravan to walk with, where it goes, seconds on the road with the taker near it, of all its seconds on the road. */
+        @Nullable public UUID caravan;
+        public String dest = "";
+        public int near, road;
 
         public boolean done() { return progress >= need; }
 
@@ -84,6 +88,7 @@ public final class QuestData extends SavedData {
             t.putString("takerName", takerName);
             t.putLongArray("points", points.stream().mapToLong(BlockPos::asLong).toArray());
             t.putInt("visited", visited);
+            if (caravan != null) { t.putUUID("caravan", caravan); t.putString("dest", dest); t.putInt("near", near); t.putInt("road", road); }
             return t;
         }
 
@@ -103,6 +108,8 @@ public final class QuestData extends SavedData {
                 b.takerName = t.getString("takerName");
                 for (long l : t.getLongArray("points")) b.points.add(BlockPos.of(l));
                 b.visited = t.getInt("visited");
+                if (t.hasUUID("caravan")) { b.caravan = t.getUUID("caravan"); b.dest = t.getString("dest"); b.near = t.getInt("near"); b.road = t.getInt("road"); }
+                if (b.kind == Kind.ESCORT && b.caravan == null) return null;
                 return b;
             } catch (Exception e) {
                 return null;
