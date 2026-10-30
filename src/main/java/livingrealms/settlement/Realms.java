@@ -337,6 +337,7 @@ public final class Realms {
         if (VxBridge.atWar(mine, faction)) return "Already at war";
         VxBridge.declareWar(player.server.overworld(), mine, faction);
         for (Settlement c : Kingdoms.cities(m, s)) c.log("You declared war on " + VxBridge.name(faction));
+        livingrealms.chronicle.Chronicle.kingdom(m, s.kingdomId(), livingrealms.chronicle.Chronicle.Kind.WAR, VxBridge.name(faction));
         return null;
     }
 
@@ -356,6 +357,7 @@ public final class Realms {
         PEACE_OFFERS.remove(pair(mine, faction));
         m.truces.put(mine.compareTo(faction) < 0 ? mine + "|" + faction : faction + "|" + mine, level.getGameTime() + TRUCE);
         for (Settlement c : Kingdoms.cities(m, s)) c.log("Peace with " + VxBridge.name(faction) + "; a truce of one day");
+        livingrealms.chronicle.Chronicle.kingdom(m, s.kingdomId(), livingrealms.chronicle.Chronicle.Kind.PEACE, VxBridge.name(faction), "a truce");
         return null;
     }
 

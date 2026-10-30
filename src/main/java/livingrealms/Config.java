@@ -17,6 +17,10 @@ public final class Config {
     public static final ForgeConfigSpec.IntValue RAID_RANGE, RAID_COOLDOWN;
     public static final ForgeConfigSpec.BooleanValue VILLAGE_EXPANSION;
     public static final ForgeConfigSpec.BooleanValue TOWN_CLAIMS;
+    public static final ForgeConfigSpec.IntValue CHRONICLE_MAX, CHRONICLE_YEAR;
+    public static final ForgeConfigSpec.BooleanValue FIRES;
+    public static final ForgeConfigSpec.DoubleValue FIRE_CHANCE, FIRE_RAID_CHANCE;
+    public static final ForgeConfigSpec.IntValue FIRE_BRIGADE_DELAY, FIRE_MAX_TICKS;
 
     public static final ForgeConfigSpec.BooleanValue ORIGIN_NATIVE_SPAWNS;
     public static final ForgeConfigSpec.IntValue ORIGIN_HUMAN, ORIGIN_DWARF, ORIGIN_ELF, ORIGIN_GIANT;
@@ -67,6 +71,19 @@ public final class Config {
         ORIGIN_DWARF = b.defineInRange("dwarfWeight", 8, 0, 10000);
         ORIGIN_ELF = b.defineInRange("elfWeight", 9, 0, 10000);
         ORIGIN_GIANT = b.defineInRange("giantWeight", 3, 0, 10000);
+        b.pop();
+        b.push("chronicle");
+        CHRONICLE_MAX = b.comment("Entries a town's chronicle keeps; the oldest go first (never the founding).").defineInRange("maxEntries", 120, 8, 1000);
+        CHRONICLE_YEAR = b.comment("Minecraft days in a chronicle year.").defineInRange("yearDays", 30, 1, 3650);
+        b.pop();
+        b.push("fires");
+        FIRES = b.comment("Town fires: wooden buildings can catch fire, townsfolk fight it, fire is kept inside the town and damaged buildings are repaired. Off: none of this happens.")
+                .define("enabled", true);
+        FIRE_CHANCE = b.comment("Chance of an outbreak per day for a town of 8 all-wooden buildings (scales with the town's fire risk, at most x3). Wells and the Fire Watch research lower it.")
+                .defineInRange("dailyChance", 0.02, 0.0, 1.0);
+        FIRE_RAID_CHANCE = b.comment("Extra chance per minute of a raid that the attackers set a building on fire.").defineInRange("raidChancePerMinute", 0.05, 0.0, 1.0);
+        FIRE_BRIGADE_DELAY = b.comment("Ticks before the bucket brigade arrives at a fire.").defineInRange("brigadeDelay", 200, 0, 6000);
+        FIRE_MAX_TICKS = b.comment("Ticks after which any fire still burning in a town is put out.").defineInRange("maxFireTicks", 6000, 400, 72000);
         b.pop();
         livingrealms.compat.CompatConfig.define(b);
         SPEC = b.build();

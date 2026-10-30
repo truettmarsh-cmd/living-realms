@@ -95,6 +95,11 @@ The City Manager's **Kingdom** page (last tab) keeps the kingdom's affairs: its 
 
 The warfare test (`-PwarfareTest`) and the Village Expansion test (`-PvillageExpansionTest`, with and without `-PvillageExpansion`) include these rules.
 
+## Town chronicle and fires
+
+- **Chronicle.** Every town keeps a dated history of notable events in short prose: its founding, rank-ups, the town hall and its first chapel, library, market or barracks, the walls and castle, raids and who led them, changes of rulers, wars and peace, heroes promoted and veterans fallen, and fires. Quiet stretches are folded into one line ("Days 12–30: the town grew quietly to 14 buildings"). Read it in **City Manager → Chronicle** (newest first or by year), get a **written book** copy from that page (1 emerald) or by using a blank book on the Town Hall. See [docs/chronicle.md](docs/chronicle.md).
+- **Fires.** Wooden buildings can catch fire (rarely; forges, crowding and raids add to the risk), and lightning, lava and dragons start real fires too. The bell rings, townsfolk form a bucket brigade, fire is never allowed past the town's land, and burnt buildings are queued for repair. A **Well** and the **Fire Watch** research lower the risk; stone buildings hardly burn. The Chronicle page shows the town's fire risk. Configurable and can be switched off (`[fires]` in the server config). See [docs/fires.md](docs/fires.md).
+
 ## Requirements
 
 - Minecraft 1.20.1, Forge 47+

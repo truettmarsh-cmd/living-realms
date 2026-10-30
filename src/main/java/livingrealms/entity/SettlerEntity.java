@@ -105,6 +105,7 @@ public class SettlerEntity extends PathfinderMob {
         goalSelector.addGoal(0, new FloatGoal(this));
         goalSelector.addGoal(1, new AvoidEntityGoal<>(this, Monster.class, 10f, 0.6, 0.75));
         goalSelector.addGoal(2, new OpenDoorGoal(this, true));
+        goalSelector.addGoal(2, new livingrealms.fire.FirefightGoal(this));
         goalSelector.addGoal(3, new BuildGoal(this));
         goalSelector.addGoal(4, new TownsfolkGoal(this));
         goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 6f));

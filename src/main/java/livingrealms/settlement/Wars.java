@@ -34,6 +34,7 @@ public final class Wars {
             String msg = Statecraft.name(m, a) + " and " + Statecraft.name(m, b) + " are at war.";
             Statecraft.tellKingdom(server, m, a, msg);
             Statecraft.tellKingdom(server, m, b, msg);
+            livingrealms.chronicle.Chronicle.war(m, a, b);
         }
         return w;
     }
@@ -263,6 +264,7 @@ public final class Wars {
         String msg = "Peace between " + Statecraft.name(m, proposer) + " and " + Statecraft.name(m, enemy) + (why == null ? "" : ", forced by " + why) + ": " + text + ".";
         Statecraft.tellKingdom(server, m, proposer, msg);
         Statecraft.tellKingdom(server, m, enemy, msg);
+        livingrealms.chronicle.Chronicle.peace(m, proposer, enemy, text);
     }
 
     /** Village Expansion records the peace too, so its factions stop marching and honour the truce. */

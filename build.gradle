@@ -65,6 +65,10 @@ minecraft {
                 workingDirectory project.file(project.property('villageExpansionTestDir'))
                 property 'livingrealms.villageExpansionTest', 'true'
             }
+            if (project.hasProperty('chronicleTest')) {
+                workingDirectory project.file(project.property('chronicleTestDir'))
+                property 'livingrealms.chronicleTest', 'true'
+            }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')
                 property 'livingrealms.militaryTest', 'true'

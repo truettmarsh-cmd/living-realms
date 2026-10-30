@@ -45,7 +45,7 @@ public class CityScreen extends Screen {
     enum Tab {
         OVERVIEW("Overview", Items.BELL), MAP("City Map", Items.FILLED_MAP), BUILD("Build", Items.BRICKS), PROJECTS("Projects", Items.SCAFFOLDING),
         STORAGE("Stockpile", Items.CHEST), RESEARCH("Research", Items.ENCHANTED_BOOK), MILITARY("Military", Items.IRON_SWORD), FORGE("Blacksmith", Items.ANVIL),
-        KINGDOM("Kingdom", Items.GOLDEN_HELMET);
+        KINGDOM("Kingdom", Items.GOLDEN_HELMET), CHRONICLE("Chronicle", Items.WRITABLE_BOOK);
         final String label;
         final Item icon;
         Tab(String label, Item icon) { this.label = label; this.icon = icon; }
@@ -250,6 +250,7 @@ public class CityScreen extends Screen {
                 case MILITARY -> military();
                 case FORGE -> forge();
                 case KINGDOM -> KingdomPanel.draw(ui, cx, cy, cw, ch, v().getCompound("statecraft"), this::act);
+                case CHRONICLE -> ChroniclePanel.draw(ui, cx, cy, cw, ch, v(), mine(), this::act);
             }
         } catch (Exception e) {
             ui.text("Something went wrong drawing this page: " + e, cx, cy + 20, RED);
@@ -478,7 +479,7 @@ public class CityScreen extends Screen {
         // chronicle
         int lh = scrolls ? 70 : cy + ch - y;
         ui.card(cx, y, cw, lh);
-        ui.text("Chronicle", cx + 8, y + 6, MUTED);
+        ui.text("Town log", cx + 8, y + 6, MUTED);
         List<String> log = strings("log");
         int off2 = ui.beginScroll("log", cx + 4, y + 18, cw - 8, Math.max(11, (lh - 22) / 11 * 11), log.size() * 11);
         int ly = y + 19 - off2;

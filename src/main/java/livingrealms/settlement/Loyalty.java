@@ -127,6 +127,7 @@ public final class Loyalty {
         unrest(s.id, null);
         String msg = s.name + " rose in rebellion against " + rulerName + (freeName != null ? " and declared itself free." : " and returned to " + by + ".");
         s.log(msg);
+        livingrealms.chronicle.Chronicle.rebellion(s, rulerName);
         Statecraft.tellKingdom(server, m, ruler, msg);
         Wars.open(server, m, ruler, s.kingdomId(), server.overworld().getGameTime(), false);
     }
