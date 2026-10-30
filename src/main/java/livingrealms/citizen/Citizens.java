@@ -347,6 +347,15 @@ public final class Citizens {
         s.dirty = true;
     }
 
+    // Sickness deaths (livingrealms.hardship) take a person: the sickly first, then the oldest.
+    static {
+        livingrealms.hardship.Hardships.listen((s, e, detail) -> {
+            if (e != livingrealms.hardship.Hardships.Event.DEATH || s.people.all.isEmpty()) return;
+            s.people.all.stream().filter(c -> c.grown).max(Comparator.<Citizen>comparingInt(c -> c.has(Trait.SICKLY) ? 1 : 0).thenComparingDouble(c -> c.age(s.people.clock)))
+                    .ifPresent(c -> die(s, c, "of " + detail, false));
+        });
+    }
+
     /** A visible settler was killed (the settler's own death handling lowers the population). */
     public static void killed(Settlement s, int citizen, String cause) {
         Citizen c = s.people.get(citizen);
