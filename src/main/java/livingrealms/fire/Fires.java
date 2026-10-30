@@ -487,7 +487,7 @@ public final class Fires {
             if (gone < Math.max(2, solid(p) / 100)) continue;
             BuildingType t = BuildingCatalog.get(p.typeId);
             f.damaged.add(t == null ? "building" : t.name.toLowerCase(Locale.ROOT));
-            if (p.state == Plot.State.BUILT) { Planning.repair(s, p); f.repairs++; }
+            if (p.state == Plot.State.BUILT) { Planning.repair(s, p); p.automatic = true; p.priority = livingrealms.settlement.Siege.REPAIR_PRIORITY; f.repairs++; }
         }
         s.dirty = true;
     }
