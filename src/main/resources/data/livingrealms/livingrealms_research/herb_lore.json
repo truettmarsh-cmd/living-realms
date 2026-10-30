@@ -1,0 +1,15 @@
+{
+ "name": "Herb Lore",
+ "branch": "Economy",
+ "cost": 80,
+ "requires": [
+  "agriculture"
+ ],
+ "items": {
+  "minecraft:paper": 4
+ },
+ "icon": "minecraft:honey_bottle",
+ "x": 2,
+ "y": 2,
+ "description": "Healers' gardens and remedies: sickness spreads less, the sick recover sooner and fewer die. Unlocks the Apothecary."
+}

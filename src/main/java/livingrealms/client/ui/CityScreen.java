@@ -383,7 +383,8 @@ public class CityScreen extends Screen {
         // the body scrolls when the window is too short for it; the chronicle then gets a fixed height
         CompoundTag raidTag = v().getCompound("raid");
         int raidH = raidTag.isEmpty() ? 0 : 46;
-        int top = cy + 64, bodyH = raidH + 50 + 110 + (mine() && !v().getBoolean("ai") ? 22 : 0) + (v().getCompound("compat").getList("lines", Tag.TAG_COMPOUND).isEmpty() ? 0 : 22) + 70;
+        int top = cy + 64, bodyH = raidH + 50 + 110 + (mine() && !v().getBoolean("ai") ? 22 : 0) + (v().getCompound("compat").getList("lines", Tag.TAG_COMPOUND).isEmpty() ? 0 : 22)
+                + HardshipPanel.height(v().getCompound("hardship")) + 70;
         boolean scrolls = top + bodyH > cy + ch;
         int bodyOff = scrolls ? ui.beginScroll("overview", cx, top, cw + 4, cy + ch - top, bodyH + 2) : 0;
         int y = top + 2 - bodyOff, tw = (cw - 9) / 4;
@@ -479,6 +480,7 @@ public class CityScreen extends Screen {
         y += rh + 6;
         if (mine() && !v().getBoolean("ai")) { autonomy(y); y += 22; }
         y += CompatPanel.draw(ui, cx, y, cw, v().getCompound("compat"));
+        y += HardshipPanel.draw(ui, cx, y, cw, v().getCompound("hardship"), mine() && !v().getBoolean("ai"), this::act);
         // chronicle
         int lh = scrolls ? 70 : cy + ch - y;
         ui.card(cx, y, cw, lh);

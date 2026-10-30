@@ -104,6 +104,8 @@ public final class Bounties {
     static boolean deliver(Settlement s, Bounty x, Set<Item> asked) {
         x.kind = Kind.DELIVER;
         int tier = s.tier.number(), cap = 32 + 32 * tier;
+        var hard = livingrealms.hardship.Hardships.bounty(s, asked);
+        if (hard != null) { x.item = hard.item(); x.need = hard.need(); x.reason = hard.reason(); return true; }
         for (var e : shortages(s)) {
             if (asked.contains(e.getKey())) continue;
             x.item = e.getKey();

@@ -85,6 +85,7 @@ public final class Config {
         FIRE_BRIGADE_DELAY = b.comment("Ticks before the bucket brigade arrives at a fire.").defineInRange("brigadeDelay", 200, 0, 6000);
         FIRE_MAX_TICKS = b.comment("Ticks after which any fire still burning in a town is put out.").defineInRange("maxFireTicks", 6000, 400, 72000);
         b.pop();
+        livingrealms.hardship.HardshipConfig.define(b);
         livingrealms.compat.CompatConfig.define(b);
         SPEC = b.build();
     }

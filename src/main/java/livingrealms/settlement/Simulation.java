@@ -150,6 +150,7 @@ public final class Simulation {
         if (s.population > d.housing) { h -= 12; why.add("-12 overcrowded"); }
         if (s.alarmUntil > 0) { h -= 5; why.add("-5 under attack"); }
         h += Statecraft.mood(s, why);
+        h += livingrealms.hardship.Hardships.mood(s, why);
         d.happinessTarget = Math.max(0, Math.min(100, h));
     }
 
@@ -226,7 +227,7 @@ public final class Simulation {
             BuildingType t = BuildingCatalog.get(p.typeId);
             int w = d.plotWorkers.getOrDefault(p.id, 0);
             if (t == null || w == 0) continue;
-            double k = w * levelMult(p.level) * f;
+            double k = w * levelMult(p.level) * f * livingrealms.hardship.Hardships.output(s, t.category);
             switch (t.category) {
                 case FARM -> {
                     double a = s.has("agriculture") ? 1.25 : 1;
@@ -727,7 +728,7 @@ public final class Simulation {
     }
 
     public static double speed(Settlement s) {
-        return (s.has("carpentry") ? 1.25 : 1) * (s.has("engineering") ? 1.4 : 1) * Trade.buildBonus(s);
+        return (s.has("carpentry") ? 1.25 : 1) * (s.has("engineering") ? 1.4 : 1) * Trade.buildBonus(s) * livingrealms.hardship.Hardships.workFactor(s);
     }
 
     public static List<Plot> activePlots(Settlement s) {

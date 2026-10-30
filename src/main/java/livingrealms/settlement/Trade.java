@@ -102,6 +102,7 @@ public final class Trade {
                 default -> {}
             }
         }
+        livingrealms.hardship.Hardships.tradeOutput(s, out);
         return out;
     }
 
@@ -152,6 +153,7 @@ public final class Trade {
         w.merge(Items.IRON_INGOT, 4 + pop / 2, Integer::sum);
         w.merge(Items.LEATHER, 4 + pop / 2, Integer::sum);
         w.merge(Items.WHITE_WOOL, 4 + pop / 2, Integer::sum);
+        livingrealms.hardship.Hardships.wants(s, w);
         return w;
     }
 
@@ -472,6 +474,7 @@ public final class Trade {
             Settlement a = m.get(r.a), b = m.get(r.b);
             boolean inReach = trades(a) && trades(b) && (near.getOrDefault(a.id, List.of()).contains(b) || near.getOrDefault(b.id, List.of()).contains(a));
             String why = !inReach ? "Out of reach" : hostility(m, a, b, now);
+            if (why == null) why = livingrealms.hardship.Hardships.routeBlock(a, b);
             if (why == null && !r.closedBy.isEmpty()) why = "Closed by " + r.closedBy.stream().map(m::get).filter(Objects::nonNull).map(t -> t.name).findFirst().orElse("a ruler");
             r.blocked = why == null ? "" : why;
             boolean was = r.active;
@@ -553,6 +556,7 @@ public final class Trade {
         Settlement from = m.get(c.from), to = m.get(c.to);
         c.status = Status.ARRIVED; c.since = now; c.progress = 1;
         if (to != null) c.cargo.forEach(to.stock::force);
+        livingrealms.hardship.Hardships.caravanArrived(from, to, c.cargo, now, server == null ? net.minecraft.util.RandomSource.create() : server.overworld().random);
         if (from != null) {
             int coin = (int) Math.round(c.value * 0.5);
             if (from.isAi() || from.mirror()) from.wealth += c.value;

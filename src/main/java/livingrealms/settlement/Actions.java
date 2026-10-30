@@ -121,6 +121,7 @@ public final class Actions {
             case "grantRequest", "orderRequest", "declineRequest" -> Merit.handle(player, s, action, d);
             case "dismiss" -> dismissSoldier(player, level, s, d);
             case "chronicleBook" -> livingrealms.chronicle.ChronicleBook.give(player, s);
+            case "quarantine" -> livingrealms.hardship.Hardships.quarantine(s, d.getBoolean("on"));
             default -> "Unknown action";
         };
         if (err != null) tell(player, err);

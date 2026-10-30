@@ -42,6 +42,7 @@ public final class Procedural {
         KINDS.put("mine", 3);
         KINDS.put("well", 1);
         KINDS.put("garden", 1);
+        KINDS.put("apothecary", 1);
     }
 
     /** Blocks below ground level (mine shafts). */
@@ -77,6 +78,7 @@ public final class Procedural {
             case "mine" -> mine(b, level);
             case "well" -> well(b);
             case "garden" -> garden(b);
+            case "apothecary" -> apothecary(b);
             default -> cottage(b, 1);
         }
         return b.build(key);
@@ -776,5 +778,25 @@ public final class Procedural {
         b.set(7, 1, 7, Blocks.OAK_LOG); b.set(7, 2, 7, Blocks.OAK_LOG); b.set(7, 3, 7, Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true));
         b.chair(3, 1, 3, Direction.NORTH); b.chair(5, 1, 5, Direction.SOUTH);
         b.set(4, 1, 4, b.p.fence); b.set(4, 2, 4, b.p.fence); b.lantern(4, 3, 4, false);
+    }
+
+    /** A small herbalist's house: brewing stand, cauldron, drying herbs and a bed for the sick (livingrealms.hardship). */
+    static void apothecary(B b) {
+        int x0 = 1, z0 = 1, x1 = 7, z1 = 6, mid = 4, fh = 4;
+        b.clear(0, 1, 0, x1 + 1, fh + 6, z1 + 3);
+        b.body(x0, z0, x1, z1, fh, b.p.wall, true);
+        b.door(mid, 1, z1, Direction.SOUTH);
+        b.windows(x0, z0, x1, z1, 2, 2);
+        b.gable(x0, z0, x1, z1, fh + 1, true);
+        b.set(x0 + 1, 1, z0 + 1, Blocks.BREWING_STAND);
+        b.set(x0 + 2, 1, z0 + 1, Blocks.CAULDRON);
+        b.barrel(x1 - 1, 1, z0 + 1);
+        b.set(x1 - 2, 1, z0 + 1, Blocks.CRAFTING_TABLE);
+        b.bed(x1 - 1, 1, z0 + 3, Direction.NORTH);
+        b.lantern(mid, fh, (z0 + z1) / 2, true);
+        b.set(x0, 1, z1 + 1, Blocks.POTTED_FERN);
+        b.set(x1, 1, z1 + 1, Blocks.POTTED_RED_MUSHROOM);
+        b.set(x0 + 1, 1, z1 + 1, Blocks.FLOWER_POT);
+        b.path(mid, z1 + 1, mid, z1 + 2);
     }
 }

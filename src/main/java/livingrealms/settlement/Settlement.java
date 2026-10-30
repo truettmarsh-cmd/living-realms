@@ -92,6 +92,8 @@ public final class Settlement {
     public long founded;
     /** The town's history (livingrealms.chronicle). */
     public final livingrealms.chronicle.Chronicle.Log chronicle = new livingrealms.chronicle.Chronicle.Log();
+    /** Sickness, harvests, hunger and rats (livingrealms.hardship). */
+    public final livingrealms.hardship.Hardships.State hardship = new livingrealms.hardship.Hardships.State();
     public long lastDay;
 
     /** Recomputed every simulation step; not saved. */
@@ -464,6 +466,7 @@ public final class Settlement {
         t.putLong("founded", founded);
         t.putLong("lastDay", lastDay);
         t.put("chronicle", chronicle.save());
+        t.put("hardship", hardship.save());
         return t;
     }
 
@@ -532,6 +535,7 @@ public final class Settlement {
         s.founded = t.getLong("founded");
         s.lastDay = t.getLong("lastDay");
         s.chronicle.load(t.getCompound("chronicle"));
+        s.hardship.load(t.getCompound("hardship"));
         return s;
     }
 }
