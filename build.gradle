@@ -36,6 +36,8 @@ minecraft {
             if (project.hasProperty('honoursUiTest')) property 'livingrealms.honoursUiTest', 'true'
             // ./gradlew runClient -PquestUiTest -PrunDir=<fresh dir> : the Quests page and a quest toast, screenshots (see QuestUiTour)
             if (project.hasProperty('questUiTest')) property 'livingrealms.questUiTest', 'true'
+            // ./gradlew runClient -PpeopleUiTest -PrunDir=<fresh dir> : the People page, a citizen's card and choosing a captain (see PeopleUiTour)
+            if (project.hasProperty('peopleUiTest')) property 'livingrealms.peopleUiTest', 'true'
             // ./gradlew runClient -ParchitectTest -PrunDir=<dir> : Architect view walkthrough with screenshots (see ArchitectTour)
             if (project.hasProperty('architectTest')) property 'livingrealms.architectTest', 'true'
             if (project.hasProperty('tour')) property 'livingrealms.tour', 'true'
@@ -87,6 +89,11 @@ minecraft {
             if (project.hasProperty('siegeTest')) {
                 workingDirectory project.file(project.property('siegeTestDir'))
                 property 'livingrealms.siegeTest', 'true'
+            }
+            // ./gradlew runServer -PcitizenTest -PcitizenTestDir=<fresh dir> : named townsfolk, families, mayors and captains (see CitizenSelfTest, docs/citizens.md)
+            if (project.hasProperty('citizenTest')) {
+                workingDirectory project.file(project.property('citizenTestDir'))
+                property 'livingrealms.citizenTest', 'true'
             }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')

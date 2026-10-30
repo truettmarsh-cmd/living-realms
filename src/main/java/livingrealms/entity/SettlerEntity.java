@@ -45,6 +45,8 @@ public class SettlerEntity extends PathfinderMob {
             "Jocelyn", "Kenric", "Lettice", "Mabel", "Ned", "Odo", "Petronel", "Ralf", "Sybil", "Tybalt", "Wat", "Agnes", "Hob", "Elric", "Rowena"};
     @Nullable private UUID settlement;
     private boolean leaving;
+    /** The citizen record this settler walks about as (livingrealms.citizen), 0 for none. */
+    private int citizen;
 
     public SettlerEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -65,7 +67,11 @@ public class SettlerEntity extends PathfinderMob {
         e.settlement = s.id;
         e.setJob(job);
         e.moveTo(pos.getX() + 0.5 + level.random.nextInt(5) - 2, pos.getY(), pos.getZ() + 0.5 + level.random.nextInt(5) - 2, level.random.nextFloat() * 360, 0);
-        e.setCustomName(Component.literal(NAMES[level.random.nextInt(NAMES.length)]));
+        livingrealms.citizen.Citizen who = livingrealms.citizen.Citizens.claim(s, job, level.random);
+        if (who != null) e.citizen = who.id;
+        // the name tag shows when looked at, as vanilla does for named mobs
+        e.setCustomName(Component.literal(who != null ? who.name() : NAMES[level.random.nextInt(NAMES.length)]));
+        e.setCustomNameVisible(false);
         e.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(switch (job) {
             case BUILDER -> Items.STONE_PICKAXE;
             case FARMER -> Items.IRON_HOE;
@@ -91,6 +97,8 @@ public class SettlerEntity extends PathfinderMob {
 
     public void setJob(Job j) { entityData.set(JOB, j.ordinal()); }
 
+    public int citizen() { return citizen; }
+
     @Nullable
     public UUID settlementId() { return settlement; }
 
@@ -115,9 +123,13 @@ public class SettlerEntity extends PathfinderMob {
     @Override
     public void tick() {
         super.tick();
-        if (!level().isClientSide && tickCount % 100 == 0 && settlement() == null) {
-            leaving = true;
-            discard();
+        if (!level().isClientSide && tickCount % 100 == 0) {
+            Settlement s = settlement();
+            // gone with their town, their citizen has left or died, or a nameless settler from before the town had citizens
+            if (s == null || citizen > 0 && s.people.get(citizen) == null || citizen == 0 && s.people.started) {
+                leaving = true;
+                discard();
+            }
         }
     }
 
@@ -133,6 +145,8 @@ public class SettlerEntity extends PathfinderMob {
         super.die(source);
         Settlement s = settlement();
         if (s != null && !leaving) {
+            livingrealms.citizen.Citizens.killed(s, citizen, source.is(net.minecraft.tags.DamageTypeTags.IS_FIRE) ? "in a fire"
+                    : source.getEntity() != null ? "at the hands of " + source.getEntity().getName().getString() : "by misadventure");
             s.population = Math.max(1, s.population - 1);
             s.log(getName().getString() + " the " + job().label.toLowerCase() + " was killed");
         }
@@ -152,8 +166,10 @@ public class SettlerEntity extends PathfinderMob {
                 }
                 if (doing.isEmpty()) doing = " — waiting for plans";
             }
-            player.displayClientMessage(Component.literal(getName().getString() + ", " + job().label.toLowerCase() + where + doing)
-                    .withStyle(ChatFormatting.YELLOW), true);
+            livingrealms.citizen.Citizen who = s == null ? null : s.people.get(citizen);
+            String line = who != null && doing.isEmpty() ? livingrealms.citizen.Citizens.describe(s, who)
+                    : getName().getString() + ", " + job().label.toLowerCase() + where + doing;
+            player.displayClientMessage(Component.literal(line).withStyle(ChatFormatting.YELLOW), true);
         }
         return InteractionResult.sidedSuccess(level().isClientSide);
     }

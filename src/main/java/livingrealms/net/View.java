@@ -56,6 +56,7 @@ public final class View {
         t.put("statecraft", Statecraft.view(p, manager, s));
         t.put("quests", livingrealms.quest.Quests.view(p, manager, s));
         t.put("trade", livingrealms.settlement.Trade.view(p, manager, s));
+        t.put("people", livingrealms.citizen.Citizens.view(s, p));
         t.putBoolean("mine", p.getUUID().equals(s.owner) || p.hasPermissions(2));
         t.putBoolean("ai", s.isAi());
         t.putString("style", s.style);

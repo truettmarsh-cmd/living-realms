@@ -77,6 +77,8 @@ public final class Chronicle {
         DISASTER("Disaster", "{0}"),
         /** (text) for quests */
         QUEST("Quest", "{0}"),
+        /** (text) townsfolk: mayors, captains, notable weddings and deaths (livingrealms.citizen) */
+        PEOPLE("People", "{0}"),
         /** (text) for trade */
         TRADE("Trade", "{0}"),
         /** (text) summary of a quiet stretch, written by the chronicle itself */

@@ -70,6 +70,7 @@ public final class Loyalty {
         double weary = 0;
         for (Statecraft.War w : m.state.wars) if (w.involves(s.kingdomId())) weary = Math.max(weary, w.exhaustion(s.kingdomId()) / 25);
         if (weary >= 0.5) out.add(Map.entry("war-weariness", -weary));
+        livingrealms.citizen.Citizens.loyalty(s, out);
         return out;
     }
 

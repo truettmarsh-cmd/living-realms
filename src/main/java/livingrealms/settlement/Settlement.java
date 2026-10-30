@@ -93,6 +93,8 @@ public final class Settlement {
     /** The town's history (livingrealms.chronicle). */
     public final livingrealms.chronicle.Chronicle.Log chronicle = new livingrealms.chronicle.Chronicle.Log();
     public long lastDay;
+    /** The townsfolk by name (livingrealms.citizen). */
+    public final livingrealms.citizen.People people = new livingrealms.citizen.People();
 
     /** Recomputed every simulation step; not saved. */
     public transient Derived d = new Derived();
@@ -464,6 +466,7 @@ public final class Settlement {
         t.putLong("founded", founded);
         t.putLong("lastDay", lastDay);
         t.put("chronicle", chronicle.save());
+        t.put("people", people.save());
         return t;
     }
 
@@ -532,6 +535,7 @@ public final class Settlement {
         s.founded = t.getLong("founded");
         s.lastDay = t.getLong("lastDay");
         s.chronicle.load(t.getCompound("chronicle"));
+        if (t.contains("people")) s.people.load(t.getCompound("people"));
         return s;
     }
 }

@@ -46,7 +46,7 @@ public class CityScreen extends Screen {
         OVERVIEW("Overview", Items.BELL), MAP("City Map", Items.FILLED_MAP), BUILD("Build", Items.BRICKS), PROJECTS("Projects", Items.SCAFFOLDING),
         STORAGE("Stockpile", Items.CHEST), RESEARCH("Research", Items.ENCHANTED_BOOK), MILITARY("Military", Items.IRON_SWORD), FORGE("Blacksmith", Items.ANVIL),
         KINGDOM("Kingdom", Items.GOLDEN_HELMET), TRADE("Trade", Items.EMERALD), QUESTS("Quests", Items.WRITABLE_BOOK),
-        CHRONICLE("Chronicle", Items.WRITTEN_BOOK);
+        CHRONICLE("Chronicle", Items.WRITTEN_BOOK), PEOPLE("People", Items.PLAYER_HEAD);
         final String label;
         final Item icon;
         Tab(String label, Item icon) { this.label = label; this.icon = icon; }
@@ -238,7 +238,7 @@ public class CityScreen extends Screen {
         ui.round(px, py, pw, ph, 8, 0xFF2A313B);
         ui.round(px + 1, py + 1, pw - 2, ph - 2, 7, 0xFF181C22, 0xFF13161B);
         sidebar();
-        boolean showSearch = tab == Tab.BUILD || tab == Tab.STORAGE || tab == Tab.FORGE;
+        boolean showSearch = tab == Tab.BUILD || tab == Tab.STORAGE || tab == Tab.FORGE || tab == Tab.PEOPLE;
         search.visible = showSearch;
         try {
             switch (tab) {
@@ -254,6 +254,7 @@ public class CityScreen extends Screen {
                 case TRADE -> TradePanel.draw(ui, cx, cy, cw, ch, v().getCompound("trade"), this::act);
                 case QUESTS -> QuestPanel.draw(ui, cx, cy, cw, ch, v().getCompound("quests"), this::act);
                 case CHRONICLE -> ChroniclePanel.draw(ui, cx, cy, cw, ch, v(), mine(), this::act);
+                case PEOPLE -> PeoplePanel.draw(ui, cx, cy, cw, ch, v().getCompound("people"), mine(), search, this::act);
             }
         } catch (Exception e) {
             ui.text("Something went wrong drawing this page: " + e, cx, cy + 20, RED);
