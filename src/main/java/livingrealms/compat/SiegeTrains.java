@@ -35,7 +35,7 @@ import java.util.*;
 /**
  * A raid takes one siege engine along: Talhanation's Siege Weapons crewed by a Recruits Siege Engineer, or a Medieval
  * Siege Machine crewed by a bowman (Recruits Siege Compatibility makes bowmen work it). The engine sets up outside the
- * target and bombards its centre; when the raid ends it is struck down, and a surviving engine goes back to the stockpile.
+ * target and bombards the wall it is breaching (a walled town), then its centre; when the raid ends it is struck down, and a surviving engine goes back to the stockpile.
  */
 final class SiegeTrains {
     record Kind(String mod, String entity, String item, boolean engineer, String name, Map<String, Integer> ammo) {}
@@ -132,7 +132,9 @@ final class SiegeTrains {
         List<CompatData.Engine> list = CompatData.get(server).engines.get(key(raid));
         ServerLevel level = server.getLevel(target.dim);
         if (list == null || level == null) return;
-        BlockPos at = livingrealms.military.BattleAI.firePoint(target.center, attackers, defenders);
+        // a siege: the stretch being breached first (docs/sieges.md), then the centre, keeping off our own troops
+        BlockPos objective = raid.siege.aim(target);
+        BlockPos at = raid.siege.bombarding() ? objective : livingrealms.military.BattleAI.firePoint(objective, attackers, defenders);
         for (CompatData.Engine x : list) {
             Entity crew = level.getEntity(x.crew());
             if (!(crew instanceof IStrategicFire fire)) continue;
@@ -144,8 +146,9 @@ final class SiegeTrains {
             } else {
                 fire.setStrategicFirePos(at);
                 fire.setShouldStrategicFire(true);
-                if (!was || (old != null && old.equals(target.center) != at.equals(target.center)))
-                    target.log(at.equals(target.center) ? "The siege engine shells the centre of " + target.name
+                if (!was || (old != null && (old.equals(target.center) != at.equals(target.center) || old.equals(objective) != at.equals(objective))))
+                    target.log(raid.siege.bombarding() ? "The siege engine pounds the " + raid.siege.where + " of " + target.name
+                            : at.equals(target.center) ? "The siege engine shells the centre of " + target.name
                             : "The siege engine shifts its fire onto the defenders, away from the attackers");
             }
         }

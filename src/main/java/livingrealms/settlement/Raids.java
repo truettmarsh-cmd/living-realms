@@ -29,12 +29,17 @@ public final class Raids {
         public int held, elapsed;
         /** Whether the defenders were closing ranks last second; only for announcing the change. */
         boolean regrouped;
+        /** The siege of a walled town (docs/sieges.md); an open-field assault for an unwalled one. */
+        public Siege siege = new Siege();
+        /** A walled town is given longer before the attackers give up. */
+        public int maxTicks() { return siege.walled ? Siege.MAX_TICKS : MAX_TICKS; }
         public CompoundTag save() {
             CompoundTag t = new CompoundTag();
             t.putUUID("source", source); t.putUUID("target", target);
             t.putUUID("attacker", attacker); t.putUUID("defender", defender);
             ListTag ids = new ListTag(); soldiers.forEach(id -> ids.add(StringTag.valueOf(id.toString())));
             t.put("soldiers", ids); t.putInt("held", held); t.putInt("elapsed", elapsed);
+            t.put("siege", siege.save());
             return t;
         }
         static Raid load(CompoundTag t) {
@@ -42,7 +47,8 @@ public final class Raids {
             r.attacker = t.getUUID("attacker"); r.defender = t.getUUID("defender");
             for (Tag id : t.getList("soldiers", Tag.TAG_STRING)) r.soldiers.add(UUID.fromString(id.getAsString()));
             r.held = Math.max(0, Math.min(HOLD_TICKS, t.getInt("held")));
-            r.elapsed = Math.max(0, t.getInt("elapsed")); return r;
+            r.elapsed = Math.max(0, t.getInt("elapsed"));
+            r.siege = Siege.load(t.getCompound("siege")); return r;
         }
     }
 
@@ -88,6 +94,7 @@ public final class Raids {
         var troops = available(server.getLevel(source.dim), source);
         int count = Math.min(12, Math.max(2, troops.size() / 2));
         troops.stream().limit(count).forEach(so -> raid.soldiers.add(so.entity));
+        raid.siege = Siege.begin(server.getLevel(target.dim), source, target);
         m.raids.add(raid);
         Strategy.raidStarted(m, raid, server.overworld().getGameTime());
         Statecraft.raidStarted(server, m, raid, source, target);
@@ -97,6 +104,10 @@ public final class Raids {
         announce(server, source, "Marching on " + target.name + " with " + count + " soldiers.");
         announce(server, target, source.name + " is raiding " + target.name + (target.capital
                 ? "! CAPITAL AT RISK: defeat transfers every city in your kingdom." : "! Defeat transfers this city only."));
+        if (raid.siege.walled) {
+            announce(server, target, "The gates of " + target.name + " are shut. The enemy makes for the " + raid.siege.where + ".");
+            announce(server, source, target.name + " is walled: the army makes for the " + raid.siege.where + ".");
+        }
         return null;
     }
 
@@ -184,7 +195,7 @@ public final class Raids {
         for (ServerPlayer p : level.players()) if (p.getUUID().equals(target.owner) && !p.isCreative() && !p.isSpectator()
                 && p.isAlive() && target.contains(p.blockPosition())) defenders.add(p);
         raid.elapsed += 20;
-        if (raid.elapsed >= MAX_TICKS) { finish(server, m, raid, "Raid repelled: attackers failed to take the city in time"); return; }
+        if (raid.elapsed >= raid.maxTicks()) { finish(server, m, raid, "Raid repelled: attackers failed to take the city in time"); return; }
         target.alarmUntil = level.getGameTime() + 100;
         // Sides first (owner, and the Recruits team Village Expansion reads), then orders, so each side sees the other as an enemy.
         for (LivingEntity attacker : attackers) {
@@ -202,36 +213,57 @@ public final class Raids {
         BattleAI.enlist(key(raid), attackers, defenders);
         Vec3 front = BattleAI.centroid(attackers, Vec3.atCenterOf(source.center));
         double reach = Math.min(target.radius() + 8, 56);
-        var attack = BattleAI.plan(new BattleAI.Side(attackers, defenders, target.center, BattleAI.toward(target.center, source.center, reach), false, null));
         List<LivingEntity> holding = defenders.stream().filter(d -> RecruitsBridge.isRecruit(d) && !guards.contains(d.getUUID())).toList();
-        // behind town walls the defenders hold the gate the attackers are gathering at, until they are through it
-        Plot gate = livingrealms.settlement.plan.Walls.gateFacing(target, front.x, front.z);
-        BlockPos stand = gate == null ? target.center : BattleAI.toward(gate.center(), target.center, 5);
-        var defence = BattleAI.plan(new BattleAI.Side(holding, attackers, stand, BattleAI.rally(stand, front, 8), true, ruler));
+        Siege sg = raid.siege;
+        BattleAI.Plan[] siege = sg.walled ? sg.plan(level, raid, source, target, attackers, defenders, holding, ruler, front, reach) : null;
+        BattleAI.Plan attack, defence;
+        Plot gate = null;
+        if (siege != null) { attack = siege[0]; defence = siege[1]; }
+        else {
+            attack = BattleAI.plan(new BattleAI.Side(attackers, defenders, target.center, BattleAI.toward(target.center, source.center, reach), false, null));
+            // behind town walls the defenders hold the gate the attackers are gathering at, until they are through it
+            gate = livingrealms.settlement.plan.Walls.gateFacing(target, front.x, front.z);
+            BlockPos stand = gate == null ? target.center : BattleAI.toward(gate.center(), target.center, 5);
+            defence = BattleAI.plan(new BattleAI.Side(holding, attackers, stand, BattleAI.rally(stand, front, 8), true, ruler));
+        }
         for (var plan : List.of(attack, defence)) plan.orders().forEach((soldier, order) -> command(level, soldier, order));
-        if (defence.regrouping() && !raid.regrouped) announce(server, target, gate != null
-                ? "Outnumbered, the defenders of " + target.name + " close ranks at the " + livingrealms.settlement.plan.Walls.side(target, gate.center()) + " gate."
+        String held = siege != null ? "the " + sg.where : gate != null ? "the " + livingrealms.settlement.plan.Walls.side(target, gate.center()) + " gate" : null;
+        if (defence.regrouping() && !raid.regrouped) announce(server, target, held != null
+                ? "Outnumbered, the defenders of " + target.name + " close ranks at " + held + "."
                 : "Outnumbered, the defenders of " + target.name + " close ranks at the centre.");
         raid.regrouped = defence.regrouping();
         livingrealms.compat.Compat.raidTick(server, raid, target, attackers, defenders);
-        boolean atCenter = attackers.stream().anyMatch(e -> e.blockPosition().distSqr(target.center) <= 12 * 12);
-        raid.held = defenders.isEmpty() && atCenter ? raid.held + 20 : 0;
-        String back = attack.fallingBack() > 0 ? " (" + attack.fallingBack() + " falling back)" : "";
-        String hold = gate != null ? ", holding the " + livingrealms.settlement.plan.Walls.side(target, gate.center()) + " gate"
-                : defence.regrouping() ? ", holding the centre" : defence.fallingBack() > 0 ? " (" + defence.fallingBack() + " falling back)" : "";
-        status(source, target, defenders.isEmpty() && atCenter ? "City center occupied: " + raid.held / 20 + "/60 seconds"
-                : "Raid in progress: " + attackers.size() + " attackers" + back + "; " + defenders.size() + " local defenders" + hold);
-        if (raid.held >= HOLD_TICKS) {
-            boolean capital = target.capital;
-            UUID oldOwner = target.owner;
-            int count = Kingdoms.conquer(server, m, source, target);
-            String result = target.name + " fell. " + (capital ? "Capital captured: " + count + " cities transferred." : "Only this city transferred.");
-            if (oldOwner != null) {
-                ServerPlayer player = server.getPlayerList().getPlayer(oldOwner);
-                if (player != null) player.sendSystemMessage(Component.literal(result));
-            }
-            finish(server, m, raid, result);
+        boolean rulerHome = ruler != null;
+        if (siege != null && sg.after(level, raid, source, target, attackers, defenders, rulerHome, livingrealms.compat.Compat.engines(server, raid))) {
+            fall(server, m, raid, source, target, target.name + ", starved under siege, surrendered to " + source.name + ".");
+            return;
         }
+        boolean atCenter = attackers.stream().anyMatch(e -> e.blockPosition().distSqr(target.center) <= 12 * 12);
+        raid.held = defenders.isEmpty() && atCenter && !(sg.walled && sg.phase.before(Siege.Phase.ASSAULT)) ? raid.held + 20 : 0;
+        if (!sg.phase.before(Siege.Phase.ASSAULT)) sg.phase = raid.held > 0 ? Siege.Phase.HOLD : Siege.Phase.ASSAULT;
+        String back = attack.fallingBack() > 0 ? " (" + attack.fallingBack() + " falling back)" : "";
+        String hold = held != null ? ", holding " + held
+                : defence.regrouping() ? ", holding the centre" : defence.fallingBack() > 0 ? " (" + defence.fallingBack() + " falling back)" : "";
+        status(source, target, raid.held > 0 ? "City center occupied: " + raid.held / 20 + "/60 seconds"
+                : siege != null && sg.phase.before(Siege.Phase.ASSAULT) ? sg.status(attackers.size(), back, defenders.size())
+                : "Assault · Raid in progress: " + attackers.size() + " attackers" + back + "; " + defenders.size() + " local defenders" + hold);
+        if (raid.held >= HOLD_TICKS) {
+            fall(server, m, raid, source, target, null);
+        }
+    }
+
+    /** The town falls to the attackers: taken by storm (how == null), or by surrender. */
+    static void fall(MinecraftServer server, SettlementManager m, Raid raid, Settlement source, Settlement target, String how) {
+        raid.held = HOLD_TICKS;
+        boolean capital = target.capital;
+        UUID oldOwner = target.owner;
+        int count = Kingdoms.conquer(server, m, source, target);
+        String result = (how != null ? how + " " : target.name + " fell. ") + (capital ? "Capital captured: " + count + " cities transferred." : "Only this city transferred.");
+        if (oldOwner != null) {
+            ServerPlayer player = server.getPlayerList().getPlayer(oldOwner);
+            if (player != null) player.sendSystemMessage(Component.literal(result));
+        }
+        finish(server, m, raid, result);
     }
 
     static String key(Raid raid) { return raid.source + ">" + raid.target; }
@@ -268,6 +300,7 @@ public final class Raids {
     static void finish(MinecraftServer server, SettlementManager m, Raid raid, String message) {
         m.raids.remove(raid);
         BattleAI.release(key(raid));
+        Siege.end(server, raid, m.get(raid.target));
         Strategy.raidEnded(m, raid, server.overworld().getGameTime());
         Statecraft.raidEnded(server, m, raid, raid.held >= HOLD_TICKS);
         Settlement source = m.get(raid.source), target = m.get(raid.target);

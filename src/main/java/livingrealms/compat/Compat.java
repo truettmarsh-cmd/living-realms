@@ -89,6 +89,12 @@ public final class Compat {
         try { SiegeTrains.aim(server, raid, target, attackers, defenders); } catch (Throwable t) { fail("siege", t); }
     }
 
+    /** Siege engines out with this raid: each one speeds the breach (they pound the same stretch of wall). */
+    public static int engines(MinecraftServer server, Raids.Raid raid) {
+        try { return CompatData.get(server).engines.getOrDefault(SiegeTrains.key(raid), java.util.List.of()).size(); }
+        catch (Throwable t) { return 0; }
+    }
+
     /** Hostile soldiers the town's alarm should treat like monsters. */
     public static boolean hostile(Entity e) {
         return loaded(SIEGE_OVERHAUL) && on(CompatConfig.RAIDER_ALARM) && SiegeOverhaulCompat.raider(e);

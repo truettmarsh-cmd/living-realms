@@ -191,7 +191,7 @@ public final class Strategy {
      * raid. A kingdom that repelled this one in the last two days is avoided unless nothing better is in reach.
      */
     static double raidScore(MinecraftServer server, SettlementManager m, Settlement source, Settlement t, double attack, long now) {
-        double odds = odds(attack, defence(server, t));
+        double odds = odds(attack, defence(server, t) * Siege.wallFactor(t)); // walls make a garrison count for more
         if (odds < HOPELESS) return 0;
         double range = Config.RAID_RANGE.get();
         double score = odds * odds * value(m, t) / (1 + Math.sqrt(source.center.distSqr(t.center)) / range);
