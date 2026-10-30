@@ -309,6 +309,11 @@ public final class AutoBuild {
         }
     }
 
+    /** Towns don't put up a dragon roost on their own when there are no dragons to keep (Ice and Fire absent). */
+    static boolean autoWanted(BuildingType t) {
+        return !t.id.equals("livingrealms:" + livingrealms.building.RoostBlueprint.KIND) || livingrealms.dragon.DragonApi.installed();
+    }
+
     static List<BuildingType> candidates(Settlement s, net.minecraft.util.RandomSource random) {
         List<BuildingType> candidates = new ArrayList<>();
         if (!s.d.hasTownHall) {
@@ -319,7 +324,7 @@ public final class AutoBuild {
             List<BuildingType> offStyle = new ArrayList<>();
             for (BuildingType t : BuildingCatalog.types().values()) {
                 if (t.category == Category.CIVIC || t.category == Category.ROAD || t.category == Category.WALL
-                        || t.id.equals(CapitalCastles.ID) || s.cannotBuild(t) != null) continue;
+                        || t.id.equals(CapitalCastles.ID) || s.cannotBuild(t) != null || !autoWanted(t)) continue;
                 // the town's own look: procedural buildings and templates of its style family only
                 if (BuildingCatalog.fits(t, s.style)) candidates.add(t);
                 else if (t.category == need) offStyle.add(t);

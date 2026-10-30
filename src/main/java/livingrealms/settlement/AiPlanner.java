@@ -146,7 +146,7 @@ public final class AiPlanner {
     static BuildingType chooseType(RandomSource r, Settlement s, Category c) {
         List<BuildingType> own = new ArrayList<>(), family = new ArrayList<>(), proc = new ArrayList<>();
         for (BuildingType t : BuildingCatalog.types().values()) {
-            if (t.category != c || s.cannotBuild(t) != null) continue;
+            if (t.category != c || s.cannotBuild(t) != null || !AutoBuild.autoWanted(t)) continue;
             if (t.id.equals(CapitalCastles.ID) || t.id.equals("livingrealms:town_hall") || t.category == Category.WALL) continue;
             if (t.procedural()) proc.add(t);
             else if (t.style.equals(s.style)) own.add(t);
