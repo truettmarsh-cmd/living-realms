@@ -39,6 +39,8 @@ minecraft {
             // ./gradlew runClient -ParchitectTest -PrunDir=<dir> : Architect view walkthrough with screenshots (see ArchitectTour)
             if (project.hasProperty('architectTest')) property 'livingrealms.architectTest', 'true'
             if (project.hasProperty('tour')) property 'livingrealms.tour', 'true'
+            // ./gradlew runClient -PtradeUiTest -PrunDir=<fresh dir> : the Trade page and a caravan on the road (see TradeUiTour)
+            if (project.hasProperty('tradeUiTest')) property 'livingrealms.tradeUiTest', 'true'
             // ./gradlew runClient -PwarTour -PvillageExpansion -PpackMods -PrunDir=<fresh dir> : war and siege walkthrough (see WarTour)
             if (project.hasProperty('warTour')) property 'livingrealms.warTour', 'true'
             // ./gradlew runClient -PtownRingTour -PrunDir=<dir> [-PvillageExpansion] : town ring and map claim, before and after a rank-up (see TownRingTour)
@@ -75,6 +77,11 @@ minecraft {
             if (project.hasProperty('chronicleTest')) {
                 workingDirectory project.file(project.property('chronicleTestDir'))
                 property 'livingrealms.chronicleTest', 'true'
+            }
+            // ./gradlew runServer -PtradeTest -PtradeTestDir=<fresh dir> : trade routes and caravans (see TradeSelfTest)
+            if (project.hasProperty('tradeTest')) {
+                workingDirectory project.file(project.property('tradeTestDir'))
+                property 'livingrealms.tradeTest', 'true'
             }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')

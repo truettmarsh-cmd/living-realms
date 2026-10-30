@@ -94,6 +94,7 @@ public final class Actions {
             case "research" -> research(s, d.getString("id"));
             case "cancelResearch" -> cancelResearch(s);
             case "clearSkips" -> { s.researchSkip.clear(); yield null; }
+            case "tradeRoute", "tradeBan" -> { String e = Trade.handle(player, m, s, action, d); s.dirty = true; yield e; }
             case "autoResearch" -> { s.autoResearch = d.getBoolean("on"); yield null; }
             case "autoTier" -> { s.autoTier = d.getBoolean("on"); yield null; }
             case "autoTrain" -> { s.autoTrain = d.getBoolean("on"); yield null; }
