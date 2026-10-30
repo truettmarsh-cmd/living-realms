@@ -388,6 +388,15 @@ public final class Caravans {
     }
 
     /** A caravan's body whose caravan travels on simulated, arrived or was lost is dropped as its chunk loads. */
+    /** Caravan traders carry the town's goods, not a shop: no vanilla trading screen. */
+    @SubscribeEvent
+    public static void onInteract(net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteract e) {
+        if (e.getTarget() instanceof net.minecraft.world.entity.npc.WanderingTrader && e.getTarget().getPersistentData().hasUUID(TAG)) {
+            e.setCanceled(true);
+            e.setCancellationResult(net.minecraft.world.InteractionResult.FAIL);
+        }
+    }
+
     @SubscribeEvent
     public static void onJoin(EntityJoinLevelEvent e) {
         if (!(e.getLevel() instanceof ServerLevel level) || !e.getEntity().getPersistentData().hasUUID(TAG)) return;
