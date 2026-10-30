@@ -1,0 +1,113 @@
+{
+  "name": "The Road to the Crown",
+  "chapters": [
+    {
+      "id": "hearth", "title": "A Charter and a Hearth", "icon": "minecraft:campfire",
+      "intro": "Every crown began as a fire in a field. Plant your charter and gather people round it.",
+      "steps": [
+        {"id": "found", "title": "Plant the Charter", "flavour": "A banner, a chest and a claim on the land.",
+         "objective": "Found a settlement with a Town Charter", "check": {"type": "cities", "count": 1},
+         "reward": {"emeralds": 4, "items": {"minecraft:bread": 8}}},
+        {"id": "hall", "title": "A Hall for Every Voice", "flavour": "Where there is a hall, there is a town.",
+         "objective": "Finish a Town Hall", "check": {"type": "building", "id": "livingrealms:town_hall", "count": 1},
+         "reward": {"emeralds": 4, "stock": {"minecraft:cobblestone": 32}}},
+        {"id": "roofs", "title": "Roofs Over Heads", "flavour": "Settlers stay where the rain stays out.",
+         "objective": "Have 4 finished buildings in one town", "check": {"type": "buildings", "count": 4},
+         "reward": {"stock": {"minecraft:oak_log": 32}}},
+        {"id": "swords", "title": "Sworn Swords", "flavour": "A fire draws travellers, and not all of them are friendly.",
+         "objective": "Have 3 soldiers in your garrisons", "check": {"type": "soldiers", "count": 3},
+         "reward": {"emeralds": 6}},
+        {"id": "hamlet", "title": "No Longer a Camp", "flavour": "The carters have started calling it by name.",
+         "objective": "Raise a town to Hamlet rank", "check": {"type": "tier", "count": 2},
+         "reward": {"emeralds": 8, "research": 30}}
+      ]
+    },
+    {
+      "id": "stone", "title": "Stone and Scholarship", "icon": "minecraft:enchanted_book",
+      "intro": "Wood burns and memory fades. Build in stone and write things down.",
+      "steps": [
+        {"id": "library", "title": "Ink and Candle", "flavour": "Someone must remember how the last well was dug.",
+         "objective": "Finish a Library", "check": {"type": "category", "id": "library", "count": 1},
+         "reward": {"research": 40}},
+        {"id": "learning", "title": "Learned Folk", "flavour": "Three ideas, argued over and written down.",
+         "objective": "Complete 3 research projects in one town", "check": {"type": "research_count", "count": 3},
+         "reward": {"emeralds": 6}},
+        {"id": "masonry", "title": "Dressed Stone", "flavour": "Square blocks, true walls, proud gables.",
+         "objective": "Research Masonry", "check": {"type": "research", "id": "masonry"},
+         "reward": {"stock": {"minecraft:cobblestone": 64}}},
+        {"id": "bounty", "title": "A Helping Hand", "flavour": "A lord who carries stone is a lord who is followed.",
+         "objective": "Complete a town bounty (Quests page)", "check": {"type": "bounties", "count": 1},
+         "reward": {"emeralds": 4}},
+        {"id": "village", "title": "A Proper Village", "flavour": "A market day, a priest, a quarrel over a fence.",
+         "objective": "Raise a town to Village rank", "check": {"type": "tier", "count": 3},
+         "reward": {"emeralds": 12, "research": 40}}
+      ]
+    },
+    {
+      "id": "walls", "title": "Walls and Watchmen", "icon": "minecraft:stone_bricks",
+      "intro": "Wealth draws raiders as honey draws wasps. Wall the town and drill the guard.",
+      "steps": [
+        {"id": "fortifications", "title": "The Art of Defence", "flavour": "Learn from the castles of older kings.",
+         "objective": "Research Fortifications", "check": {"type": "research", "id": "fortifications"},
+         "reward": {"stock": {"minecraft:cobblestone": 64}}},
+        {"id": "raise", "title": "Raise the Walls", "flavour": "Three blocks thick, five high, and a walk on top.",
+         "objective": "Finish 4 wall sections, towers or gatehouses", "check": {"type": "walls", "count": 4},
+         "reward": {"emeralds": 10}},
+        {"id": "guard", "title": "A Standing Guard", "flavour": "Eight spears on the wall, eight more asleep.",
+         "objective": "Have 8 soldiers in your garrisons", "check": {"type": "soldiers", "count": 8},
+         "reward": {"emeralds": 6, "merit": 10}},
+        {"id": "roads", "title": "Clear the Roads", "flavour": "Merchants come where the roads are safe.",
+         "objective": "Slay 20 hostile mobs (you or your soldiers)", "check": {"type": "kills", "count": 20},
+         "reward": {"emeralds": 8}},
+        {"id": "gate", "title": "Hold the Gate", "flavour": "They came at dusk. They did not get in.",
+         "objective": "Hold off a raid on one of your cities (or take a city yourself)", "check": {"type": "battles", "count": 1},
+         "reward": {"emeralds": 16, "merit": 20}},
+        {"id": "town", "title": "Market Charter", "flavour": "A town, by right and by charter.",
+         "objective": "Raise a town to Town rank", "check": {"type": "tier", "count": 4},
+         "reward": {"emeralds": 16, "research": 60}}
+      ]
+    },
+    {
+      "id": "realm", "title": "The Realm Widens", "icon": "minecraft:filled_map",
+      "intro": "One town is a lordship. Two is a realm. Settle, march and treat with your neighbours.",
+      "steps": [
+        {"id": "second", "title": "A Second Hearth", "flavour": "Your banner flies over two market squares.",
+         "objective": "Rule 2 cities (found or conquer one)", "check": {"type": "cities", "count": 2},
+         "reward": {"emeralds": 12}},
+        {"id": "march", "title": "Banners on the March", "flavour": "Win or lose, the realm learns its strength.",
+         "objective": "Lead a raid on a rival city", "check": {"type": "raids_led", "count": 1},
+         "reward": {"merit": 15}},
+        {"id": "peace", "title": "The Pen and the Sword", "flavour": "A treaty signed is a war you need not fight.",
+         "objective": "Agree a truce or tribute with another kingdom (Kingdom page)", "check": {"type": "peace"},
+         "reward": {"emeralds": 12}},
+        {"id": "guard", "title": "A Sworn Shield", "flavour": "One soldier who follows you, not the town.",
+         "objective": "Promote a Royal Guard", "check": {"type": "royal_guard", "count": 1},
+         "reward": {"emeralds": 8}},
+        {"id": "city", "title": "City of Stone", "flavour": "Two walls, a guildhall and a bishop's opinion.",
+         "objective": "Raise a town to City rank", "check": {"type": "tier", "count": 5},
+         "reward": {"emeralds": 24, "research": 80}}
+      ]
+    },
+    {
+      "id": "crown", "title": "The Crown", "icon": "minecraft:golden_helmet",
+      "intro": "A capital, a castle and a crown. Make the realm a kingdom.",
+      "steps": [
+        {"id": "charter", "title": "The Royal Charter", "flavour": "Ink and wax make a king as surely as steel.",
+         "objective": "Research Royal Charter", "check": {"type": "research", "id": "royal_charter"},
+         "reward": {"emeralds": 16}},
+        {"id": "capital", "title": "Seat of the Realm", "flavour": "All roads lead here now.",
+         "objective": "Raise your capital to Capital rank", "check": {"type": "tier", "count": 6},
+         "reward": {"emeralds": 32}},
+        {"id": "castle", "title": "A Castle for a King", "flavour": "Four towers, a great hall and a courtyard for the court.",
+         "objective": "Finish the Capital Castle", "check": {"type": "castle"},
+         "reward": {"emeralds": 24}},
+        {"id": "realm", "title": "Three Banners", "flavour": "A kingdom is more than its capital.",
+         "objective": "Rule 3 cities", "check": {"type": "cities", "count": 3},
+         "reward": {"emeralds": 16}},
+        {"id": "crowned", "title": "Long Live the King", "flavour": "Kneel a lord. Rise a king.",
+         "objective": "Take a rival kingdom's capital, or rule 5 cities", "check": {"type": "crown", "count": 5},
+         "reward": {"emeralds": 48, "merit": 30, "items": {"minecraft:golden_helmet": 1}}}
+      ]
+    }
+  ]
+}

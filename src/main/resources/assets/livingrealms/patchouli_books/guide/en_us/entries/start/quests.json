@@ -1,0 +1,26 @@
+{
+  "name": "Quests and Bounties",
+  "icon": "minecraft:writable_book",
+  "category": "livingrealms:start",
+  "sortnum": 5,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "title": "The Road to the Crown",
+      "text": "The City Manager's $(l)Quests$() page follows one quest line from your first charter to a crown, in five chapters:$(li)A Charter and a Hearth$(li)Stone and Scholarship$(li)Walls and Watchmen$(li)The Realm Widens$(li)The Crown"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Steps complete by themselves when your kingdom gets there: a town hall, a rank, a research, walls, a raid held off, a second city, a truce, the Capital Castle. Only the current chapter counts, and each step pays once: emeralds, items, stockpile goods, research or merit for your soldiers. A toast and a chime mark each one."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Town bounties",
+      "text": "Each town posts up to three bounties from what it needs:$(li)$(l)Deliver$() what its builders are short of, or bread when the granary is low. Carry it and press Deliver.$(li)$(l)Slay$() hostile mobs near the town (your soldiers' kills count).$(li)$(l)Patrol$() the four posts at the town's edge."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Accept a bounty on the board; you may hold three at once. Bounties expire after three days (a taken one always has at least a day). Rewards are emeralds and grow with the town's rank. Independent towns post bounties too, unless you are at war with them.$(br2)Pack makers: the quest line is data, in $(l)data/<ns>/livingrealms_quests/$()."
+    }
+  ]
+}

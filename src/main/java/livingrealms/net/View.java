@@ -54,6 +54,7 @@ public final class View {
         t.putString("owner", s.isAi() && !s.mirror() ? "" : s.ownerName);
         if (Realms.on()) t.put("vx", Realms.view(p, manager, s));
         t.put("statecraft", Statecraft.view(p, manager, s));
+        t.put("quests", livingrealms.quest.Quests.view(p, manager, s));
         t.putBoolean("mine", p.getUUID().equals(s.owner) || p.hasPermissions(2));
         t.putBoolean("ai", s.isAi());
         t.putString("style", s.style);

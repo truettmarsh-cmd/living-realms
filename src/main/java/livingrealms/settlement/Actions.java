@@ -62,6 +62,12 @@ public final class Actions {
             s.dirty = true;
             return;
         }
+        if (action.startsWith("quest")) {
+            String error = livingrealms.quest.Quests.handle(player, m, s, action, d);
+            if (error != null) tell(player, error);
+            s.dirty = true;
+            return;
+        }
         if (s.mirror()) {
             tell(player, s.name + " is run by Village Expansion. You can look, raid it in war, or capture it.");
             return;

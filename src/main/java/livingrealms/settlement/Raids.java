@@ -224,6 +224,7 @@ public final class Raids {
         if (raid.held >= HOLD_TICKS) {
             boolean capital = target.capital;
             UUID oldOwner = target.owner;
+            livingrealms.quest.Quests.cityTaken(server, m, raid.attacker, capital);
             int count = Kingdoms.conquer(server, m, source, target);
             String result = target.name + " fell. " + (capital ? "Capital captured: " + count + " cities transferred." : "Only this city transferred.");
             if (oldOwner != null) {
@@ -270,6 +271,7 @@ public final class Raids {
         BattleAI.release(key(raid));
         Strategy.raidEnded(m, raid, server.overworld().getGameTime());
         Statecraft.raidEnded(server, m, raid, raid.held >= HOLD_TICKS);
+        livingrealms.quest.Quests.raidEnded(server, m, raid, raid.held >= HOLD_TICKS);
         Settlement source = m.get(raid.source), target = m.get(raid.target);
         livingrealms.compat.Compat.raidEnded(server, raid, source);
         for (Settlement s : new Settlement[]{source, target}) if (s != null) {

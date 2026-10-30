@@ -23,6 +23,7 @@ public final class ClientNet {
             case "recruit" -> livingrealms.client.ui.RecruitScreen.receive(data);
             case "plots" -> ClientState.setTowns(data);
             case "blueprint" -> ClientState.putBlueprint(data);
+            case "quest" -> QuestToast.show(data);
             default -> {}
         }
     }

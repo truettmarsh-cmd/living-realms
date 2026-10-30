@@ -34,6 +34,8 @@ minecraft {
             if (project.hasProperty('realmsUiTest')) property 'livingrealms.realmsUiTest', 'true'
             if (project.hasProperty('guideTest')) property 'livingrealms.guideTest', 'true'
             if (project.hasProperty('honoursUiTest')) property 'livingrealms.honoursUiTest', 'true'
+            // ./gradlew runClient -PquestUiTest -PrunDir=<fresh dir> : the Quests page and a quest toast, screenshots (see QuestUiTour)
+            if (project.hasProperty('questUiTest')) property 'livingrealms.questUiTest', 'true'
             // ./gradlew runClient -ParchitectTest -PrunDir=<dir> : Architect view walkthrough with screenshots (see ArchitectTour)
             if (project.hasProperty('architectTest')) property 'livingrealms.architectTest', 'true'
             if (project.hasProperty('tour')) property 'livingrealms.tour', 'true'
@@ -64,6 +66,11 @@ minecraft {
             if (project.hasProperty('villageExpansionTest')) {
                 workingDirectory project.file(project.property('villageExpansionTestDir'))
                 property 'livingrealms.villageExpansionTest', 'true'
+            }
+            // ./gradlew runServer -PquestTest -PquestTestDir=<fresh dir> : quest line and town bounties (see QuestSelfTest)
+            if (project.hasProperty('questTest')) {
+                workingDirectory project.file(project.property('questTestDir'))
+                property 'livingrealms.questTest', 'true'
             }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')

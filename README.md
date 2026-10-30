@@ -95,6 +95,12 @@ The City Manager's **Kingdom** page (last tab) keeps the kingdom's affairs: its 
 
 The warfare test (`-PwarfareTest`) and the Village Expansion test (`-PvillageExpansionTest`, with and without `-PvillageExpansion`) include these rules.
 
+## Quests and bounties
+
+The City Manager's **Quests** page (last tab) follows a quest line from your first charter to a crown: five chapters (A Charter and a Hearth, Stone and Scholarship, Walls and Watchmen, The Realm Widens, The Crown) of 5–6 steps each, from founding a town and training soldiers through ranks, research, walls, holding off a raid, a second city, a truce, the Capital Castle and taking a rival capital. Steps complete by themselves when your kingdom gets there, only within the current chapter, and each pays once (emeralds, items, stockpile goods, research or soldier merit) with a toast and a chime. Progress is per player and saved with the world.
+
+Every town also keeps a **bounty board** of up to three: deliver what its builders are short of (or bread when the granary is low), slay hostile mobs near it, or walk a patrol of its border. Accept from the page (three at a time), deliver from your inventory; bounties expire after three days and pay emeralds that grow with the town's rank. The quest line is data (`data/<ns>/livingrealms_quests/*.json`). Details in [docs/quests.md](docs/quests.md); test with `./gradlew runServer -PquestTest -PquestTestDir=<fresh dir>`.
+
 ## Requirements
 
 - Minecraft 1.20.1, Forge 47+
@@ -138,6 +144,7 @@ Test with `./gradlew runServer -PvillageExpansionTest -PvillageExpansionTestDir=
 These folders can be overridden or extended with data packs:
 
 - `data/<ns>/livingrealms_research/*.json`: research nodes.
+- `data/<ns>/livingrealms_quests/*.json`: the quest line's chapters, steps, checks and rewards (see [docs/quests.md](docs/quests.md)).
 - `data/<ns>/livingrealms_smithing/*.json`: smithing patterns (material, pieces, costs, required research and `requires_mod`).
 - `data/<ns>/livingrealms_buildings/*.json`: tweaks to auto-discovered buildings, keyed by `"template"` (name, category, tier, research, or `"hide": true`).
 - `data/<ns>/livingrealms_styles/*.json`: which palette family (`plains`, `desert`, `savanna`, `taiga`, `snowy`) a template style or biome id belongs to (`"families"`, `ns:*` for a whole namespace), and template styles the villagers never build on their own (`"exclude"`, e.g. festive or fantasy villages). Unlisted styles fall back to name rules.
