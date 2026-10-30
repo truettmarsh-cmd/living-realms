@@ -213,6 +213,7 @@ public final class BuildingCatalog {
         proc(out, "chapel", "Chapel", Category.CHAPEL, 3, "architecture", -1);
         proc(out, "market", "Market Square", Category.MARKET, 3, "trade", -1);
         proc(out, "stables", "Stables", Category.STABLE, 3, "cavalry", -1);
+        proc(out, RoostBlueprint.KIND, "Dragon Roost", Category.STABLE, 5, "dragonry", 1);
     }
 
     static void proc(Map<String, BuildingType> out, String kind, String name, Category cat, int tier, String research, int max) {

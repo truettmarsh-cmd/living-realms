@@ -108,6 +108,24 @@ Every town also keeps a **bounty board** of up to three: deliver what its builde
 - **Chronicle.** Every town keeps a dated history of notable events in short prose: its founding, rank-ups, the town hall and its first chapel, library, market or barracks, the walls and castle, raids and who led them, changes of rulers, wars and peace, heroes promoted and veterans fallen, and fires. Quiet stretches are folded into one line ("Days 12–30: the town grew quietly to 14 buildings"). Read it in **City Manager → Chronicle** (newest first or by year), get a **written book** copy from that page (1 emerald) or by using a blank book on the Town Hall. See [docs/chronicle.md](docs/chronicle.md).
 - **Fires.** Wooden buildings can catch fire (rarely; forges, crowding and raids add to the risk), and lightning, lava and dragons start real fires too. The bell rings, townsfolk form a bucket brigade, fire is never allowed past the town's land, and burnt buildings are queued for repair. A **Well** and the **Fire Watch** research lower the risk; stone buildings hardly burn. The Chronicle page shows the town's fire risk. Configurable and can be switched off (`[fires]` in the server config). See [docs/fires.md](docs/fires.md).
 
+## Dragons
+
+With **Ice and Fire** installed, dragons join kingdom play. Each part is optional and switchable under `[dragons]` in the server config. See [docs/dragons.md](docs/dragons.md).
+
+- **Dragon Roost.** A City can build a big open stone roost once it has the **Dragonry** research.
+  - To give it a dragon, put an Ice and Fire egg in the stockpile and the keepers hatch it, or order one of your tamed dragons to sit in the roost and it moves in.
+  - The dragon perches on the nest, flies home when it strays, and grows faster on the keepers' food.
+  - It is the mount for a Dragon Rider trained in the town. With **Dragon Bond**, the nest is a Dragon Nest and the roost becomes the dragon's home.
+- **Wild dragon attacks.** Rarely, a wild dragon near a town attacks it.
+  - The bell rings, and bowmen, scorpions and the town's own dragon fight back.
+  - Its breath burns people and at most two buildings. Those fires go to the bucket brigade and are repaired, with the dragon named as the cause in the chronicle.
+  - After a minute it flies off, unless it is brought down first.
+- **Scorpions.** The **Scorpions** research mounts heavy crossbows on wall towers, gatehouses and watchtowers from Town rank. They shoot at dragons first, then at raiders and hostile mobs. A bolt does three times the damage to a dragon.
+- **NPC kingdoms** raise dragons in their roosts and send one, with a rider, on a raid. It circles over the breach and breathes on the defenders for one short sortie, setting at most two fires, then flies home.
+- **The City Manager** overview shows the roost's dragon or egg and any dragon attacking the town. The chronicle records hatchings, attacks, sorties and dragons slain.
+- **Without Ice and Fire** the roost is only a building, no attacks or sorties ever start, and only the scorpions work.
+- **Test:** `./gradlew runServer -PdragonTest -PdragonTestDir=<fresh dir>`; add `-Pintegrations` to run it with Ice and Fire.
+
 ## Trade and caravans
 
 Towns make goods from their land: plains towns wheat, bread and wool, taiga towns spruce logs and furs, snowy towns furs and packed ice, desert towns sand, glass and dyes, savanna towns acacia and terracotta; NPC towns' farms, mines and smithies add food and iron. Towns within 768 blocks of each other that are at peace (same kingdom, allied or neutral) keep trade routes. When one town has a surplus of something the other is short of (its building sites' materials, its research, what every household keeps), a caravan loads up and sets out; prices follow supply and need. Near a player the caravan is real: a wandering trader leading a laden donkey or llama, with a guard or two, walking market to market. Elsewhere its travel is simulated, and it is never lost just because it unloaded. Bandits and enemy raiders may ambush it (guards, and your own soldiers walking with it, make that less likely); killing a trader spills its goods and is a hostile act that suspends trade between the kingdoms, and a second one means war. Each arrival raises both towns' prosperity, which makes them build and grow a little faster. The City Manager's **Trade** page shows stock, prices and production, each route and its caravan, and lets the ruler close a route or ban a good's export. Details in [docs/trade.md](docs/trade.md); the trade test is `-PtradeTest`.

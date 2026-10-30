@@ -1,0 +1,16 @@
+{
+ "name": "Dragonry",
+ "branch": "Military",
+ "cost": 600,
+ "requires": [
+  "cavalry",
+  "urban_planning"
+ ],
+ "icon": "minecraft:dragon_egg",
+ "x": 2,
+ "y": 11,
+ "description": "Unlocks the Dragon Roost (City rank). With Ice and Fire, a roost hatches a dragon egg you bring or adopts your tamed dragon, and its dragon can carry a Dragon Rider.",
+ "items": {
+  "minecraft:gold_ingot": 16
+ }
+}

@@ -53,6 +53,8 @@ The attackers' melee fight only defenders outside the walls before the breach. T
 
 Every 3 seconds, up to four towers or gatehouses within 40 blocks of the breach each loose two arrows (3 damage, not pickable) from their roofs at the nearest attacker outside the wall.
 
+With the **Scorpions** research, wall towers, gatehouses and watchtowers also loose heavy bolts at raiders in the town's land, and at dragons before anything else (see [dragons](dragons.md)).
+
 ## Blockade and surrender
 
 While at least 3 attackers, two thirds of them, are camped outside the wall (within 48 blocks of it) before the breach, the town is blockaded. Every 20 seconds the blockade eats a sixth of a day's food (4 per townsperson and 5 per soldier, in nutrition) from the stockpile, the same way the simulation eats. NPC towns keep no food stock, so they get notional provisions of a day's food × (rank + 1).

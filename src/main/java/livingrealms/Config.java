@@ -86,6 +86,7 @@ public final class Config {
         FIRE_MAX_TICKS = b.comment("Ticks after which any fire still burning in a town is put out.").defineInRange("maxFireTicks", 6000, 400, 72000);
         b.pop();
         livingrealms.compat.CompatConfig.define(b);
+        livingrealms.dragon.DragonConfig.define(b);
         SPEC = b.build();
     }
 
