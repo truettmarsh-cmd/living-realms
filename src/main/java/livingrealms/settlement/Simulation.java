@@ -106,7 +106,8 @@ public final class Simulation {
         }
         d.foodNeedPerDay = s.population * 4 + s.soldiers.size() * 5 * (s.has("logistics") ? 0.7 : 1.0);
         d.researchPerDay = researchRate(s, d);
-        d.emeraldsPerDay = s.population * TAX[s.taxLevel] + d.workers.getOrDefault(Job.MERCHANT, 0) * 3.0 * (s.has("banking") ? 1.5 : 1);
+        d.emeraldsPerDay = (s.population * TAX[s.taxLevel] + d.workers.getOrDefault(Job.MERCHANT, 0) * 3.0 * (s.has("banking") ? 1.5 : 1))
+                * livingrealms.citizen.Citizens.taxBonus(s);
         double food = 0;
         for (Plot p : s.plots) {
             BuildingType t = BuildingCatalog.get(p.typeId);
@@ -151,6 +152,7 @@ public final class Simulation {
         if (s.alarmUntil > 0) { h -= 5; why.add("-5 under attack"); }
         h += Statecraft.mood(s, why);
         h += livingrealms.hardship.Hardships.mood(s, why);
+        h += livingrealms.citizen.Citizens.townMood(s, why);
         d.happinessTarget = Math.max(0, Math.min(100, h));
     }
 
@@ -173,14 +175,15 @@ public final class Simulation {
         s.happiness += Math.signum(d.happinessTarget - s.happiness) * Math.min(Math.abs(d.happinessTarget - s.happiness), 40 * f);
         int housing = d.housing;
         if (!s.starving && s.happiness >= 45 && s.population < housing) {
-            s.growth += (1.5 + s.levels(Category.TAVERN) * 0.5 + Trade.growthBonus(s)) * f;
+            s.growth += (1.5 + s.levels(Category.TAVERN) * 0.5 + Trade.growthBonus(s) + livingrealms.citizen.Citizens.growthBonus(s)) * f;
         } else if (s.starving || s.happiness < 25) {
             s.growth -= 0.8 * f;
         }
         if (s.growth >= 1) {
             s.growth = 0;
             s.population++;
-            if (!s.isAi()) s.log(pick(level, "A new family has moved in", "Settlers arrived from the road", "A child was born"));
+            String who = livingrealms.citizen.Citizens.arrived(s, level.random);
+            if (!s.isAi()) s.log(who);
         } else if (s.growth <= -1) {
             s.growth = 0;
             if (s.population > 1) {
@@ -188,6 +191,7 @@ public final class Simulation {
                 if (!s.isAi()) s.log(s.starving ? "A family left to find food elsewhere" : "Unhappy settlers packed up and left");
             }
         }
+        livingrealms.citizen.Citizens.step(s, f, level.random);
         research(s, d, f);
         forge(s, d, f);
         training(level, s, d, f);
@@ -678,6 +682,7 @@ public final class Simulation {
         d.workers.forEach((j, n) -> { if (j != Job.BUILDER) for (int i = 0; i < n; i++) folkJobs.add(j); });
         for (int i = 0; i < d.unemployed; i++) folkJobs.add(Job.IDLE);
         int haveB = 0, haveF = 0;
+        livingrealms.citizen.Citizens.seen(s, present.stream().filter(e -> e.isAlive() && e.citizen() > 0).map(SettlerEntity::citizen).toList());
         for (SettlerEntity e : present) {
             if (e.job() == Job.BUILDER) {
                 if (haveB >= builders) e.discard(); else haveB++;
@@ -728,7 +733,7 @@ public final class Simulation {
     }
 
     public static double speed(Settlement s) {
-        return (s.has("carpentry") ? 1.25 : 1) * (s.has("engineering") ? 1.4 : 1) * Trade.buildBonus(s) * livingrealms.hardship.Hardships.workFactor(s);
+        return (s.has("carpentry") ? 1.25 : 1) * (s.has("engineering") ? 1.4 : 1) * Trade.buildBonus(s) * livingrealms.hardship.Hardships.workFactor(s) * livingrealms.citizen.Citizens.buildBonus(s);
     }
 
     public static List<Plot> activePlots(Settlement s) {

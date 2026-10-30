@@ -95,6 +95,8 @@ public final class Settlement {
     /** Sickness, harvests, hunger and rats (livingrealms.hardship). */
     public final livingrealms.hardship.Hardships.State hardship = new livingrealms.hardship.Hardships.State();
     public long lastDay;
+    /** The townsfolk by name (livingrealms.citizen). */
+    public final livingrealms.citizen.People people = new livingrealms.citizen.People();
 
     /** Recomputed every simulation step; not saved. */
     public transient Derived d = new Derived();
@@ -467,6 +469,7 @@ public final class Settlement {
         t.putLong("lastDay", lastDay);
         t.put("chronicle", chronicle.save());
         t.put("hardship", hardship.save());
+        t.put("people", people.save());
         return t;
     }
 
@@ -536,6 +539,7 @@ public final class Settlement {
         s.lastDay = t.getLong("lastDay");
         s.chronicle.load(t.getCompound("chronicle"));
         s.hardship.load(t.getCompound("hardship"));
+        if (t.contains("people")) s.people.load(t.getCompound("people"));
         return s;
     }
 }

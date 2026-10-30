@@ -66,6 +66,8 @@ public final class Bounties {
 
     @Nullable
     static Bounty make(Settlement s, Board b, long now, RandomSource rnd) {
+        Bounty ask = livingrealms.citizen.Requests.bounty(s, now, lifetime());
+        if (ask != null) return ask;
         int tier = s.tier.number();
         Set<Kind> have = EnumSet.noneOf(Kind.class);
         Set<Item> asked = new HashSet<>();
@@ -244,6 +246,7 @@ public final class Bounties {
     static void complete(QuestData data, SettlementManager m, Settlement s, Bounty x, ServerPlayer p, long now) {
         Board b = data.board(s.id);
         if (!b.bounties.remove(x)) return;
+        livingrealms.citizen.Requests.done(s, x);
         b.nextPost = Math.max(b.nextPost, now + gap());
         Quests.give(p, new ItemStack(Items.EMERALD, x.reward));
         data.of(p.getUUID()).bump(QuestData.BOUNTIES, 1);
