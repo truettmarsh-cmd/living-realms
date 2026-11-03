@@ -57,7 +57,10 @@ public final class SoldierProgression {
         Record r = record(level.getServer(), killer);
         if (r == null || !killer.isAlive()) return;
         SoldierRanks.grant(r.settlement, r.soldier, killer, SoldierSkills.XP_PER_KILL, false, level.getServer().overworld().getGameTime());
-        if (killer instanceof LivingEntity living) RecruitCombat.onKill(r.soldier, living, event.getSource());
+        if (killer instanceof LivingEntity living) {
+            RecruitCombat.onKill(r.soldier, living, event.getSource());
+            SoldierPaths.onKill(r.soldier, living, level.getServer().overworld().getGameTime());
+        }
         r.settlement.dirty = true;
     }
 
@@ -158,6 +161,7 @@ public final class SoldierProgression {
         modifier(e, Attributes.ARMOR, ARMOUR, so.skills.contains(SoldierSkills.IRONCLAD) ? 2 : 0, AttributeModifier.Operation.ADDITION);
         modifier(e, Attributes.ATTACK_DAMAGE, ATTACK, so.skills.contains(SoldierSkills.WEAPON_DRILLS) ? 2 : 0, AttributeModifier.Operation.ADDITION);
         modifier(e, Attributes.MOVEMENT_SPEED, SPEED, so.skills.contains(SoldierSkills.MARCHING) ? .1 : 0, AttributeModifier.Operation.MULTIPLY_TOTAL);
+        SoldierPaths.apply(e, so);
         if (e.getHealth() > e.getMaxHealth()) e.setHealth(e.getMaxHealth());
     }
 
@@ -169,6 +173,7 @@ public final class SoldierProgression {
         modifier(e, Attributes.ARMOR, ARMOUR, 0, AttributeModifier.Operation.ADDITION);
         modifier(e, Attributes.ATTACK_DAMAGE, ATTACK, 0, AttributeModifier.Operation.ADDITION);
         modifier(e, Attributes.MOVEMENT_SPEED, SPEED, 0, AttributeModifier.Operation.MULTIPLY_TOTAL);
+        SoldierPaths.clear(e);
         if (e.getHealth() > e.getMaxHealth()) e.setHealth(e.getMaxHealth());
     }
 

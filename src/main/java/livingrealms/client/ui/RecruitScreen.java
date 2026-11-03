@@ -23,8 +23,8 @@ import static livingrealms.client.ui.Imm.*;
 /** Recruit Command: one recruit's orders, promotions, skills and inventory. Opened by shift + right-click. */
 public class RecruitScreen extends Screen {
     public enum Page {
-        OVERVIEW("Overview", Items.BELL), PROMOTIONS("Promotions", Items.GOLDEN_HELMET), SKILLS("Skills", Items.ENCHANTED_BOOK),
-        WEAPONS("Weapons", Items.IRON_SWORD), LEGENDARY("Legendary", Items.NETHER_STAR), SPECIAL("Special", Items.BLAZE_POWDER);
+        OVERVIEW("Overview", Items.BELL), PROMOTIONS("Promotions", Items.GOLDEN_HELMET), SKILLS("Skills", Items.ENCHANTED_BOOK), PATH("Path", Items.IRON_SWORD),
+        WEAPONS("Weapons", Items.STONE_AXE), LEGENDARY("Legendary", Items.NETHER_STAR), SPECIAL("Special", Items.BLAZE_POWDER);
         final String label;
         final Item icon;
         Page(String label, Item icon) { this.label = label; this.icon = icon; }
@@ -276,7 +276,7 @@ public class RecruitScreen extends Screen {
             else ui.text(ui.clip("Joins the garrison: unlocks the skill tree, weapon practice and legendary perks.", cw - 16), cx + 8, by + 26, FAINT);
         } else {
             int earned = so.contains("rank") ? so.getInt("rank") : SoldierSkills.earnedPoints(so.getInt("skillXp"));
-            int points = Math.max(0, earned - so.getList("skills", Tag.TAG_STRING).size());
+            int points = so.contains("points") ? so.getInt("points") : Math.max(0, earned - so.getList("skills", Tag.TAG_STRING).size());
             ui.button("rcGoSkills", cx + bw + 12, by, bw, 18, points > 0 ? "Skills (" + points + " pts)" : "Skill tree", points > 0 ? Style.PRIMARY : Style.SECONDARY, true, () -> showPage(Page.SKILLS));
             if (so.contains("drillCost")) {
                 boolean ready = so.getBoolean("drillReady");
@@ -369,6 +369,7 @@ public class RecruitScreen extends Screen {
         CompoundTag so = soldier();
         String sub = switch (page) {
             case SKILLS -> "Spend skill points earned in battle";
+            case PATH -> "Make this recruit a specialist, up to a legendary mastery";
             case WEAPONS -> "Weapon practice and the recruit's favourite";
             case LEGENDARY -> "Rare perks rolled on Recruits level-ups";
             default -> "Signature abilities";
@@ -377,6 +378,7 @@ public class RecruitScreen extends Screen {
         int top = cy + 30, h = cy + ch - top;
         if (so == null) { notEnlisted(top); return; }
         switch (page) {
+            case PATH -> panels.path(so, cx, cw, top, h);
             case WEAPONS -> panels.weapons(so, cx, cw, top, h);
             case LEGENDARY -> panels.legends(so, cx, cw, top, h);
             case SPECIAL -> { if (SoldierPanels.hasSpecials(so)) panels.specials(so, cx, cw, top, h); else panels.skills(so, cx, cw, top, h); }

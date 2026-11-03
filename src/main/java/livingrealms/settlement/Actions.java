@@ -118,6 +118,8 @@ public final class Actions {
             case "drillSoldier" -> drillSoldier(player, s, d);
             case "respecSoldier" -> respecSoldier(player, s, d);
             case "chooseSpecial" -> chooseSpecial(player, s, d);
+            case "choosePath" -> choosePath(player, s, d);
+            case "learnPathSkill" -> learnPathSkill(player, s, d);
             case "grantRequest", "orderRequest", "declineRequest" -> Merit.handle(player, s, action, d);
             case "dismiss" -> dismissSoldier(player, level, s, d);
             case "chronicleBook" -> livingrealms.chronicle.ChronicleBook.give(player, s);
@@ -424,7 +426,7 @@ public final class Actions {
         if (so.skills.contains(skill)) return "This recruit already learned that skill";
         if (!skill.unlocked(so.skills)) return "Learn " + skill.prerequisite.label + " first";
         if (SoldierSkills.earnedPoints(so.skillXp) < skill.requiredRank) return "This skill needs recruit rank " + skill.requiredRank;
-        if (SoldierSkills.availablePoints(so.skillXp, so.skills) < 1) return "Earn a skill point through combat or drill";
+        if (livingrealms.military.SoldierPaths.available(so) < 1) return "Earn a skill point through combat or drill";
         Entity e = SoldierProgression.findEntity(player.server, so.entity);
         if (e == null || !e.isAlive() || !s.owner.equals(RecruitsBridge.owner(e))) return "Your recruit must be loaded and still belong to you";
         so.skills.add(skill);
@@ -447,6 +449,26 @@ public final class Actions {
         Settlement.Soldier so = soldier(s, d);
         if (so == null) return "No such recruit";
         return SoldierRanks.respec(s, so, SoldierProgression.findEntity(player.server, so.entity));
+    }
+
+    @Nullable
+    static String choosePath(ServerPlayer player, Settlement s, CompoundTag d) {
+        if (!player.getUUID().equals(s.owner)) return "Only this town's owner can train its recruits";
+        Settlement.Soldier so = soldier(s, d);
+        if (so == null) return "Unknown recruit";
+        Entity e = SoldierProgression.findEntity(player.server, so.entity);
+        if (e != null && !s.owner.equals(RecruitsBridge.owner(e))) e = null;
+        return livingrealms.military.SoldierPaths.choose(s, so, livingrealms.military.SoldierPath.byId(d.getString("path")), e, null);
+    }
+
+    @Nullable
+    static String learnPathSkill(ServerPlayer player, Settlement s, CompoundTag d) {
+        if (!player.getUUID().equals(s.owner)) return "Only this town's owner can train its recruits";
+        Settlement.Soldier so = soldier(s, d);
+        if (so == null) return "Unknown recruit";
+        Entity e = SoldierProgression.findEntity(player.server, so.entity);
+        if (e != null && !s.owner.equals(RecruitsBridge.owner(e))) e = null;
+        return livingrealms.military.SoldierPaths.learn(s, so, livingrealms.military.PathSkill.byId(d.getString("skill")), e);
     }
 
     @Nullable

@@ -154,14 +154,16 @@ public final class SoldierRanks {
     public static String respec(Settlement s, Settlement.Soldier so, @Nullable Entity e) {
         String err = loaded(s, e);
         if (err != null) return err;
-        if (so.skills.isEmpty()) return so.name + " has no learned skills to unlearn";
-        int cost = respecEmeralds(so.skills.size());
+        int refunded = SoldierPaths.spent(so);
+        if (refunded == 0) return so.name + " has no learned skills to unlearn";
+        int cost = respecEmeralds(refunded);
         if (!s.stock.has(Items.EMERALD, cost)) return "Respec costs " + cost + " emeralds from town stock";
         s.stock.take(Items.EMERALD, cost);
-        int refunded = so.skills.size();
         so.skills.clear();
+        // the path stays; its skills and mastery are refunded, so a new path can be chosen
+        so.pathSkills.clear();
         if (e instanceof LivingEntity le) { SoldierProgression.clearSkills(le); SoldierProgression.applySkills(le, so); }
-        s.log(so.name + " unlearned " + refunded + " skills; the points are free to spend again");
+        s.log(so.name + " unlearned their skills; " + refunded + " points are free to spend again");
         return null;
     }
 
@@ -187,7 +189,7 @@ public final class SoldierRanks {
         out.putString("drillCost", drillCost(rank));
         out.putInt("drillCooldown", cooldown);
         out.putBoolean("drillReady", !maxed && cooldown == 0 && s.stock.has(Items.EMERALD, drillEmeralds(rank)) && foodValue(s.stock) >= drillFood(rank));
-        out.putString("respecCost", respecCost(so.skills.size()));
+        out.putString("respecCost", respecCost(SoldierPaths.spent(so)));
     }
 
     private SoldierRanks() {}

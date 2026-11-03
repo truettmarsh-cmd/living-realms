@@ -169,6 +169,7 @@ public final class View {
         t.putString("town", s.name);
         livingrealms.military.SoldierRanks.describe(s, so, t);
         livingrealms.military.SoldierSpecials.describe(s, so, t);
+        livingrealms.military.SoldierPaths.describe(so, t);
         return t;
     }
 

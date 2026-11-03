@@ -141,6 +141,21 @@ With **Ice and Fire** installed, dragons join kingdom play. Each part is optiona
 - **Without Ice and Fire** the roost is only a building, no attacks or sorties ever start, and only the scorpions work.
 - **Test:** `./gradlew runServer -PdragonTest -PdragonTestDir=<fresh dir>`; add `-Pintegrations` to run it with Ice and Fire.
 
+## Specialist paths and legendary masteries
+
+From skill rank 4, a town recruit can follow a specialist path on the new **Path** page of Recruit Command (and the City Manager's soldier view). Each path has four skills learned in order (skill ranks 5, 7, 10 and 13, one point each) and ends in a choice of two legendary masteries (rank 16, two points). Path skills spend the same points as the general skill tree, so a specialist gives up part of it. Respec refunds everything; with no path skills learned, the path can be changed.
+
+| Path | For | Legendary masteries |
+|---|---|---|
+| Swordsman | footmen, shieldbearers (sword, dagger) | Blademaster: +30% damage, hits back for 30% of every melee hit taken. Whirlwind: +15%, each hit slashes up to 4 nearby foes for 60% |
+| Shieldman | footmen (retrained as shieldbearers), shieldbearers | Colossus: a 1.6x giant with +20 health, +4 armour, no knockback, +15% damage. Aegis: it and recruits within 6 blocks take 20% less |
+| Berserker | footmen, shieldbearers (retrained as footmen); axe, greatsword, mace | Titan: a 1.8x giant with +30 health, +30% damage, no knockback, 10% slower. Undying Rage: survives a killing blow on 1 HP every 3 minutes, then +40% damage for 10s |
+| Spearman | footmen, shieldbearers (spear, polearm) | Dragonbane: +50% damage against foes with 60+ health. Hedgehog: +15% damage, melee attackers take 4 damage |
+| Marksman | bowmen, crossbowmen, dragon riders | Deadshot: every fourth shot hits for triple damage. Hunter's Mark: marked foes take +25% from all your town recruits for 8s |
+| Knight | horsemen | Warlord: recruits within 12 blocks deal +15% and take 10% less. Juggernaut: rider and horse become 1.4x giants with +20 health each and +20% damage |
+
+Path skills work only with the path's gear (its weapons, a shield, or a horse). They have their own budgets on top of the general ones: +30% damage and 40% damage reduction; masteries add their fixed bonus beyond that. Retraining keeps the same recruit, UUID, inventory and levels. Giants need the optional Pehkui mod to change size; without it they keep the stats. Undying Rage never stops void or administrative kills.
+
 ## Trade and caravans
 
 Towns make goods from their land: plains towns wheat, bread and wool, taiga towns spruce logs and furs, snowy towns furs and packed ice, desert towns sand, glass and dyes, savanna towns acacia and terracotta; NPC towns' farms, mines and smithies add food and iron. Towns within 768 blocks of each other that are at peace (same kingdom, allied or neutral) keep trade routes. When one town has a surplus of something the other is short of (its building sites' materials, its research, what every household keeps), a caravan loads up and sets out; prices follow supply and need. Near a player the caravan is real: a wandering trader leading a laden donkey or llama, with a guard or two, leaving by its town's paved high street toward the other town (through the gate) and walking market to market. The City Map draws each route and shows caravans on the road. Elsewhere its travel is simulated, and it is never lost just because it unloaded. Bandits and enemy raiders may ambush it (guards, and your own soldiers walking with it, make that less likely); killing a trader spills its goods and is a hostile act that suspends trade between the kingdoms, and a second one means war. Each arrival raises both towns' prosperity, which makes them build and grow a little faster. The City Manager's **Trade** page shows stock, prices and production, each route and its caravan, and lets the ruler close a route or ban a good's export. Details in [docs/trade.md](docs/trade.md); the trade test is `-PtradeTest`.

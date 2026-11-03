@@ -128,6 +128,11 @@ public final class Settlement {
         public final List<SpecialSkill> specials = new ArrayList<>();
         public final Map<SpecialSkill, Long> specialCooldowns = new EnumMap<>(SpecialSkill.class);
         public long braceUntil, rallyUntil, chargeUntil;
+        /** Specialist path (chosen from skill rank 4), its learned skills and at most one legendary mastery. */
+        public livingrealms.military.SoldierPath path;
+        public final Set<livingrealms.military.PathSkill> pathSkills = EnumSet.noneOf(livingrealms.military.PathSkill.class);
+        public int pathHits;
+        public long rampageUntil, rageUntil, undyingReadyAt;
         public final Merit.Record merit = new Merit.Record();
 
         public CompoundTag save() {
@@ -171,6 +176,12 @@ public final class Settlement {
             specialCooldowns.forEach((sp, ready) -> specialReady.putLong(sp.name(), ready));
             t.put("specialCooldowns", specialReady);
             t.putLong("braceUntil", braceUntil); t.putLong("rallyUntil", rallyUntil); t.putLong("chargeUntil", chargeUntil);
+            t.putString("path", path == null ? "" : path.name());
+            ListTag pathLearned = new ListTag();
+            pathSkills.forEach(sk -> pathLearned.add(StringTag.valueOf(sk.name())));
+            t.put("pathSkills", pathLearned);
+            t.putInt("pathHits", pathHits);
+            t.putLong("rampageUntil", rampageUntil); t.putLong("rageUntil", rageUntil); t.putLong("undyingReadyAt", undyingReadyAt);
             Merit.save(merit, t);
             return t;
         }
@@ -218,6 +229,14 @@ public final class Settlement {
             CompoundTag specialReady = t.getCompound("specialCooldowns");
             for (SpecialSkill sp : SpecialSkill.values()) if (specialReady.contains(sp.name())) s.specialCooldowns.put(sp, Math.max(0, specialReady.getLong(sp.name())));
             s.braceUntil = Math.max(0, t.getLong("braceUntil")); s.rallyUntil = Math.max(0, t.getLong("rallyUntil")); s.chargeUntil = Math.max(0, t.getLong("chargeUntil"));
+            s.path = livingrealms.military.SoldierPath.byId(t.getString("path"));
+            for (Tag entry : t.getList("pathSkills", Tag.TAG_STRING)) {
+                livingrealms.military.PathSkill sk = livingrealms.military.PathSkill.byId(entry.getAsString());
+                // skills of another path, or a second mastery, never load
+                if (sk != null && sk.path == s.path && (!sk.mastery() || s.pathSkills.stream().noneMatch(livingrealms.military.PathSkill::mastery))) s.pathSkills.add(sk);
+            }
+            s.pathHits = Math.max(0, t.getInt("pathHits"));
+            s.rampageUntil = Math.max(0, t.getLong("rampageUntil")); s.rageUntil = Math.max(0, t.getLong("rageUntil")); s.undyingReadyAt = Math.max(0, t.getLong("undyingReadyAt"));
             Merit.load(s.merit, t);
             return s;
         }

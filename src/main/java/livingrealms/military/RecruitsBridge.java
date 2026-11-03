@@ -283,6 +283,27 @@ public final class RecruitsBridge {
         return r.getXpLevel() < need ? "Needs Recruits level " + need : null;
     }
 
+    /**
+     * Rebuilds a recruit as another Villager Recruits unit, keeping its UUID, owner, inventory, levels and Living Realms
+     * data (everything in its save). Returns the new entity, the same one if it already is that unit, or null.
+     */
+    @Nullable
+    public static Entity convert(Entity e, UnitType unit) {
+        if (!(e instanceof AbstractRecruitEntity) || !(e.level() instanceof ServerLevel level) || !e.isAlive()) return null;
+        EntityType<? extends AbstractRecruitEntity> type = type(unit);
+        if (e.getType() == type) return e;
+        if (e.isPassenger() || e.isVehicle()) return null;
+        AbstractRecruitEntity n = type.create(level);
+        if (n == null) return null;
+        n.load(e.saveWithoutId(new net.minecraft.nbt.CompoundTag()));
+        e.discard();
+        if (!level.addFreshEntity(n)) {
+            n.setUUID(UUID.randomUUID());
+            if (!level.addFreshEntity(n)) return null;
+        }
+        return n;
+    }
+
     /** Recruits replaces the entity on promotion; returns the new one, or null. */
     @Nullable
     public static Entity promote(Entity e, int profession, net.minecraft.server.level.ServerPlayer p) {

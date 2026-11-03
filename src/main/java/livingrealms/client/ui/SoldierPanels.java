@@ -27,8 +27,8 @@ final class SoldierPanels {
         default void dismissed() {}
     }
 
-    static final String[] TABS = {"Skills", "Weapons", "Legendary", "Origin"};
-    static final String[] TABS_SPECIAL = {"Skills", "Weapons", "Legendary", "Special", "Origin"};
+    static final String[] TABS = {"Skills", "Path", "Weapons", "Legendary", "Origin"};
+    static final String[] TABS_SPECIAL = {"Skills", "Path", "Weapons", "Legendary", "Special", "Origin"};
 
     private final Imm ui;
     private final Host host;
@@ -41,12 +41,13 @@ final class SoldierPanels {
     /** Tab labels for this soldier; Special appears only when the perks data is present. */
     static String[] tabs(CompoundTag so) { return hasSpecials(so) ? TABS_SPECIAL : TABS; }
 
-    void resetScroll() { for (String s : new String[]{"soldierSkills", "soldierWeapons", "soldierLegends", "soldierSpecials", "soldierOrigin"}) ui.resetScroll(s); }
+    void resetScroll() { for (String s : new String[]{"soldierSkills", "soldierPath", "soldierWeapons", "soldierLegends", "soldierSpecials", "soldierOrigin"}) ui.resetScroll(s); }
 
     /** Draws tab {@code index} of {@link #tabs}. */
     void draw(CompoundTag so, int index, int x, int w, int sy, int sh) {
         String[] tabs = tabs(so);
         switch (tabs[Math.max(0, Math.min(tabs.length - 1, index))]) {
+            case "Path" -> path(so, x, w, sy, sh);
             case "Weapons" -> weapons(so, x, w, sy, sh);
             case "Legendary" -> legends(so, x, w, sy, sh);
             case "Special" -> specials(so, x, w, sy, sh);
@@ -81,12 +82,13 @@ final class SoldierPanels {
             if (skill != null) learned.add(skill);
         }
         int xp = so.getInt("skillXp"), rank = so.contains("rank") ? so.getInt("rank") : SoldierSkills.earnedPoints(xp);
-        int points = SoldierSkills.availablePoints(xp, learned);
+        // the server counts path skills too; older data falls back to the general tree alone
+        int points = so.contains("points") ? so.getInt("points") : SoldierSkills.availablePoints(xp, learned);
         int maxPoints = so.contains("maxPoints") ? so.getInt("maxPoints") : SoldierSkills.MAX_POINTS;
         boolean seen = so.getBoolean("seen"), progression = so.contains("xpNeeded");
         int head = progression ? 24 : 0;
         int footer = host.royalFooter() ? 90 : 0;
-        String intro = "Kills give 25 XP; damage, alarms, raid defence and escort duty add up to 75 XP a day. Drill: 40 XP. 50 XP per point (" + maxPoints + " max); respec refunds all.";
+        String intro = "Kills give 25 XP; damage, alarms, raid defence and escort duty add up to 75 XP a day. Drill: 40 XP. 50 XP per point (" + maxPoints + " max), shared with the Path tab; respec refunds all.";
         int extra = Math.max(0, ui.wrapHeight(intro, cw - 12) - 20);
         int off = ui.beginScroll("soldierSkills", cx, sy, cw, sh, 566 + head + footer + extra);
         int y = sy - off;
@@ -108,7 +110,7 @@ final class SoldierPanels {
                 if (ui.over(bx, y + 12, 84, 17)) ui.tip("Drill: train this recruit up a rank", "Costs " + so.getString("drillCost"), ready ? "Ready now" : cd > 0 ? "Ready in " + cd + "s" : "Not ready");
             }
             if (so.contains("respecCost")) {
-                ui.button("respecSoldier", bx + 88, y + 12, 84, 17, "Respec", Style.SECONDARY, host.canCommand() && seen && !learned.isEmpty(), () -> host.act("respecSoldier", soldierData(so)));
+                ui.button("respecSoldier", bx + 88, y + 12, 84, 17, "Respec", Style.SECONDARY, host.canCommand() && seen && (!learned.isEmpty() || hasPathSkills(so)), () -> host.act("respecSoldier", soldierData(so)));
                 if (ui.over(bx + 88, y + 12, 84, 17)) ui.tip("Respec: forget learned skills and refund their points", "Costs " + so.getString("respecCost"));
             }
         }
@@ -140,6 +142,105 @@ final class SoldierPanels {
         }
         if (host.royalFooter()) royalGuard(so, rank, y + 566);
         ui.endScroll();
+    }
+
+    static boolean hasPathSkills(CompoundTag so) {
+        for (Tag t : so.getList("pathTree", Tag.TAG_COMPOUND)) if (((CompoundTag) t).getString("state").equals("learned")) return true;
+        return false;
+    }
+
+    /** Specialist path: the choice of six, then the chosen path's four skills and its two legendary masteries. */
+    void path(CompoundTag so, int x, int w, int sy, int sh) {
+        cx = x; cw = w;
+        ListTag paths = so.getList("paths", Tag.TAG_COMPOUND), tree = so.getList("pathTree", Tag.TAG_COMPOUND);
+        String chosen = so.getString("path");
+        int points = so.getInt("points");
+        boolean seen = so.getBoolean("seen");
+        CompoundTag current = null;
+        for (Tag t : paths) if (((CompoundTag) t).getString("id").equals(chosen)) current = (CompoundTag) t;
+        int w2 = (cw - 16) / 2, pathRows = (paths.size() + 1) / 2;
+        int treeH = current == null ? 0 : 52 + 4 * 46 + 26 + 92;
+        int off = ui.beginScroll("soldierPath", cx, sy, cw, sh, 60 + treeH + 22 + pathRows * 88);
+        int y = sy - off;
+        if (current == null) {
+            ui.text(ui.clip("Specialist path · choose one from skill rank " + so.getInt("pathRank"), cw - 12), cx + 4, y + 3, GOLD);
+            ui.wrap("A path makes this recruit a specialist: four skills learned in order, then one legendary mastery. They cost skill points from the same pool as the Skills tab, so a specialist gives up part of the general tree.", cx + 4, y + 17, cw - 12, MUTED);
+        } else {
+            ui.text(ui.clip(current.getString("label") + " path · " + points + (points == 1 ? " point" : " points") + " available", cw - 12), cx + 4, y + 3, GOLD);
+            ui.wrap(current.getString("desc") + " Path skills work only with " + current.getString("gear").replace("Needs ", "") + ".", cx + 4, y + 17, cw - 12, MUTED);
+            int ty = y + 52;
+            for (int i = 0; i < tree.size(); i++) {
+                CompoundTag sk = tree.getCompound(i);
+                if (sk.getInt("tier") == 5) continue;
+                skillRow(so, sk, cx + 2, ty, cw - 10, seen);
+                ty += 46;
+            }
+            ui.text("Legendary mastery · choose one (" + PathMasteryCost + " points)", cx + 4, ty + 8, PURPLE);
+            int mi = 0;
+            for (int i = 0; i < tree.size(); i++) {
+                CompoundTag sk = tree.getCompound(i);
+                if (sk.getInt("tier") != 5) continue;
+                masteryCard(so, sk, cx + (mi++ % 2) * (w2 + 6), ty + 22, w2, seen);
+            }
+            y += treeH;
+        }
+        int gy = y + (current == null ? 52 : 4);
+        ui.text(current == null ? "Paths" : "Other paths", cx + 4, gy, FAINT);
+        for (int i = 0; i < paths.size(); i++) {
+            CompoundTag p = paths.getCompound(i);
+            String state = p.getString("state");
+            boolean has = state.equals("chosen"), open = state.equals("available");
+            int px = cx + (i % 2) * (w2 + 6), yy = gy + 14 + (i / 2) * 88;
+            ui.card(px, yy, w2, 82, has ? 0xFF303725 : CARD, has ? GOLD : open ? BLUE : BORDER);
+            ui.text(ui.clip(p.getString("label"), w2 - 12), px + 6, yy + 5, has ? GOLD : open ? TEXT : MUTED);
+            ui.pushClip(px, yy, px + w2, yy + 62);
+            int h = ui.wrap(p.getString("desc"), px + 6, yy + 17, w2 - 12, MUTED);
+            ui.text(ui.clip(p.getString("fits"), w2 - 12), px + 6, yy + 19 + h, FAINT);
+            ui.popClip();
+            String becomes = p.getString("becomes"), req = p.getString("req");
+            if (has) ui.text("Chosen", px + 6, yy + 67, GOLD);
+            else if (open) ui.button("path" + i, px + 4, yy + 63, w2 - 8, 15, "Choose", Style.PRIMARY, host.canCommand() && seen, () -> {
+                CompoundTag d = soldierData(so); d.putString("path", p.getString("id")); host.act("choosePath", d);
+            });
+            else ui.text(ui.clip("🔒 " + req, w2 - 12), px + 6, yy + 67, RED);
+            if (ui.over(px, yy, w2, 82)) {
+                List<String> tip = new ArrayList<>(List.of(p.getString("label"), p.getString("desc"), p.getString("gear"), p.getString("fits")));
+                if (!becomes.isEmpty()) tip.add(becomes + " (same recruit, inventory and levels)");
+                if (!req.isEmpty()) tip.add(req);
+                ui.tip(tip);
+            }
+        }
+        ui.endScroll();
+    }
+
+    private static final int PathMasteryCost = livingrealms.military.PathSkill.MASTERY_COST;
+
+    private void skillRow(CompoundTag so, CompoundTag sk, int x, int y, int w, boolean seen) {
+        String state = sk.getString("state");
+        boolean known = state.equals("learned"), open = state.equals("available");
+        ui.card(x, y, w, 40, known ? 0xFF303725 : CARD, known ? GOLD : open ? BLUE : BORDER);
+        ui.text(ui.clip(sk.getInt("tier") + ". " + sk.getString("label"), w - 120), x + 7, y + 5, known ? GOLD : TEXT);
+        ui.text(ui.clip(sk.getString("desc"), w - 120), x + 7, y + 20, MUTED);
+        String label = known ? "Learned" : open ? "Learn · 1 point" : sk.getString("req");
+        ui.button("pathSkill" + sk.getString("id"), x + w - 108, y + 12, 102, 16, ui.clip(label, 96), known ? Style.GHOST : Style.PRIMARY,
+                host.canCommand() && open && seen, () -> { CompoundTag d = soldierData(so); d.putString("skill", sk.getString("id")); host.act("learnPathSkill", d); });
+        if (ui.over(x, y, w, 40)) ui.tip(sk.getString("label"), sk.getString("desc"), "Skill rank " + sk.getInt("rank") + " · 1 point", known ? "Learned" : sk.getString("req"));
+    }
+
+    private void masteryCard(CompoundTag so, CompoundTag sk, int x, int y, int w, boolean seen) {
+        String state = sk.getString("state");
+        boolean known = state.equals("learned"), open = state.equals("available");
+        ui.card(x, y, w, 86, known ? 0xFF343044 : CARD, known ? PURPLE : open ? BLUE : BORDER);
+        ui.text(ui.clip("✦ " + sk.getString("label"), w - 12), x + 6, y + 6, known ? PURPLE : TEXT);
+        ui.pushClip(x, y, x + w, y + 66);
+        ui.wrap(sk.getString("desc"), x + 6, y + 20, w - 12, MUTED);
+        ui.popClip();
+        if (known) ui.text("Mastered", x + 6, y + 71, PURPLE);
+        else ui.button("pathMastery" + sk.getString("id"), x + 4, y + 67, w - 8, 15,
+                ui.clip(open ? "Master · " + sk.getInt("cost") + " points" : sk.getString("req"), w - 16), Style.PRIMARY,
+                host.canCommand() && open && seen, () -> { CompoundTag d = soldierData(so); d.putString("skill", sk.getString("id")); host.act("learnPathSkill", d); });
+        if (ui.over(x, y, w, 86)) ui.tip(sk.getString("label"), sk.getString("desc"), "Legendary mastery · skill rank " + sk.getInt("rank") + " · " + sk.getInt("cost") + " points",
+                "Only one mastery per recruit; respec to change it", known ? "Mastered" : sk.getString("req"));
     }
 
     void royalGuard(CompoundTag so, int rank, int gy) {

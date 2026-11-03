@@ -23,6 +23,7 @@ import java.util.*;
 public final class MilitarySelfTest {
     @SubscribeEvent
     public static void started(ServerStartedEvent event) {
+        if (Boolean.getBoolean("livingrealms.pathsTest")) { pathsOnly(event); return; }
         if (!Boolean.getBoolean("livingrealms.militaryTest")) return;
         event.getServer().execute(() -> {
             String report;
@@ -32,6 +33,7 @@ public final class MilitarySelfTest {
                 checks += RecruitProgressionSelfTest.run(event.getServer().overworld());
                 checks += SoldierRanksSelfTest.run(event.getServer().overworld());
                 checks += SpecialSkillsSelfTest.run(event.getServer().overworld());
+                checks += PathsSelfTest.run(event.getServer().overworld());
                 checks += MeritSelfTest.run(event.getServer().overworld());
                 checks += livingrealms.military.RecruitOriginSelfTest.run(event.getServer().overworld());
                 checks += CapitalCastleSelfTest.run(event.getServer().overworld());
@@ -45,6 +47,23 @@ public final class MilitarySelfTest {
                 LivingRealms.LOG.error("MILITARY SELF TEST FAILED", failure);
             }
             try { Files.writeString(Path.of("military-test-result.txt"), report); } catch (Exception ex) { LivingRealms.LOG.error("Cannot write test result", ex); }
+            event.getServer().halt(false);
+        });
+    }
+
+    /** Just the specialist paths, for a full modpack server (-Dlivingrealms.pathsTest=true): real Pehkui giants. */
+    private static void pathsOnly(ServerStartedEvent event) {
+        event.getServer().execute(() -> {
+            String report;
+            try {
+                report = "PASS: " + PathsSelfTest.run(event.getServer().overworld()) + " path assertions (Pehkui " + (livingrealms.military.PehkuiBridge.installed() ? "loaded" : "absent")
+                        + (PathsSelfTest.skipped.isEmpty() ? "" : "; " + PathsSelfTest.skipped) + ")\n";
+                LivingRealms.LOG.info("PATHS SELF TEST {}", report);
+            } catch (Throwable failure) {
+                report = "FAIL: " + failure + "\n";
+                LivingRealms.LOG.error("PATHS SELF TEST FAILED", failure);
+            }
+            try { Files.writeString(Path.of("paths-test-result.txt"), report); } catch (Exception ex) { LivingRealms.LOG.error("Cannot write test result", ex); }
             event.getServer().halt(false);
         });
     }

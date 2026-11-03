@@ -79,9 +79,11 @@ public final class RecruitCombat {
             var record = SoldierProgression.record(level.getServer(), attacker);
             if (record != null) {
                 WeaponProficiency weapon = weapon(source, attacker);
+                boolean projectile = source.getDirectEntity() instanceof Projectile;
                 double special = SoldierSpecials.onAttack(record.soldier(), attacker, victim, source, weapon, damage, time);
-                damage *= (float)(1 + damageBonus(record.settlement(), record.soldier(), attacker, victim,
-                        weapon, source.getDirectEntity() instanceof Projectile, time, special));
+                damage *= (float)(1 + damageBonus(record.settlement(), record.soldier(), attacker, victim, weapon, projectile, time, special)
+                        + SoldierPaths.attack(record.settlement(), record.soldier(), attacker, victim, weapon, projectile, time));
+                SoldierPaths.afterHit(record.settlement(), record.soldier(), attacker, victim, weapon, projectile, damage, time);
             }
         }
         var defender = SoldierProgression.record(level.getServer(), victim);
@@ -103,6 +105,8 @@ public final class RecruitCombat {
             if (so.legendary.contains(LegendaryPerk.VANGUARD) && SoldierSpecials.allies(defender.settlement(), victim, 8).size() >= 2) reduction += .06;
             if (victim.getHealth() < victim.getMaxHealth() * .4 && trigger(so, LegendaryPerk.IRON_WILL, time, 1500)) reduction += .20;
             damage *= (float)(1 - Math.min(DEFENCE_CAP, reduction));
+            damage *= (float)(1 - SoldierPaths.defend(defender.settlement(), so, victim, source, time));
+            SoldierPaths.struck(so, victim, source, damage);
         }
         event.setAmount(damage);
     }

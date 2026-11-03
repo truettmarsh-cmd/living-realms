@@ -47,6 +47,16 @@ public final class PehkuiBridge {
         if (factor != 1 && !Boolean.TRUE.equals(getPersistence.invoke(scale))) persistence.invoke(scale, Boolean.TRUE);
         tag.putFloat(key, factor);
     }
+    /** Sets one named size factor (height and width alike), keeping every other factor on the entity. */
+    public static boolean scale(Entity entity, String key, float factor) {
+        if (!ready()) return false;
+        try {
+            if (factor == 1 && !entity.getPersistentData().contains(key + "Height")) return true;
+            applyScale(entity, data.invoke(height, entity), key + "Height", factor);
+            applyScale(entity, data.invoke(width, entity), key + "Width", factor);
+            return true;
+        } catch (ReflectiveOperationException | LinkageError e) { fail(e); return false; }
+    }
     public static float scale(Entity entity, boolean vertical) {
         if (!ready()) return 1;
         try { return ((Number)getScale.invoke(data.invoke(vertical ? height : width, entity))).floatValue(); }
