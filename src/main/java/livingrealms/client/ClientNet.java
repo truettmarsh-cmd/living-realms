@@ -24,6 +24,7 @@ public final class ClientNet {
             case "plots" -> ClientState.setTowns(data);
             case "blueprint" -> ClientState.putBlueprint(data);
             case "quest" -> QuestToast.show(data);
+            case "reports" -> livingrealms.client.ui.ReportsPanel.receive(data);
             default -> {}
         }
     }

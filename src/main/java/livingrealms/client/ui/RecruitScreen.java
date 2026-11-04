@@ -24,7 +24,8 @@ import static livingrealms.client.ui.Imm.*;
 public class RecruitScreen extends Screen {
     public enum Page {
         OVERVIEW("Overview", Items.BELL), PROMOTIONS("Promotions", Items.GOLDEN_HELMET), SKILLS("Skills", Items.ENCHANTED_BOOK), PATH("Path", Items.IRON_SWORD),
-        WEAPONS("Weapons", Items.STONE_AXE), LEGENDARY("Legendary", Items.NETHER_STAR), SPECIAL("Special", Items.BLAZE_POWDER);
+        WEAPONS("Weapons", Items.STONE_AXE), LEGENDARY("Legendary", Items.NETHER_STAR),
+        REPORTS("Reports", Items.WRITABLE_BOOK), SPECIAL("Special", Items.BLAZE_POWDER);
         final String label;
         final Item icon;
         Page(String label, Item icon) { this.label = label; this.icon = icon; }
@@ -39,6 +40,7 @@ public class RecruitScreen extends Screen {
         public int emeralds() { return d.getInt("emeralds"); }
         public boolean royalFooter() { return false; }
     });
+    private final ReportsPanel reports = new ReportsPanel(ui);
     private CompoundTag d;
     private Page page;
     private EditBox nameBox;
@@ -145,6 +147,7 @@ public class RecruitScreen extends Screen {
             switch (page) {
                 case OVERVIEW -> overview();
                 case PROMOTIONS -> promotions();
+                case REPORTS -> { header("Battle reports", "After-action summaries of your recruits' last " + ReportsPanel.KEEP + " battles"); reports.draw(cx, cy + 30, cw, ch - 30, entity()); }
                 default -> details();
             }
         } catch (Exception e) {

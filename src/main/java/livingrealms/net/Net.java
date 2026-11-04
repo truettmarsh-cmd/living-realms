@@ -79,6 +79,7 @@ public final class Net {
             }
             case "close" -> WATCHING.remove(p.getUUID());
             case "recruit" -> livingrealms.military.RecruitCommand.handle(p, m.data);
+            case "reports" -> livingrealms.battle.BattleReports.request(p);
             case "action" -> {
                 UUID id = m.data.getUUID("id");
                 Actions.handle(p, id, m.data.getString("action"), m.data.getCompound("data"));
