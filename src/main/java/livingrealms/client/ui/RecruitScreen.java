@@ -219,7 +219,8 @@ public class RecruitScreen extends Screen {
         boolean changed = !nameBox.getValue().trim().isEmpty() && !nameBox.getValue().trim().equals(d.getString("name"));
         ui.button("rcRename", cx + cw - 80, ry, 78, 18, "Rename", Style.SECONDARY, changed, this::rename);
         int top = ry + 24, bottom = cy + ch;
-        int off = ui.beginScroll("rcPage", cx, top, cw, bottom - top, 228 + 6 + BondsPanel.height(ui, d.getCompound("bonds"), cw));
+        int bondsH = BondsPanel.height(ui, d.getCompound("bonds"), cw);
+        int off = ui.beginScroll("rcPage", cx, top, cw, bottom - top, 228 + 6 + bondsH + (d.contains("supply") ? SupplyPanel.HEIGHT + 6 : 0));
         int y = top - off;
         int w2 = (cw - 6) / 2;
         // condition
@@ -291,6 +292,7 @@ public class RecruitScreen extends Screen {
         }
         // brothers-in-arms
         BondsPanel.draw(ui, d.getCompound("bonds"), cx, y + 76, cw);
+        if (d.contains("supply")) SupplyPanel.draw(ui, d.getCompound("supply"), cx, y + 76 + bondsH + 6, cw, this::op);
         ui.endScroll();
     }
 

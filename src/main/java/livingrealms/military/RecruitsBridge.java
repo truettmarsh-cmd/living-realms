@@ -220,6 +220,23 @@ public final class RecruitsBridge {
 
     public static float hunger(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getHunger() : 0; }
 
+    /** The recruit's whole inventory (0-5 are its equipment slots, the pack starts at 6), or null. */
+    @Nullable
+    public static net.minecraft.world.Container inventory(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getInventory() : null; }
+
+    /** Food Recruits' own eat goal will eat from the pack (edible and not on its food blacklist). */
+    public static boolean canEat(Entity e, ItemStack stack) { return e instanceof AbstractRecruitEntity r && !stack.isEmpty() && r.canEatItemStack(stack); }
+
+    /** The storage block a recruit was given with Recruits' upkeep command, or null. */
+    @Nullable
+    public static BlockPos upkeepPos(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getUpkeepPos() : null; }
+
+    /** The upkeep entity (a cart or chest boat) a recruit was given with Recruits' upkeep command, or null. */
+    @Nullable
+    public static UUID upkeepEntity(Entity e) { return e instanceof AbstractRecruitEntity r ? r.getUpkeepUUID() : null; }
+
+    public static void setUpkeepPos(Entity e, BlockPos pos) { if (e instanceof AbstractRecruitEntity r) r.setUpkeepPos(pos); }
+
     /** Veteran training: start soldiers at a higher level with Recruits' level buffs. */
     public static void setLevel(Entity e, int level) {
         if (!(e instanceof AbstractRecruitEntity r)) return;

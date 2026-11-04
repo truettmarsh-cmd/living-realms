@@ -139,7 +139,7 @@ public final class PathsSelfTest {
             check(Math.abs(SoldierPaths.attack(s, so, bers, zombie, WeaponProficiency.AXE, false, now) - .21) < 1e-6, "Fury grows as health drops"); checks++;
             float healed = bers.getHealth();
             SoldierPaths.onKill(so, bers, now);
-            check(bers.getHealth() - healed == 3 && so.rampageUntil == now + SoldierPaths.RAMPAGE_TICKS, "Bloodlust heals, Rampage starts"); checks++;
+            check(Math.abs(bers.getHealth() - healed - 3) < 1e-3 && so.rampageUntil == now + SoldierPaths.RAMPAGE_TICKS, "Bloodlust heals, Rampage starts"); checks++;
             bers.setHealth(1);
             check(Math.abs(SoldierPaths.attack(s, so, bers, zombie, WeaponProficiency.AXE, false, now) - SoldierPaths.PATH_CAP) < 1e-6, "Path bonuses capped at 30%"); checks++;
             check(Math.abs(SoldierPaths.defend(s, so, bers, level.damageSources().mobAttack(zombie), now) + SoldierPaths.RECKLESS_PENALTY) < 1e-9, "Reckless takes 5% more"); checks++;

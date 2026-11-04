@@ -1801,8 +1801,9 @@ public class CityScreen extends Screen {
             ui.button("equip", cx + 6, ly + lh - 21, 150, 16, "Equip from the armoury", Style.PRIMARY, !all.isEmpty(), () -> act("equipAll"));
             if (ui.over(cx + 6, ly + lh - 21, 150, 16)) ui.tip("Gives every soldier in town the best kit the armoury holds for them (see Kits). Old gear goes back into the stockpile.");
         }
-        String hint = "Fed soldiers heal over time; hungry ones weaken.";
-        if (ui.width(hint) < cw - 172) ui.right(hint, cx + cw - 8, ly + lh - 16, FAINT);
+        String low = v().getString("supplyLow"), hint = low.isEmpty() ? "Fed soldiers heal over time; hungry ones weaken." : low;
+        if (ui.width(hint) < cw - 172) ui.right(hint, cx + cw - 8, ly + lh - 16, low.isEmpty() ? FAINT : ORANGE);
+        else if (!low.isEmpty()) ui.right(ui.clip(hint, cw - 172), cx + cw - 8, ly + lh - 16, ORANGE);
     }
 
     static final String[] ROSTER_SORTS = {"Rank", "Name", "Health", "Unit"}, ROSTER_FILTERS = {"All", "Home", "Away", "Hurt"};
