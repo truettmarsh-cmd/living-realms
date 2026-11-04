@@ -40,6 +40,13 @@ public final class PathsSelfTest {
                 for (PathSkill sk : tree) if (sk.tier > 1) { check(sk.prerequisite() != null && sk.prerequisite().tier == Math.min(4, sk.tier - 1), "Prerequisite " + sk); checks++; }
             }
             check(Arrays.stream(PathSkill.values()).filter(PathSkill::giant).count() == 3, "Three giant masteries"); checks++;
+            // the Saint and Undying Rage change the damage at LOW, so battle reports and bonds (LOWEST) see what lands
+            try {
+                var lowest = net.minecraftforge.eventbus.api.EventPriority.LOWEST;
+                check(SoldierPaths.class.getMethod("lethal", LivingDamageEvent.class).getAnnotation(net.minecraftforge.eventbus.api.SubscribeEvent.class).priority() == net.minecraftforge.eventbus.api.EventPriority.LOW
+                        && livingrealms.battle.BattleReports.class.getMethod("damaged", LivingDamageEvent.class).getAnnotation(net.minecraftforge.eventbus.api.SubscribeEvent.class).priority() == lowest
+                        && Bonds.class.getMethod("struck", LivingDamageEvent.class).getAnnotation(net.minecraftforge.eventbus.api.SubscribeEvent.class).priority() == lowest, "Saves at LOW, observers at LOWEST"); checks++;
+            } catch (NoSuchMethodException ex) { throw new IllegalStateException("Paths: damage hooks missing", ex); }
 
             // choice gates and the shieldman's new body
             LivingEntity foot = spawn(level, UnitType.FOOTMAN, s, "Path Footman", spawned);
@@ -240,6 +247,16 @@ public final class PathsSelfTest {
             SoldierPaths.pulse(s, hl, medic, 44 * 20);
             check(Math.abs(bers.getHealth() - 8) < .01, "Bandage heals the most wounded ally nearby: " + bers.getHealth()); checks++;
             check(Math.abs(SoldierPaths.attack(s, so, bers, zombie, WeaponProficiency.AXE, false, now + SoldierPaths.MARK_TICKS) - .10) < 1e-9, "War Chaplain: +10% damage nearby"); checks++;
+            // the chaplain's +10% is its own term beyond the path budget, as the README promises
+            so.pathSkills.add(PathSkill.RECKLESS);
+            bers.setHealth(bers.getMaxHealth());
+            zombie.getPersistentData().putUUID("LivingRealmsMarkedBy", s.id);
+            zombie.getPersistentData().putLong("LivingRealmsMarkedUntil", now + 10);
+            check(Math.abs(SoldierPaths.attack(s, so, bers, zombie, WeaponProficiency.AXE, false, now) - (SoldierPaths.PATH_CAP + SoldierPaths.WAR_CHAPLAIN_BONUS)) < 1e-9,
+                    "Mark +25% and Reckless +12% fill the 30% path budget; the chaplain still adds 10%: " + SoldierPaths.attack(s, so, bers, zombie, WeaponProficiency.AXE, false, now)); checks++;
+            medic.teleportTo(bers.getX() + 20, bers.getY(), bers.getZ());
+            check(Math.abs(SoldierPaths.attack(s, so, bers, zombie, WeaponProficiency.AXE, false, now) - SoldierPaths.PATH_CAP) < 1e-9, "No chaplain within 8 blocks: just the capped path bonus"); checks++;
+            so.pathSkills.remove(PathSkill.RECKLESS);
         } finally {
             for (Entity e : spawned) if (e != null) e.discard();
             manager.remove(s);

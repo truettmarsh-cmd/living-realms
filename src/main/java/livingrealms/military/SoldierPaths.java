@@ -30,11 +30,11 @@ import java.util.UUID;
 /**
  * Specialist paths: choosing one, learning its skills, and what they do in a fight. Path skills have their own
  * budgets on top of the general ones (PATH_CAP damage, PATH_DEFENCE_CAP reduction); a legendary mastery adds its
- * own fixed bonus beyond that, since it is the end of a recruit's training.
+ * own fixed bonus beyond that, since it is the end of a recruit's training, and so does a War Chaplain's blessing.
  */
 @Mod.EventBusSubscriber(modid = LivingRealms.MODID)
 public final class SoldierPaths {
-    public static final double PATH_CAP = .30, PATH_DEFENCE_CAP = .40, RECKLESS_PENALTY = .05;
+    public static final double PATH_CAP = .30, PATH_DEFENCE_CAP = .40, RECKLESS_PENALTY = .05, WAR_CHAPLAIN_BONUS = .10;
     public static final float COLOSSUS_SIZE = 1.6f, TITAN_SIZE = 1.8f, JUGGERNAUT_SIZE = 1.4f;
     public static final int UNDYING_COOLDOWN = 3600, RAGE_TICKS = 200, RAMPAGE_TICKS = 120, MARK_TICKS = 160, SAINT_COOLDOWN = 2400;
     /** Each morning a recruit with a mastery teaches up to MENTOR_STUDENTS lower-ranked recruits who could follow its path. */
@@ -223,12 +223,12 @@ public final class SoldierPaths {
 
     // ------------------------------------------------------------------ combat
 
-    /** Extra damage for a town recruit's hit: path skills (capped at PATH_CAP), auras and marks, then mastery. */
+    /** Extra damage for a town recruit's hit: path skills, auras and marks (capped at PATH_CAP), then mastery and the war chaplain's blessing beyond the cap. */
     public static double attack(@Nullable Settlement s, Settlement.Soldier so, LivingEntity attacker, LivingEntity victim,
                                 @Nullable WeaponProficiency weapon, boolean projectile, long time) {
         if (busy) return 0;
-        double path = 0, mastery = 0;
-        if (s != null) path += aura(s, attacker, victim, time);
+        double path = 0, mastery = 0, blessing = 0;
+        if (s != null) { path += aura(s, attacker, victim, time); blessing = chaplain(s, attacker); }
         if (so.path != null && so.path.equipped(attacker, weapon)) {
             PathSkill m = mastery(so);
             switch (so.path) {
@@ -268,26 +268,36 @@ public final class SoldierPaths {
                 }
             }
         }
-        return Math.min(PATH_CAP, path) + mastery;
+        return Math.min(PATH_CAP, path) + mastery + blessing;
     }
 
-    /** Hunter's mark, the banner auras and the war chaplain's blessing from recruits of the same town. */
+    /** Hunter's mark and the banner auras from recruits of the same town (inside the path budget). */
     static double aura(Settlement s, LivingEntity attacker, LivingEntity victim, long time) {
         double bonus = 0;
         CompoundTag tag = victim.getPersistentData();
         if (tag.hasUUID(MARK) && tag.getUUID(MARK).equals(s.id) && time < tag.getLong(MARK_UNTIL)) bonus += .25;
-        double banner = 0, chaplain = 0;
+        double banner = 0;
         for (Settlement.Soldier other : s.soldiers) {
+            if (other.path != SoldierPath.KNIGHT) continue;
             PathSkill m = mastery(other);
-            boolean preacher = m == PathSkill.WAR_CHAPLAIN;
-            double radius = preacher ? 8 : other.path != SoldierPath.KNIGHT ? 0 : m == PathSkill.WARLORD ? 12 : has(other, PathSkill.BANNER) ? 8 : 0;
+            double radius = m == PathSkill.WARLORD ? 12 : has(other, PathSkill.BANNER) ? 8 : 0;
             if (radius == 0) continue;
             Entity e = attacker.level() instanceof ServerLevel level ? level.getEntity(other.entity) : null;
             if (e == null || !e.isAlive() || e.distanceToSqr(attacker) > radius * radius) continue;
-            if (preacher) chaplain = .10;
-            else banner = Math.max(banner, m == PathSkill.WARLORD ? .15 : .05);
+            banner = Math.max(banner, m == PathSkill.WARLORD ? .15 : .05);
         }
-        return bonus + banner + chaplain;
+        return bonus + banner;
+    }
+
+    /** A War Chaplain of the same town within 8 blocks: a flat +10%, like a mastery outside the path budget. */
+    static double chaplain(Settlement s, LivingEntity attacker) {
+        if (!(attacker.level() instanceof ServerLevel level)) return 0;
+        for (Settlement.Soldier other : s.soldiers) {
+            if (mastery(other) != PathSkill.WAR_CHAPLAIN) continue;
+            Entity e = level.getEntity(other.entity);
+            if (e != null && e.isAlive() && e.distanceToSqr(attacker) <= 8 * 8) return WAR_CHAPLAIN_BONUS;
+        }
+        return 0;
     }
 
     /** Damage reduction for a town recruit: its own path and the shield and banner auras around it. May be negative. */
@@ -367,8 +377,11 @@ public final class SoldierPaths {
         if (has(so, PathSkill.RAMPAGE)) { so.rampageUntil = time + RAMPAGE_TICKS; apply(attacker, so); }
     }
 
-    /** Undying Rage: a killing blow leaves the berserker on 1 HP, once every three minutes. */
-    @SubscribeEvent(priority = EventPriority.LOWEST)
+    /**
+     * Undying Rage: a killing blow leaves the berserker on 1 HP, once every three minutes; or a Saint nearby saves the
+     * recruit. LOW, so the observers at LOWEST (battle reports, bonds' avenge) see the damage that really lands.
+     */
+    @SubscribeEvent(priority = EventPriority.LOW)
     public static void lethal(LivingDamageEvent event) {
         LivingEntity victim = event.getEntity();
         if (event.isCanceled() || event.getAmount() < victim.getHealth() || !(victim.level() instanceof ServerLevel level)
@@ -380,6 +393,7 @@ public final class SoldierPaths {
             event.setAmount(Math.max(0, victim.getHealth() - 1));
             r.settlement().log(r.soldier().name + " refused to fall");
             r.settlement().dirty = true;
+            livingrealms.battle.BattleReports.saved(victim, event.getSource(), "Undying Rage held");
             return;
         }
         Settlement.Soldier saint = saint(r.settlement(), victim, level, now);
@@ -388,6 +402,7 @@ public final class SoldierPaths {
         victim.setHealth(Math.min(victim.getMaxHealth(), 6));
         r.settlement().log(saint.name + " " + PathSkill.SAINT.epithet() + " pulled " + r.soldier().name + " back from death");
         r.settlement().dirty = true;
+        livingrealms.battle.BattleReports.saved(victim, event.getSource(), "Saved by " + saint.name + " " + PathSkill.SAINT.epithet());
     }
 
     /** A Saint of the town within 10 blocks whose blessing is ready, now spent; it may save itself. */

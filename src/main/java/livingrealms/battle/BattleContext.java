@@ -69,11 +69,13 @@ final class BattleContext {
 
     /**
      * A skirmish or dragon attack in which recruits fell is written in the owner's town chronicle. Raids and sieges are
-     * chronicled already, and notable fallen get their own entry (Chronicle.fallen); this adds the battle around them.
+     * chronicled already; notable fallen (Chronicle.fallen) and bonded partners (Bonds.fell) get their own entry and are
+     * left out of this one, which is skipped if none remain.
      */
     static void chronicle(MinecraftServer server, UUID owner, BattleReport r) {
         if (r.kind != BattleReport.Kind.SKIRMISH && r.kind != BattleReport.Kind.DRAGON) return;
-        List<BattleReport.Fighter> fallen = r.fallen();
+        // a fall already told in its own line (a notable soldier, a bonded partner's grief) is left out here
+        List<BattleReport.Fighter> fallen = r.fallen().stream().filter(f -> f.id == null || !Chronicle.fallChronicled(f.id)).collect(Collectors.toList());
         if (fallen.isEmpty() || r.place.isEmpty()) return;
         try {
             ResourceKey<Level> dim = BattleReports.dimension(r.dim);

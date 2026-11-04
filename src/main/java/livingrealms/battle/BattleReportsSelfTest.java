@@ -54,7 +54,7 @@ public final class BattleReportsSelfTest {
         });
     }
 
-    static void run(ServerLevel level) {
+    static void run(ServerLevel level) throws Exception {
         checks = 0;
         MinecraftServer server = level.getServer();
         BattleReports.ACTIVE.clear();
@@ -189,6 +189,44 @@ public final class BattleReportsSelfTest {
             check(BattleReport.load(new CompoundTag()).kind == BattleReport.Kind.SKIRMISH, "A blank report loads as a skirmish");
             check(BattleReport.duration(95).equals("1m 35s") && BattleReport.clockText(14 * 60 + 5).equals("14:05"), "Duration and clock text");
             check(BattleContext.names(List.of("A", "B", "C")).equals("A, B and C"), "Name lists");
+
+            // saved from a killing blow: Undying Rage, then the Saint, noted as advances; the observers see what really lands
+            check(net.minecraftforge.eventbus.api.EventPriority.LOW == livingrealms.military.SoldierPaths.class
+                    .getMethod("lethal", net.minecraftforge.event.entity.living.LivingDamageEvent.class).getAnnotation(SubscribeEvent.class).priority(), "Saves run at LOW, before the LOWEST observers");
+            sa.path = livingrealms.military.SoldierPath.BERSERKER; sa.pathSkills.add(livingrealms.military.PathSkill.UNDYING_RAGE);
+            sb.path = livingrealms.military.SoldierPath.HEALER; sb.pathSkills.add(livingrealms.military.PathSkill.SAINT);
+            a.setHealth(a.getMaxHealth()); b.setHealth(b.getMaxHealth());
+            Zombie z9 = zombie(level, base.offset(2, 0, 1), spawned);
+            hit(a, z9, 2);
+            battle = BattleReports.ACTIVE.get(owner).get(0);
+            float hp = a.getHealth(), taken = battle.fighters.get(a.getUUID()).f.taken;
+            hit(z9, a, 1000);
+            check(a.isAlive() && Math.abs(a.getHealth() - 1) < .01, "Undying Rage holds Aldric on 1 HP: " + a.getHealth());
+            check(Math.abs(battle.fighters.get(a.getUUID()).f.taken - taken - (hp - 1)) < .01, "The report counts the damage that landed, not the killing blow: "
+                    + (battle.fighters.get(a.getUUID()).f.taken - taken));
+            hit(z9, a, 1000);
+            check(a.isAlive() && Math.abs(a.getHealth() - 6) < .01, "Bryn the Saint pulls Aldric back on 6 HP: " + a.getHealth());
+            r = BattleReports.update(server, BattleReports.now(server) + BattleReports.QUIET_TICKS).get(0);
+            List<String> adv = r.fighter(a.getUUID()).advances;
+            check(adv.contains("Undying Rage held") && adv.stream().anyMatch(x -> x.startsWith("Saved by Bryn")), "Both saves are in the report: " + adv);
+            check(r.fallen().isEmpty(), "Nobody fell");
+            sa.pathSkills.clear(); sa.path = null; sb.pathSkills.clear(); sb.path = null;
+
+            // a fall already chronicled on its own (a notable soldier) is left out of the skirmish line
+            LivingEntity dorn = recruit(level, UnitType.FOOTMAN, base.offset(-4, 0, 0), owner, "Dorn", spawned);
+            LivingEntity ewan = recruit(level, UnitType.FOOTMAN, base.offset(-5, 0, 0), owner, "Ewan", spawned);
+            Settlement.Soldier sd = soldier(town, dorn, UnitType.FOOTMAN);
+            sd.kills = 10;
+            check(Chronicle.notable(sd), "Dorn is a notable soldier");
+            Zombie z10 = zombie(level, base.offset(-4, 0, 2), spawned);
+            hit(dorn, z10, 3);
+            hit(z10, dorn, 1000);
+            hit(z10, ewan, 1000);
+            check(!dorn.isAlive() && !ewan.isAlive() && Chronicle.fallChronicled(dorn.getUUID()), "Dorn and Ewan fell; Dorn has his own chronicle entry");
+            r = BattleReports.update(server, BattleReports.now(server) + BattleReports.QUIET_TICKS).get(0);
+            check(r.fallen().size() == 2, "Both are in the report's fallen");
+            var notes = town.chronicle.entries.stream().filter(en -> en.kind() == Chronicle.Kind.NOTE && en.text().contains("Ewan")).toList();
+            check(notes.size() == 1 && !notes.get(0).text().contains("Dorn") && notes.get(0).text().contains("Ewan fell"), "The skirmish line names only Ewan: " + notes);
 
             // without the town, the report still stands
             m.remove(town);

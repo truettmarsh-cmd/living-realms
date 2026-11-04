@@ -170,6 +170,25 @@ public final class BattleReports {
         }
     }
 
+    /**
+     * A recruit was saved from a killing blow (the Saint, Undying Rage): noted among its advances in the battle. Called
+     * from the LOW-priority save itself, since the damage this class then sees at LOWEST is no longer lethal (or zero).
+     */
+    public static void saved(LivingEntity victim, net.minecraft.world.damagesource.DamageSource source, String what) {
+        if (!(victim.level() instanceof ServerLevel level)) return;
+        MinecraftServer server = level.getServer();
+        UUID v = owner(server, victim);
+        if (v == null) return;
+        Entity attacker = source.getEntity();
+        boolean hostile = attacker != null && attacker != victim && !friendly(v, attacker);
+        long now = now(server);
+        Battle b = battle(v, level, victim, now, hostile);
+        if (b == null) return;
+        Joined j = join(server, b, victim);
+        if (!j.f.advances.contains(what)) j.f.advances.add(what);
+        if (hostile) b.touch(now, victim);
+    }
+
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void died(LivingDeathEvent event) {
         if (event.isCanceled() || !(event.getEntity().level() instanceof ServerLevel level)) return;
