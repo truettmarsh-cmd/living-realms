@@ -39,7 +39,9 @@ final class DecreesPanel {
             String name = d.getString("name");
             ui.text(name, x + 28, ry + 2, locked ? FAINT : TEXT);
             ui.text(d.getString("tier"), x + 32 + ui.width(name), ry + 2, d.getString("tier").equals("Capital") ? PURPLE : BLUE);
-            ui.text(ui.clip(d.getString("desc"), w - 28 - 170), x + 28, ry + 13, locked ? FAINT : MUTED);
+            // the description stops short of the cost, which is right-aligned against the Decree button
+            String cost = ui.clip(d.getString("cost"), 150);
+            ui.text(ui.clip(d.getString("desc"), Math.max(40, w - 82 - ui.width(cost) - 10 - 28)), x + 28, ry + 13, locked ? FAINT : MUTED);
             String status; int col;
             switch (state) {
                 case "active" -> { status = "In force · " + d.getInt("activeMin") + " min"; col = GREEN; }
@@ -48,7 +50,7 @@ final class DecreesPanel {
                 default -> { status = why.isEmpty() ? "Ready" : "Not now"; col = why.isEmpty() ? GOLD : MUTED; }
             }
             ui.right(status, x + w - 82, ry + 2, col);
-            ui.right(ui.clip(d.getString("cost"), 150), x + w - 82, ry + 13, FAINT);
+            ui.right(cost, x + w - 82, ry + 13, FAINT);
             CompoundTag data = new CompoundTag();
             data.putString("decree", d.getString("id"));
             ui.button("decree" + d.getString("id"), x + w - 74, ry + 5, 66, 15, "Decree", Style.PRIMARY, ruler && why.isEmpty(),

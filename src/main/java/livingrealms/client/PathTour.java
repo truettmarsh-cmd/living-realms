@@ -80,7 +80,7 @@ public final class PathTour {
             });
             case 160 -> RecruitUiTour.op(heroId, "refresh");
             case 180 -> shot(mc, "titan_tree");
-            case 182 -> { if (mc.screen != null) mc.screen.mouseScrolled(mc.getWindow().getGuiScaledWidth() / 2.0 + 60, mc.getWindow().getGuiScaledHeight() / 2.0, -400); }
+            case 182 -> { if (mc.screen != null) mc.screen.mouseScrolled(mc.getWindow().getGuiScaledWidth() / 2.0 + 60, mc.getWindow().getGuiScaledHeight() / 2.0, -14); org.lwjgl.glfw.GLFW.glfwSetCursorPos(mc.getWindow().getWindow(), 10, 10); }
             case 196 -> shot(mc, "ascension");
             case 198 -> mc.setScreen(null);
             case 200 -> server.execute(() -> {

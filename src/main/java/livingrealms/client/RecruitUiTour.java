@@ -185,8 +185,8 @@ public final class RecruitUiTour {
             }
             case 710 -> mc.setScreen(null);
             // 0.11.0: the bonds and supply cards below the Overview, and the Reports page
-            case 715 -> shiftClick(mc, soldierId, true);
-            case 716 -> unsneak(mc, server, playerId);
+            // Wren, the recruit hired the Recruits way (the soldier was promoted above, so it has a new id)
+            case 715 -> op(freeId, "open");
             case 735 -> { page(mc, RecruitScreen.Page.OVERVIEW); clearHover(mc); }
             case 740 -> scroll(mc);
             case 755 -> shot(mc, "overview_bonds_supply");
