@@ -109,6 +109,11 @@ minecraft {
                 workingDirectory project.file(project.property('dragonTestDir'))
                 property 'livingrealms.dragonTest', 'true'
             }
+            // ./gradlew runServer -PbondsTest -PbondsTestDir=<fresh dir> : brothers-in-arms between recruits (see BondsSelfTest, docs/bonds.md)
+            if (project.hasProperty('bondsTest')) {
+                workingDirectory project.file(project.property('bondsTestDir'))
+                property 'livingrealms.bondsTest', 'true'
+            }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')
                 property 'livingrealms.militaryTest', 'true'

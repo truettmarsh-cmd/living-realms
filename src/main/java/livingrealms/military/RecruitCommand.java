@@ -118,6 +118,7 @@ public final class RecruitCommand {
         t.putBoolean("worker", RecruitsBridge.isWorker(e));
         // Recruits' own inventory screen only finds recruits within 10 blocks of the player
         t.putBoolean("near", e.level() == p.level() && e.distanceTo(p) <= 8);
+        t.put("bonds", Bonds.view(p.server, e));
         SoldierProgression.Record rec = SoldierProgression.record(p.server, e);
         ListTag promos = new ListTag();
         if (rec != null) {
@@ -221,6 +222,7 @@ public final class RecruitCommand {
         RecruitOrigin origin = RecruitOrigins.origin(e);
         Entity n = RecruitsBridge.promote(e, profession, p);
         if (n == null) return null;
+        Bonds.moved(p.server, e.getUUID(), n.getUUID());
         if (hasOrigin) RecruitOrigins.assign(n, origin);
         if (rec != null) {
             rec.soldier().entity = n.getUUID();
