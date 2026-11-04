@@ -215,6 +215,8 @@ public final class BuildingCatalog {
         proc(out, "stables", "Stables", Category.STABLE, 3, "cavalry", -1);
         proc(out, "apothecary", "Apothecary", Category.DECOR, 2, "herb_lore", -1);
         proc(out, RoostBlueprint.KIND, "Dragon Roost", Category.STABLE, 5, "dragonry", 1);
+        // Wonders (docs/wonders.md): Capital only, one per kingdom (Settlement.cannotBuild asks livingrealms.wonders.Wonders)
+        for (var w : livingrealms.wonders.Wonder.values()) proc(out, w.kind, w.label, w.category, 6, w.research(), 1);
     }
 
     static void proc(Map<String, BuildingType> out, String kind, String name, Category cat, int tier, String research, int max) {

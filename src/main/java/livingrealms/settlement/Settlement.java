@@ -347,6 +347,8 @@ public final class Settlement {
     @Nullable
     public String cannotBuild(BuildingType t) {
         if (t.id.equals(CapitalCastles.ID) && !capital) return "Only the kingdom capital can build the Capital Castle";
+        String wonder = livingrealms.wonders.Wonders.cannotBuild(this, t);
+        if (wonder != null) return wonder;
         if (t.minTier > tier.number()) return "Needs " + Tier.of(t.minTier).label;
         if (!has(t.research)) {
             var n = ResearchTree.get(t.research);

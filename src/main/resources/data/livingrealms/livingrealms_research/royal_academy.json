@@ -1,0 +1,16 @@
+{
+ "name": "Royal Academy",
+ "branch": "Wonders",
+ "cost": 1800,
+ "requires": [
+  "wonders_of_the_realm"
+ ],
+ "icon": "minecraft:enchanting_table",
+ "x": 1,
+ "y": 13,
+ "description": "Unlocks the Royal Academy (Capital, one per kingdom). Research goes \u00d71.5 in every city of the kingdom; saved study points hold up to 4000 and pour into a project twice as fast.",
+ "items": {
+  "minecraft:book": 32,
+  "minecraft:diamond": 4
+ }
+}

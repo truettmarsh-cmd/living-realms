@@ -560,8 +560,9 @@ public final class Trade {
         if (to != null) c.cargo.forEach(to.stock::force);
         livingrealms.hardship.Hardships.caravanArrived(from, to, c.cargo, now, server == null ? net.minecraft.util.RandomSource.create() : server.overworld().random);
         if (from != null) {
-            int coin = (int) Math.round(c.value * 0.5);
-            if (from.isAi() || from.mirror()) from.wealth += c.value;
+            double exchange = livingrealms.wonders.Wonders.caravan(from);
+            int coin = (int) Math.round(c.value * 0.5 * exchange);
+            if (from.isAi() || from.mirror()) from.wealth += c.value * exchange;
             else if (coin > 0) from.stock.force(Items.EMERALD, coin);
             Ledger l = m.trade.ledger(from.id);
             l.earned += c.value;

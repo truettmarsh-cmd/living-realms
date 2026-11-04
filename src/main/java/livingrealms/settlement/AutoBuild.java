@@ -311,8 +311,10 @@ public final class AutoBuild {
         }
     }
 
-    /** Towns don't put up a dragon roost on their own when there are no dragons to keep (Ice and Fire absent). */
+    /** Towns don't put up a dragon roost on their own when there are no dragons to keep (Ice and Fire absent), and
+     *  only their ruler decides on a Wonder. */
     static boolean autoWanted(BuildingType t) {
+        if (livingrealms.wonders.Wonders.is(t)) return false;
         return !t.id.equals("livingrealms:" + livingrealms.building.RoostBlueprint.KIND) || livingrealms.dragon.DragonApi.installed();
     }
 

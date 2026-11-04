@@ -129,6 +129,11 @@ minecraft {
                 workingDirectory project.file(project.property('decreesTestDir'))
                 property 'livingrealms.decreesTest', 'true'
             }
+            // ./gradlew runServer -PwondersTest -PwondersTestDir=<fresh dir> : the five Wonders (see WondersSelfTest, docs/wonders.md)
+            if (project.hasProperty('wondersTest')) {
+                workingDirectory project.file(project.property('wondersTestDir'))
+                property 'livingrealms.wondersTest', 'true'
+            }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')
                 property 'livingrealms.militaryTest', 'true'

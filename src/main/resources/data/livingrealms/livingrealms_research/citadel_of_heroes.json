@@ -1,0 +1,16 @@
+{
+ "name": "Citadel of Heroes",
+ "branch": "Wonders",
+ "cost": 1800,
+ "requires": [
+  "wonders_of_the_realm"
+ ],
+ "icon": "minecraft:golden_sword",
+ "x": 1,
+ "y": 16,
+ "description": "Unlocks the Citadel of Heroes (Capital, one per kingdom). Recruits trained in any city of the kingdom start 2 levels higher with a skill point; every city's garrison cap rises by 25% (at least 4).",
+ "items": {
+  "minecraft:iron_ingot": 64,
+  "minecraft:gold_ingot": 16
+ }
+}

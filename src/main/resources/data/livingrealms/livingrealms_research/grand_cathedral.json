@@ -1,0 +1,16 @@
+{
+ "name": "Grand Cathedral",
+ "branch": "Wonders",
+ "cost": 1800,
+ "requires": [
+  "wonders_of_the_realm"
+ ],
+ "icon": "minecraft:bell",
+ "x": 1,
+ "y": 12,
+ "description": "Unlocks the Grand Cathedral (Capital, one per kingdom). +10 mood in every city of the kingdom; outbreaks of sickness 40% as likely, spreading slower and passing sooner; once a day a recruit who falls in one of your cities may be spared, carried to the cathedral with 1 HP.",
+ "items": {
+  "minecraft:gold_ingot": 24,
+  "minecraft:candle": 16
+ }
+}

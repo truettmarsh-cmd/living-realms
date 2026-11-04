@@ -1,0 +1,16 @@
+{
+ "name": "Grand Exchange",
+ "branch": "Wonders",
+ "cost": 1800,
+ "requires": [
+  "wonders_of_the_realm"
+ ],
+ "icon": "minecraft:emerald_block",
+ "x": 1,
+ "y": 15,
+ "description": "Unlocks the Grand Exchange (Capital, one per kingdom). Caravans of the kingdom sell for \u00d71.5, and every city's treasury gains 6 emeralds a day.",
+ "items": {
+  "minecraft:emerald": 64,
+  "minecraft:gold_ingot": 16
+ }
+}

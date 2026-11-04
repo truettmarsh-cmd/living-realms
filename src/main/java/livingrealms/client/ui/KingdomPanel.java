@@ -39,7 +39,8 @@ final class KingdomPanel {
         int ledgerH = 22 + Math.max(1, tribute.size() + truces.size()) * 13 + 4;
         CompoundTag decrees = sc.getCompound("decrees");
         int decH = DecreesPanel.height(decrees);
-        int total = loyH + 6 + (provH > 0 ? provH + 6 : 0) + warsH + ledgerH + (decH > 0 ? decH + 6 : 0);
+        int wondersH = WondersPanel.height(sc.getCompound("wonders"));
+        int total = loyH + 6 + (provH > 0 ? provH + 6 : 0) + warsH + ledgerH + (decH > 0 ? decH + 6 : 0) + (wondersH > 0 ? wondersH + 6 : 0);
         int off = ui.beginScroll("kingdom", x, y + 30, w, h - 30, total);
         int cy = y + 30 - off;
 
@@ -135,7 +136,9 @@ final class KingdomPanel {
         cy += ledgerH + 6;
 
         // ---- royal decrees
-        if (decH > 0) DecreesPanel.draw(ui, x, cy, w - 4, decrees, ruler, act);
+        if (decH > 0) { DecreesPanel.draw(ui, x, cy, w - 4, decrees, ruler, act); cy += decH + 6; }
+        // ---- wonders (docs/wonders.md)
+        if (wondersH > 0) WondersPanel.draw(ui, x, cy, w - 4, sc.getCompound("wonders"));
         ui.endScroll();
     }
 

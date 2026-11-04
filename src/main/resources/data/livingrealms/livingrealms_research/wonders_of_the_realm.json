@@ -1,0 +1,17 @@
+{
+ "name": "Wonders of the Realm",
+ "branch": "Wonders",
+ "cost": 2400,
+ "requires": [
+  "royal_charter",
+  "education"
+ ],
+ "icon": "minecraft:nether_star",
+ "x": 0,
+ "y": 12,
+ "description": "The great works of a kingdom. Needed for every Wonder; each Wonder also has its own research. Wonders rise only in the Capital, one of each per kingdom, and help every city of the kingdom.",
+ "items": {
+  "minecraft:gold_block": 4,
+  "minecraft:book": 16
+ }
+}
