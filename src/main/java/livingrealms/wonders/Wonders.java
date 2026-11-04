@@ -172,6 +172,13 @@ public final class Wonders {
     public static double forgeSpeed(Settlement s) { return has(s, Wonder.FORGE) ? FORGE_SPEED : 1; }
 
     /** Grand Forge: an order's materials, discounted (never below one of each). */
+    /** The research of a wonder, or the Wonders of the Realm research before them. */
+    public static boolean isWonderResearch(String id) {
+        if ("wonders_of_the_realm".equals(id)) return true;
+        for (Wonder w : Wonder.values()) if (w.research().equals(id)) return true;
+        return false;
+    }
+
     public static void forgeCost(Settlement s, Map<String, Integer> total) {
         if (has(s, Wonder.FORGE)) total.replaceAll((k, v) -> Math.max(1, (int) Math.ceil(v * FORGE_COST)));
     }

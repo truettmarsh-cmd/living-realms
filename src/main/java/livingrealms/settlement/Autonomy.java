@@ -118,6 +118,8 @@ public final class Autonomy {
         List<ResearchTree.Node> open = new ArrayList<>();
         for (var n : ResearchTree.nodes().values()) {
             if (s.cannotResearch(n.id()) != null || s.researchSkip.contains(n.id())) continue;
+            // wonders are built only in the capital, so other towns' points would be wasted on their research
+            if (!s.capital && livingrealms.wonders.Wonders.isWonderResearch(n.id())) continue;
             if (n.items().entrySet().stream().anyMatch(e -> s.stock.countIngredient(e.getKey()) < e.getValue())) continue;
             open.add(n);
         }

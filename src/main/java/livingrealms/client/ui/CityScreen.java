@@ -2118,10 +2118,12 @@ public class CityScreen extends Screen {
             Map<String, Integer> cost = new LinkedHashMap<>();
             float work = 0;
             for (Piece p : pieces) { pat.pieces().get(p).cost().forEach((k, n) -> cost.merge(k, n * forgeQty, Integer::sum)); work += p.work * forgeQty; }
+            // Grand Forge: the same 25% off the server charges (Wonders.forgeCost)
+            if (v().getBoolean("grandForge")) cost.replaceAll((k, n) -> Math.max(1, (int) Math.ceil(n * livingrealms.wonders.Wonders.FORGE_COST)));
             // short cards: materials as one row of icons, quantity and order on one line
             boolean shortCard = ch - 98 < 150;
             int cy2 = top + 66;
-            if (!shortCard) { ui.text("Materials", dx + 8, cy2, MUTED); cy2 += 11; }
+            if (!shortCard) { ui.text(v().getBoolean("grandForge") ? "Materials · Grand Forge −25%" : "Materials", dx + 8, cy2, MUTED); cy2 += 11; }
             boolean afford = true;
             int matBottom = top + ch - 98 - 44 - 12, hidden = 0, mx2 = dx + 8;
             List<String> hiddenTip = new ArrayList<>();

@@ -102,6 +102,7 @@ public final class View {
         t.putInt("buildings", d.buildings);
         t.putInt("barracks", d.barracks);
         t.putInt("smithy", d.smithyLevels);
+        t.putBoolean("grandForge", livingrealms.wonders.Wonders.has(s, livingrealms.wonders.Wonder.FORGE));
         t.putBoolean("stables", d.hasStables);
         t.putBoolean("townHall", d.hasTownHall);
         ListTag soldiers = new ListTag();
