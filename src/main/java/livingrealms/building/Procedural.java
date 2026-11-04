@@ -44,6 +44,7 @@ public final class Procedural {
         KINDS.put("garden", 1);
         KINDS.put("apothecary", 1);
         KINDS.put(RoostBlueprint.KIND, 1);
+        for (var w : livingrealms.wonders.Wonder.values()) KINDS.put(w.kind, 1);
     }
 
     /** Blocks below ground level (mine shafts). */
@@ -81,6 +82,7 @@ public final class Procedural {
             case "garden" -> garden(b);
             case "apothecary" -> apothecary(b);
             case RoostBlueprint.KIND -> RoostBlueprint.make(b);
+            case "grand_cathedral", "royal_academy", "grand_forge", "grand_exchange", "citadel_of_heroes" -> WonderBlueprints.make(kind, b);
             default -> cottage(b, 1);
         }
         return b.build(key);

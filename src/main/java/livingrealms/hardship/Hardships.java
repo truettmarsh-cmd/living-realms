@@ -182,6 +182,8 @@ public final class Hardships {
         if (hasChapel(s)) out.add(Map.entry("chapel", .75));
         if (hasApothecary(s)) out.add(Map.entry("apothecary", .6));
         if (s.has(RESEARCH)) out.add(Map.entry("Herb Lore", .6));
+        double cathedral = livingrealms.wonders.Wonders.outbreak(s);
+        if (cathedral < 1) out.add(Map.entry("Grand Cathedral", cathedral));
         return out;
     }
 
@@ -405,11 +407,13 @@ public final class Hardships {
     /** Rates per day: how fast it spreads, how fast the sick get well, and how many of them die. */
     public static double spread(Settlement s, long now) {
         double age = (now - s.hardship.sickSince) / (double) day();
-        return .6 * crowd(s) * Math.max(.2, 1 - age / 6) * (hasChapel(s) ? .8 : 1) * (hasApothecary(s) ? .6 : 1) * (s.has(RESEARCH) ? .6 : 1);
+        return .6 * crowd(s) * Math.max(.2, 1 - age / 6) * (hasChapel(s) ? .8 : 1) * (hasApothecary(s) ? .6 : 1) * (s.has(RESEARCH) ? .6 : 1)
+                * livingrealms.wonders.Wonders.spread(s);
     }
 
     public static double recovery(Settlement s) {
-        return .25 * (hasChapel(s) ? 1.3 : 1) * (hasApothecary(s) ? 1.6 : 1) * (s.has(RESEARCH) ? 1.5 : 1) * (s.hardship.medicated ? 1.5 : 1);
+        return .25 * (hasChapel(s) ? 1.3 : 1) * (hasApothecary(s) ? 1.6 : 1) * (s.has(RESEARCH) ? 1.5 : 1) * (s.hardship.medicated ? 1.5 : 1)
+                * livingrealms.wonders.Wonders.recovery(s);
     }
 
     public static double deaths(Settlement s) {

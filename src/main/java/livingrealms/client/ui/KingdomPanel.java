@@ -37,7 +37,8 @@ final class KingdomPanel {
         int warsH = wars.isEmpty() ? 34 + 6 : 0;
         for (Tag t : wars) warsH += warHeight((CompoundTag) t) + 6;
         int ledgerH = 22 + Math.max(1, tribute.size() + truces.size()) * 13 + 4;
-        int total = loyH + 6 + (provH > 0 ? provH + 6 : 0) + warsH + ledgerH;
+        int wondersH = WondersPanel.height(sc.getCompound("wonders"));
+        int total = loyH + 6 + (provH > 0 ? provH + 6 : 0) + warsH + ledgerH + (wondersH > 0 ? wondersH + 6 : 0);
         int off = ui.beginScroll("kingdom", x, y + 30, w, h - 30, total);
         int cy = y + 30 - off;
 
@@ -130,6 +131,10 @@ final class KingdomPanel {
             ui.right(r.getInt("minutes") + " min left", x + w - 12, ly, FAINT);
             ly += 13;
         }
+        cy += ledgerH + 6;
+
+        // ---- wonders (docs/wonders.md)
+        if (wondersH > 0) WondersPanel.draw(ui, x, cy, w - 4, sc.getCompound("wonders"));
         ui.endScroll();
     }
 

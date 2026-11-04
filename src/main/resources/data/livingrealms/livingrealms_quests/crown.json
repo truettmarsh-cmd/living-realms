@@ -105,7 +105,7 @@
          "objective": "Rule 3 cities", "check": {"type": "cities", "count": 3},
          "reward": {"emeralds": 16}},
         {"id": "crowned", "title": "Long Live the King", "flavour": "Kneel a lord. Rise a king.",
-         "objective": "Take a rival kingdom's capital, or rule 5 cities", "check": {"type": "crown", "count": 5},
+         "objective": "Take a rival kingdom's capital, rule 5 cities, or raise a Wonder", "check": {"type": "crown", "count": 5},
          "reward": {"emeralds": 48, "merit": 30, "items": {"minecraft:golden_helmet": 1}}}
       ]
     }

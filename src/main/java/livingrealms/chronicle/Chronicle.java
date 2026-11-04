@@ -180,6 +180,18 @@ public final class Chronicle {
         return e;
     }
 
+    /** Adds an entry of the given kind with text already written (Wonders, for LEGEND lines that are not a recruit's). */
+    public static Entry recordText(Settlement s, long day, Kind kind, String text) {
+        Log log = s.chronicle;
+        if (kind != Kind.GROWTH && kind != Kind.FOUNDING) summarise(s, day, false);
+        Entry e = new Entry(Math.max(1, day), kind, text);
+        log.entries.add(e);
+        if (kind != Kind.GROWTH && log.quietBuildings >= 0) log.quietFrom = Math.max(1, day);
+        trim(log);
+        s.dirty = true;
+        return e;
+    }
+
     /** Records the same event in every city of a kingdom. */
     public static void kingdom(SettlementManager m, UUID kingdom, Kind kind, String... args) {
         for (Settlement s : m.all()) if (s.kingdomId().equals(kingdom)) record(s, kind, args);
@@ -334,6 +346,7 @@ public final class Chronicle {
             BuildingType t = BuildingCatalog.get(p.typeId);
             if (t == null || Walls.isWallPiece(p) || t.category == Category.ROAD) continue;
             if (t.id.equals(CapitalCastles.ID)) recordOn(s, day, Kind.CASTLE);
+            else if (livingrealms.wonders.Wonders.completed(s, t, day)) {}
             else if (notableBuilding(t, had)) recordOn(s, day, Kind.BUILDING, t.name);
             else log.quietBuilt++;
             had.add(t.category);

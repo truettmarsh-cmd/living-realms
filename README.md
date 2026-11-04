@@ -175,6 +175,18 @@ Out of combat, your recruits look after their own supplies every few seconds: bo
 
 Towns make goods from their land: plains towns wheat, bread and wool, taiga towns spruce logs and furs, snowy towns furs and packed ice, desert towns sand, glass and dyes, savanna towns acacia and terracotta; NPC towns' farms, mines and smithies add food and iron. Towns within 768 blocks of each other that are at peace (same kingdom, allied or neutral) keep trade routes. When one town has a surplus of something the other is short of (its building sites' materials, its research, what every household keeps), a caravan loads up and sets out; prices follow supply and need. Near a player the caravan is real: a wandering trader leading a laden donkey or llama, with a guard or two, leaving by its town's paved high street toward the other town (through the gate) and walking market to market. The City Map draws each route and shows caravans on the road. Elsewhere its travel is simulated, and it is never lost just because it unloaded. Bandits and enemy raiders may ambush it (guards, and your own soldiers walking with it, make that less likely); killing a trader spills its goods and is a hostile act that suspends trade between the kingdoms, and a second one means war. Each arrival raises both towns' prosperity, which makes them build and grow a little faster. The City Manager's **Trade** page shows stock, prices and production, each route and its caravan, and lets the ruler close a route or ban a good's export. Details in [docs/trade.md](docs/trade.md); the trade test is `-PtradeTest`.
 
+## Wonders
+
+Five Wonders crown a kingdom: the **Grand Cathedral**, **Royal Academy**, **Grand Forge**, **Grand Exchange** and **Citadel of Heroes**. Each needs the research Wonders of the Realm (after Royal Charter and Education) and then its own research. It can be raised only in the capital at Capital rank, and only once per kingdom. Builders put it up block by block from the stockpile: 2,600 to 5,000 blocks each, some of them precious (gold, stained glass, bookshelves, anvils, iron and emerald blocks). A wonder works for every city of the kingdom:
+
+- **Grand Cathedral**: +10 mood. Outbreaks 40% as likely, spreading slower and passing sooner. Once a day, a recruit falling in one of your cities has a 50% chance to be spared, carried to the cathedral with 1 HP.
+- **Royal Academy**: research ×1.5. Saved study holds 4,000 points and pours in twice as fast.
+- **Grand Forge**: smiths ×1.5 and orders 25% cheaper. Armour and weapons the armoury hands out are Masterwork: +1 armour and +1 toughness, or +1.5 attack damage.
+- **Grand Exchange**: caravans sell for ×1.5, and every city gains 6 emeralds a day.
+- **Citadel of Heroes**: recruits finish training 2 levels higher with a skill point, and the garrison cap is up 25% (at least +4).
+
+The Kingdom page's **Wonders** card shows each one as locked (and why), available (with a **Plan it** button), building or built. A finished wonder gets a Legend entry in the chronicle and a server-wide announcement, and it completes the last quest step. When a capital falls, its wonders go to the conqueror with the city, effects and all. Details in [docs/wonders.md](docs/wonders.md); test with `./gradlew runServer -PwondersTest -PwondersTestDir=<fresh dir>`.
+
 ## Requirements
 
 - Minecraft 1.20.1, Forge 47+

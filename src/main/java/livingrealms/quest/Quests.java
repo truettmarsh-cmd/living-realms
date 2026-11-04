@@ -90,7 +90,7 @@ public final class Quests {
             case "peace" -> { need = 1; have = peace(m, player) ? 1 : 0; }
             case "royal_guard" -> { for (Settlement s : realm) for (var so : s.soldiers) if (so.royalGuard) have++; }
             case "castle" -> { need = 1; for (Settlement s : realm) for (Plot p : s.plots) if (p.typeId.equals(CapitalCastles.ID) && p.state == Plot.State.BUILT) have = 1; }
-            case "crown" -> { need = 1; have = pr.stat(QuestData.CAPITALS) > 0 || realm.size() >= c.count() ? 1 : 0; }
+            case "crown" -> { need = 1; have = pr.stat(QuestData.CAPITALS) > 0 || realm.size() >= c.count() || livingrealms.wonders.Wonders.count(realm) > 0 ? 1 : 0; }
             default -> have = 0;
         }
         return new int[]{Math.min(have, need), need};

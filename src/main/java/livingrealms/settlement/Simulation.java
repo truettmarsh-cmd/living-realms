@@ -76,6 +76,7 @@ public final class Simulation {
         if (s.isAi()) d.hasTownHall = true;
         if (s.has("granaries")) d.capacity = d.capacity * 3 / 2;
         if (s.has("command")) d.garrisonCap = d.garrisonCap * 3 / 2;
+        d.garrisonCap = livingrealms.wonders.Wonders.garrison(s, d.garrisonCap);
         s.stock.capacity = d.capacity;
 
         // jobs: builders first while there's building to do, then food, then the rest
@@ -107,7 +108,7 @@ public final class Simulation {
         d.foodNeedPerDay = s.population * 4 + s.soldiers.size() * 5 * (s.has("logistics") ? 0.7 : 1.0);
         d.researchPerDay = researchRate(s, d);
         d.emeraldsPerDay = (s.population * TAX[s.taxLevel] + d.workers.getOrDefault(Job.MERCHANT, 0) * 3.0 * (s.has("banking") ? 1.5 : 1))
-                * livingrealms.citizen.Citizens.taxBonus(s);
+                * livingrealms.citizen.Citizens.taxBonus(s) + livingrealms.wonders.Wonders.trickle(s);
         double food = 0;
         for (Plot p : s.plots) {
             BuildingType t = BuildingCatalog.get(p.typeId);
@@ -132,7 +133,7 @@ public final class Simulation {
             BuildingType t = BuildingCatalog.get(p.typeId);
             if (t != null && p.standing() && t.category == Category.LIBRARY) scholars += d.plotWorkers.getOrDefault(p.id, 0) * 25 * levelMult(p.level);
         }
-        return (base + scholars) * (s.has("education") ? 1.5 : 1);
+        return (base + scholars) * (s.has("education") ? 1.5 : 1) * livingrealms.wonders.Wonders.research(s);
     }
 
     static void happinessTarget(Settlement s, Settlement.Derived d) {
@@ -153,6 +154,7 @@ public final class Simulation {
         h += Statecraft.mood(s, why);
         h += livingrealms.hardship.Hardships.mood(s, why);
         h += livingrealms.citizen.Citizens.townMood(s, why);
+        h += livingrealms.wonders.Wonders.mood(s, why);
         d.happinessTarget = Math.max(0, Math.min(100, h));
     }
 
@@ -365,13 +367,14 @@ public final class Simulation {
             }
         }
         if (s.activeResearch.isEmpty()) {
-            s.researchBank = Math.min(s.researchBank + pts, 2000);
+            s.researchBank = Math.min(s.researchBank + pts, livingrealms.wonders.Wonders.bankCap(s));
             return;
         }
         var node = ResearchTree.get(s.activeResearch);
         if (node == null) { s.activeResearch = ""; return; }
-        s.researchProgress += pts + Math.min(s.researchBank, pts * 2);
-        s.researchBank = Math.max(0, s.researchBank - pts * 2);
+        double pour = pts * livingrealms.wonders.Wonders.bankPour(s);
+        s.researchProgress += pts + Math.min(s.researchBank, pour);
+        s.researchBank = Math.max(0, s.researchBank - pour);
         if (s.researchProgress >= node.cost()) {
             s.research.add(node.id());
             s.researchBank += s.researchProgress - node.cost();
@@ -385,7 +388,7 @@ public final class Simulation {
     static void forge(Settlement s, Settlement.Derived d, double f) {
         int smiths = d.workers.getOrDefault(Job.SMITH, 0);
         if (smiths == 0 || s.orders.isEmpty()) return;
-        double work = smiths * f * (1 + Math.max(0, d.smithyLevels - 1) * 0.3);
+        double work = smiths * f * (1 + Math.max(0, d.smithyLevels - 1) * 0.3) * livingrealms.wonders.Wonders.forgeSpeed(s);
         Iterator<ForgeOrder> it = s.orders.iterator();
         while (it.hasNext() && work > 0) {
             ForgeOrder o = it.next();
@@ -431,6 +434,7 @@ public final class Simulation {
             so.type = t.type;
             so.name = name;
             livingrealms.military.RecruitOrigins.sync(so, e);
+            livingrealms.wonders.Wonders.mustered(s, e, so);
             s.soldiers.add(so);
             s.away.trained(t.type);
             s.log(name + " has finished training");
@@ -525,11 +529,12 @@ public final class Simulation {
     }
 
     static void swapFromStock(Settlement s, Entity e, EquipmentSlot slot, Item want) {
-        ItemStack cur = RecruitsBridge.getSlot(e, slot);
+        // an unworn Masterwork piece counts as plain gear here: it may go back to the stockpile when the kit changes
+        ItemStack cur = livingrealms.wonders.Masterwork.plain(RecruitsBridge.getSlot(e, slot));
         if (!cur.isEmpty() && !Stockpile.canStore(cur)) return; // preserve personalised or worn gear
         if (cur.is(want) || !s.stock.take(want, 1)) return;
         if (Stockpile.canStore(cur)) s.stock.force(cur.getItem(), cur.getCount());
-        RecruitsBridge.setSlot(e, slot, new ItemStack(want));
+        RecruitsBridge.setSlot(e, slot, livingrealms.wonders.Masterwork.forged(s, new ItemStack(want)));
     }
 
     static void equipStack(Settlement s, Entity e, ItemStack g) {

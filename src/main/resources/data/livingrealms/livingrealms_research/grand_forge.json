@@ -1,0 +1,16 @@
+{
+ "name": "Grand Forge",
+ "branch": "Wonders",
+ "cost": 1800,
+ "requires": [
+  "wonders_of_the_realm"
+ ],
+ "icon": "minecraft:anvil",
+ "x": 1,
+ "y": 14,
+ "description": "Unlocks the Grand Forge (Capital, one per kingdom). Smiths in every city work \u00d71.5 faster and forge orders cost 25% less; armour and weapons the armoury hands to recruits are Masterwork (+1 armour and +1 toughness, or +1.5 attack damage).",
+ "items": {
+  "minecraft:iron_block": 8,
+  "minecraft:coal": 64
+ }
+}

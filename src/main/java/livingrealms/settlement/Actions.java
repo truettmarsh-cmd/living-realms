@@ -239,6 +239,7 @@ public final class Actions {
             }
             r.cost().forEach((k, v) -> total.merge(k, v * qty, Integer::sum));
         }
+        livingrealms.wonders.Wonders.forgeCost(s, total);
         for (var e : total.entrySet())
             if (s.stock.countIngredient(e.getKey()) < e.getValue())
                 return "Not enough " + ingredientName(e.getKey()) + " (" + s.stock.countIngredient(e.getKey()) + "/" + e.getValue() + ")";
