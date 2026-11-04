@@ -166,11 +166,11 @@ public class RecruitScreen extends Screen {
     void sidebar() {
         int x = px + 8, y = py + 10, w = 96;
         CompoundTag so = soldier();
-        boolean royal = so != null && so.getBoolean("royalGuard");
-        ui.round(x, y, 28, 28, 6, royal ? 0xFFF2CF6E : 0xFF3A4250, royal ? 0xFFB98E2E : 0xFF2A303B);
+        boolean royal = so != null && so.getBoolean("royalGuard"), hero = so != null && so.getCompound("hero").getBoolean("hero");
+        ui.round(x, y, 28, 28, 6, royal || hero ? 0xFFF2CF6E : 0xFF3A4250, royal || hero ? 0xFFB98E2E : 0xFF2A303B);
         ui.item(unitIcon(), x + 6, y + 6);
-        ui.text(ui.clip(d.getString("name"), w - 34), x + 34, y + 3, royal ? GOLD : TEXT);
-        ui.text(ui.clip(royal ? "Royal Guard" : d.getString("type").replaceFirst("^Recruit (.)", "$1"), w - 34), x + 34, y + 15, MUTED);
+        ui.text(ui.clip(d.getString("name"), w - 34), x + 34, y + 3, royal || hero ? GOLD : TEXT);
+        ui.text(ui.clip(hero ? "Hero · Valor " + so.getCompound("hero").getInt("valor") : royal ? "Royal Guard" : d.getString("type").replaceFirst("^Recruit (.)", "$1"), w - 34), x + 34, y + 15, MUTED);
         y += 36;
         ui.hline(x, y, w, LINE);
         y += 6;

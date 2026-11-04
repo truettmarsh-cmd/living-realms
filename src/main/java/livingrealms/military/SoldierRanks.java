@@ -56,6 +56,8 @@ public final class SoldierRanks {
     public static int grant(Settlement s, Settlement.Soldier so, @Nullable Entity e, int amount, boolean trickle, long now) {
         int before = rank(so), got = addXp(so, amount, trickle, now);
         if (got > 0) s.dirty = true;
+        // a Hero at the top rank keeps earning: the rest goes into Valor
+        if (got < amount && so.skillXp >= MAX_XP) Heroes.valor(s, so, e, amount - got, trickle, now);
         if (rank(so) > before) celebrate(s, so, e, before, rank(so));
         return got;
     }

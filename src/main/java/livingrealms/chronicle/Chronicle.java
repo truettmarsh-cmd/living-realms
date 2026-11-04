@@ -267,7 +267,8 @@ public final class Chronicle {
     public static void clearFalls() { FALLS.clear(); }
 
     public static void fallen(Settlement s, Settlement.Soldier so) {
-        if (!notable(so)) return;
+        // a Hero's fall is its own LEGEND entry (Heroes.fell)
+        if (!notable(so) || livingrealms.military.Heroes.isHero(so.entity)) return;
         markFall(so.entity);
         String title = so.royalGuard ? "Royal Guard" : livingrealms.military.SoldierRanks.title(livingrealms.military.SoldierRanks.rank(so));
         record(s, Kind.FALLEN, so.name, title, so.kills > 0 ? String.valueOf(so.kills) : "");

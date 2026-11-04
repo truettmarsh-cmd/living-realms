@@ -227,6 +227,7 @@ public final class RecruitCommand {
         if (n == null) return null;
         Bonds.moved(p.server, e.getUUID(), n.getUUID());
         livingrealms.supply.SupplyData.get(p.server).move(e.getUUID(), n.getUUID());
+        Heroes.moved(p.server, e.getUUID(), n.getUUID());
         if (hasOrigin) RecruitOrigins.assign(n, origin);
         if (rec != null) {
             rec.soldier().entity = n.getUUID();

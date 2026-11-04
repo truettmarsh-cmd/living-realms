@@ -160,7 +160,8 @@ final class SoldierPanels {
         for (Tag t : paths) if (((CompoundTag) t).getString("id").equals(chosen)) current = (CompoundTag) t;
         int w2 = (cw - 16) / 2, pathRows = (paths.size() + 1) / 2;
         String warning = so.getString("pathWarning"), epithet = so.getString("epithet");
-        int treeH = current == null ? 0 : 52 + (warning.isEmpty() ? 0 : 14) + 4 * 46 + 26 + 92;
+        int heroH = current == null ? 0 : HeroPanel.height(so);
+        int treeH = current == null ? 0 : 52 + (warning.isEmpty() ? 0 : 14) + 4 * 46 + 26 + 92 + (heroH > 0 ? heroH + 6 : 0);
         int off = ui.beginScroll("soldierPath", cx, sy, cw, sh, 60 + treeH + 22 + pathRows * 88);
         int y = sy - off;
         if (current == null) {
@@ -186,6 +187,7 @@ final class SoldierPanels {
                 if (sk.getInt("tier") != 5) continue;
                 masteryCard(so, sk, cx + (mi++ % 2) * (w2 + 6), ty + 22, w2, seen);
             }
+            if (heroH > 0) HeroPanel.draw(ui, so, cx, ty + 118, cw - 4, host.canCommand(), () -> host.act("ascendHero", soldierData(so)));
             y += treeH;
         }
         int gy = y + (current == null ? 52 : 4);

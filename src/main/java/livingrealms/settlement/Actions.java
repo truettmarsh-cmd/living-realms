@@ -120,6 +120,7 @@ public final class Actions {
             case "chooseSpecial" -> chooseSpecial(player, s, d);
             case "choosePath" -> choosePath(player, s, d);
             case "learnPathSkill" -> learnPathSkill(player, s, d);
+            case "ascendHero" -> livingrealms.military.Heroes.ascend(player, s, d);
             case "grantRequest", "orderRequest", "declineRequest" -> Merit.handle(player, s, action, d);
             case "dismiss" -> dismissSoldier(player, level, s, d);
             case "chronicleBook" -> livingrealms.chronicle.ChronicleBook.give(player, s);
