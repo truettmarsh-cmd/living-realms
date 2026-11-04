@@ -109,6 +109,11 @@ minecraft {
                 workingDirectory project.file(project.property('dragonTestDir'))
                 property 'livingrealms.dragonTest', 'true'
             }
+            // ./gradlew runServer -PreportsTest -PreportsTestDir=<fresh dir> : battle reports (see BattleReportsSelfTest, docs/battle-reports.md)
+            if (project.hasProperty('reportsTest')) {
+                workingDirectory project.file(project.property('reportsTestDir'))
+                property 'livingrealms.reportsTest', 'true'
+            }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')
                 property 'livingrealms.militaryTest', 'true'
