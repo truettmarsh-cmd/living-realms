@@ -50,7 +50,7 @@ public final class BondsSelfTest {
         });
     }
 
-    static void run(ServerLevel level) {
+    static void run(ServerLevel level) throws Exception {
         var server = level.getServer();
         BlockPos at = level.getSharedSpawnPos().offset(4, 0, 4);
         at = RecruitsBridge.surface(level, at);
@@ -115,7 +115,7 @@ public final class BondsSelfTest {
             for (LivingEntity x : List.of(d, e, f)) Bonds.engage(x, t3);
             data.pair(ia, d.getUUID(), true).points = 10;
             data.pair(ia, e.getUUID(), true).points = 10;
-            check(Bonds.bondCount(data, ia, null) == 3, "Aldric has three bonds");
+            check(Bonds.bondCount(data, ia, null, t3) == 3, "Aldric has three bonds");
             BondData.Pair af = data.pair(ia, f.getUUID(), true);
             af.points = 8;
             Bonds.award(server, data, ia, f.getUUID(), 3, t3);
@@ -132,6 +132,18 @@ public final class BondsSelfTest {
             check(de.level() == Bonds.Level.BLOOD_OATH, "Dunn and Edda may still swear their own Blood Oath");
             check(data.bondsOf(ia).get(0).other(ia).equals(ib), "Strongest bond listed first");
             ad.points = 10;
+            // gone partners hold no place: discarded, given to another player, or unseen for 5 days
+            BondData.Member me = data.member(e.getUUID());
+            data.member(ib).seen = data.member(d.getUUID()).seen = me.seen;
+            check(Bonds.ceiling(data, af, t3) == Bonds.Level.COMRADES.points - 1, "Fenn still held back by Aldric's three bonds");
+            me.removed = true;
+            check(Bonds.bondCount(data, ia, null, t3) == 2 && Bonds.ceiling(data, af, t3) > Bonds.Level.COMRADES.points, "A removed partner frees its place");
+            me.removed = false; me.owner = stranger;
+            check(Bonds.bondCount(data, ia, null, t3) == 2, "A partner now another player's frees its place");
+            me.owner = owner;
+            check(Bonds.bondCount(data, ia, null, me.seen + Bonds.GONE_TICKS - 1) == 3, "Unseen for under 5 days still counts");
+            check(Bonds.bondCount(data, ia, null, me.seen + Bonds.GONE_TICKS) < 3 && Bonds.ceiling(data, af, me.seen + Bonds.GONE_TICKS) == Bonds.Level.BLOOD_OATH.points,
+                    "Partners unseen for 5 days hold no place");
 
             // buffs: best bond beside, 10-block range, the bond budget; Blood Oath defence
             Entity zed = EntityType.ZOMBIE.spawn(level, at.offset(1, 0, 1), MobSpawnType.COMMAND);
@@ -166,17 +178,23 @@ public final class BondsSelfTest {
 
             // avenge: a hard hit on Bera rouses Aldric (Blood Oath) but not a mere comrade
             BondData.Pair bd = data.pair(ib, d.getUUID(), true); bd.points = 10;
-            check(Bonds.avenge(data, b, now) == 1 && a.hasEffect(MobEffects.DAMAGE_BOOST) && !d.hasEffect(MobEffects.DAMAGE_BOOST), "Hard hit: Aldric avenges with Strength");
-            check(a.getEffect(MobEffects.DAMAGE_BOOST).getDuration() <= Bonds.AVENGE_TICKS && a.getEffect(MobEffects.DAMAGE_BOOST).getAmplifier() == 0, "Strength I for 5s");
+            check(Bonds.avenge(data, b, now) == 1 && data.member(ia).avengeUntil == now + Bonds.AVENGE_TICKS
+                    && (data.member(d.getUUID()) == null || data.member(d.getUUID()).avengeUntil <= now), "Hard hit: Aldric avenges, a mere comrade doesn't");
+            check(!a.hasEffect(MobEffects.DAMAGE_BOOST), "Avenge is no potion");
+            check(near(Bonds.attack(data, a, zombie, now), Bonds.BOND_CAP), "Avenge +10% on top of the Blood Oath, within the 15% bond budget: " + Bonds.attack(data, a, zombie, now));
+            b.teleportTo(at.getX() + 15, at.getY(), at.getZ());
+            check(near(Bonds.attack(data, a, zombie, now), Bonds.Level.COMRADES.damage + Bonds.AVENGE)
+                    && near(Bonds.attack(data, a, zombie, now + Bonds.AVENGE_TICKS), Bonds.Level.COMRADES.damage), "Avenge: +10% for 5s");
+            b.teleportTo(at.getX() + 3, at.getY(), at.getZ());
             check(Bonds.avenge(data, b, now + 20) == 0, "Avenge cooldown");
-            a.removeAllEffects();
-            data.member(ia).avengeReady = 0;
+            data.member(ia).avengeReady = 0; data.member(ia).avengeUntil = 0;
             var small = new LivingDamageEvent(b, level.damageSources().mobAttack(zombie), 1);
             Bonds.struck(small);
-            check(!a.hasEffect(MobEffects.DAMAGE_BOOST), "A light hit rouses nobody");
+            check(data.member(ia).avengeUntil == 0, "A light hit rouses nobody");
             var hard = new LivingDamageEvent(b, level.damageSources().mobAttack(zombie), b.getMaxHealth() * .3f);
             Bonds.struck(hard);
-            check(a.hasEffect(MobEffects.DAMAGE_BOOST), "Real damage hook: hard hit avenged");
+            check(data.member(ia).avengeUntil > now, "Real damage hook: hard hit avenged");
+            data.member(ia).avengeUntil = 0;
 
             // view for Recruit Command
             CompoundTag v = Bonds.view(server, a);
@@ -206,7 +224,10 @@ public final class BondsSelfTest {
             check(!b.isAlive(), "Bera fell");
             long when = RecruitCombat.now(a);
             BondData.Member grief = data.member(ia);
-            check(data.pair(ia, ib) == null && data.member(ib) == null && Bonds.bondCount(data, ia, null) == 2, "Fallen partner's bonds are gone");
+            check(data.pair(ia, ib) == null && data.member(ib) == null && Bonds.bondCount(data, ia, null, when) == 2, "Fallen partner's bonds are gone");
+            check(Bonds.lastGrief.equals("✝ Aldric and Dunn grieve for Bera, and will seek vengeance on the Zombie."), "One grief line names every partner: " + Bonds.lastGrief);
+            check(Bonds.griefLine("Cade", List.of("Bob"), EnumSet.of(Bonds.Level.COMRADES), "").equals("✝ Bob grieves for Cade, a comrade.")
+                    && Bonds.griefLine("Cade", List.of("Bob", "Ann"), EnumSet.of(Bonds.Level.SWORN), "").equals("✝ Bob and Ann grieve for Cade, their sworn kin."), "Grief wording");
             check(grief.griefUntil > when && grief.griefUntil <= when + Bonds.GRIEF_TICKS && grief.mourned.equals("Bera"), "Aldric grieves for 3 minutes");
             check(grief.vengeance.equals("minecraft:zombie") && grief.vengeanceUntil == grief.griefUntil + Bonds.VENGEANCE_TICKS, "Then 10 minutes of vengeance on zombies");
             check(RecruitsBridge.morale(a) <= morale - Bonds.Level.BLOOD_OATH.grief + 1e-3, "Blood Oath grief: -15 morale: " + morale + " -> " + RecruitsBridge.morale(a));
@@ -225,13 +246,41 @@ public final class BondsSelfTest {
             Bonds.award(server, data, d.getUUID(), ia, 3, when + 48000);
             check(dd.level() == Bonds.Level.SWORN && !town.chronicle.entries.isEmpty()
                     && town.chronicle.entries.get(town.chronicle.entries.size() - 1).text().contains("swore themselves kin"), "Sworn Kin chronicled for a town soldier");
+            data.member(e.getUUID()).seen = data.member(ia).seen = when;
             d.hurt(level.damageSources().mobAttack(zombie), 1000);
             check(town.chronicle.entries.get(town.chronicle.entries.size() - 1).text().contains("Dunn fell"), "Fall of sworn kin chronicled: "
                     + town.chronicle.entries.get(town.chronicle.entries.size() - 1).text());
+            check(town.chronicle.entries.stream().filter(x -> x.text().contains("Dunn fell")).count() == 1
+                    && town.chronicle.entries.get(town.chronicle.entries.size() - 1).text().contains("Edda and Aldric"), "One chronicle line for both sworn partners: "
+                    + town.chronicle.entries.get(town.chronicle.entries.size() - 1).text());
+            check(Chronicle.fallChronicled(d.getUUID()), "The fall is marked as chronicled, so the battle report leaves it out");
             check(town.soldiers.isEmpty(), "Town still forgets its fallen soldier");
-            Bonds.sweep(server, Math.max(t3, when) + 48000 + Bonds.FORMING_FORGOTTEN + Bonds.VENGEANCE_TICKS * 4L);
+            long late = Math.max(t3, when) + 48000 + Bonds.FORMING_FORGOTTEN + Bonds.VENGEANCE_TICKS * 4L;
+            // Aldric and Edda were both away the whole time: that alone doesn't end their bond
+            data.member(ia).seen = data.member(e.getUUID()).seen = late - Bonds.GONE_TICKS * 3;
+            // ghosts: a partner discarded (a promotion through Villager Recruits' own screen), one gone to another player, one unseen for 5 days
+            LivingEntity g = spawn(level, UnitType.FOOTMAN, at.offset(-2, 0, 2), owner, "Gort", spawned);
+            Bonds.engage(g, when);
+            data.pair(ia, g.getUUID(), true).points = 10;
+            g.discard();
+            check(data.member(g.getUUID()).removed, "A discarded recruit is known removed");
+            UUID given = UUID.randomUUID(), lost = UUID.randomUUID();
+            data.member(given, true).owner = stranger; data.member(given).seen = late;
+            data.pair(ia, given, true).points = 10;
+            data.member(lost, true).owner = owner; data.member(lost).seen = data.member(ia).seen - Bonds.GONE_TICKS;
+            data.pair(ia, lost, true).points = 10;
+            Bonds.sweep(server, late);
             check(data.pair(ia, f.getUUID()) == null && data.member(f.getUUID()) == null, "Old forming tie and its idle recruit forgotten");
             check(data.pair(ia, e.getUUID()) != null, "Real bonds are never forgotten");
+            check(data.pair(ia, g.getUUID()) == null && data.pair(ia, given) == null && data.pair(ia, lost) == null, "Ghost bonds are pruned in the sweep");
+            data.forget(given); data.forget(lost);
+
+            // the server stopping clears fights in progress
+            Bonds.engage(a, late); Bonds.engage(f, late);
+            check(Bonds.battlesInProgress() > 0, "A shared fight in progress");
+            check(Bonds.class.getMethod("stopped", net.minecraftforge.event.server.ServerStoppedEvent.class).isAnnotationPresent(SubscribeEvent.class), "Stop handler subscribed");
+            Bonds.stopped(null);
+            check(Bonds.battlesInProgress() == 0 && CombatClock.all().isEmpty(), "Server stop clears battles and combat marks");
         } finally {
             for (Entity x : spawned) if (x != null) { data.forget(x.getUUID()); x.discard(); }
             if (town != null) SettlementManager.get(server).remove(town);

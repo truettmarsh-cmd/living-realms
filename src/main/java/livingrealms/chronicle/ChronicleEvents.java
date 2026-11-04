@@ -21,6 +21,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -55,6 +56,9 @@ public final class ChronicleEvents {
         for (Settlement s : SettlementManager.get(level.getServer()).all())
             for (Settlement.Soldier so : s.soldiers) if (so.entity.equals(id)) { Chronicle.fallen(s, so); return; }
     }
+
+    @SubscribeEvent
+    public static void stopped(ServerStoppedEvent e) { Chronicle.clearFalls(); }
 
     @SubscribeEvent
     public static void onJoin(EntityJoinLevelEvent e) {

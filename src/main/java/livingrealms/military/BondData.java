@@ -18,7 +18,9 @@ public final class BondData extends SavedData {
     public static final class Member {
         public String name = "";
         @Nullable public UUID owner;
-        public long seen, griefUntil, vengeanceUntil, avengeReady;
+        /** seen: game time it was last loaded (refreshed about every 30 s); removed: discarded, not just unloaded. */
+        public long seen, griefUntil, vengeanceUntil, avengeReady, avengeUntil;
+        public boolean removed;
         public int griefLevel;
         public String mourned = "", vengeance = "", vengeanceLabel = "";
 
@@ -34,6 +36,8 @@ public final class BondData extends SavedData {
             t.putString("vengeanceLabel", vengeanceLabel);
             t.putLong("vengeanceUntil", vengeanceUntil);
             t.putLong("avenge", avengeReady);
+            t.putLong("avengeUntil", avengeUntil);
+            if (removed) t.putBoolean("removed", true);
             return t;
         }
 
@@ -49,6 +53,8 @@ public final class BondData extends SavedData {
             m.vengeanceLabel = t.getString("vengeanceLabel");
             m.vengeanceUntil = t.getLong("vengeanceUntil");
             m.avengeReady = t.getLong("avenge");
+            m.avengeUntil = t.getLong("avengeUntil");
+            m.removed = t.getBoolean("removed");
             return m;
         }
     }
@@ -148,7 +154,7 @@ public final class BondData extends SavedData {
     public void move(UUID from, UUID to) {
         if (from.equals(to)) return;
         Member m = members.remove(from);
-        if (m != null) members.put(to, m);
+        if (m != null) { m.removed = false; members.put(to, m); }
         for (Pair p : new ArrayList<>(pairsOf(from))) {
             removePair(p);
             UUID other = p.other(from);

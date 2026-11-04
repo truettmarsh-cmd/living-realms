@@ -254,8 +254,21 @@ public final class Chronicle {
                 || !so.legendary.isEmpty() || so.royalGuard || so.merit.merit >= livingrealms.settlement.Merit.THRESHOLD;
     }
 
+    /** Recruits whose fall already has its own chronicle line (a notable soldier, or a bonded partner's), newest last. */
+    private static final Map<UUID, Boolean> FALLS = new LinkedHashMap<>() {
+        @Override protected boolean removeEldestEntry(Map.Entry<UUID, Boolean> e) { return size() > 256; }
+    };
+
+    /** Another line already tells of this recruit's fall, so a battle's line can leave it out. */
+    public static void markFall(UUID recruit) { FALLS.put(recruit, true); }
+
+    public static boolean fallChronicled(UUID recruit) { return FALLS.containsKey(recruit); }
+
+    public static void clearFalls() { FALLS.clear(); }
+
     public static void fallen(Settlement s, Settlement.Soldier so) {
         if (!notable(so)) return;
+        markFall(so.entity);
         String title = so.royalGuard ? "Royal Guard" : livingrealms.military.SoldierRanks.title(livingrealms.military.SoldierRanks.rank(so));
         record(s, Kind.FALLEN, so.name, title, so.kills > 0 ? String.valueOf(so.kills) : "");
     }
