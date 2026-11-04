@@ -183,7 +183,16 @@ public final class RecruitUiTour {
                 ClientSetup.RECRUIT.setKey(InputConstants.UNKNOWN);
                 KeyMapping.resetMapping();
             }
-            case 710 -> { LOG.info("Recruit UI tour complete: save={}, screenshot prefix=livingrealms_recruit_{}", SAVE, RUN); mc.stop(); }
+            case 710 -> mc.setScreen(null);
+            // 0.11.0: the bonds and supply cards below the Overview, and the Reports page
+            case 715 -> shiftClick(mc, soldierId, true);
+            case 716 -> unsneak(mc, server, playerId);
+            case 735 -> { page(mc, RecruitScreen.Page.OVERVIEW); clearHover(mc); }
+            case 740 -> scroll(mc);
+            case 755 -> shot(mc, "overview_bonds_supply");
+            case 760 -> page(mc, RecruitScreen.Page.REPORTS);
+            case 780 -> shot(mc, "reports");
+            case 790 -> { LOG.info("Recruit UI tour complete: save={}, screenshot prefix=livingrealms_recruit_{}", SAVE, RUN); mc.stop(); }
             default -> {}
         }
     }
