@@ -2,6 +2,7 @@ package livingrealms.supply;
 
 import livingrealms.LivingRealms;
 import livingrealms.military.BattleAI;
+import livingrealms.military.CombatClock;
 import livingrealms.military.RecruitsBridge;
 import livingrealms.military.SoldierProgression;
 import livingrealms.military.UnitType;
@@ -53,7 +54,10 @@ public final class Resupply {
     public static final double OWNER_RANGE = 16, STORE_RANGE = 48;
     /** Durability left (fraction) at or below which gear counts as worn. */
     public static final float WORN = 0.25f;
-    public static final long WARN_TICKS = 3 * 60 * 20, CALM_TICKS = 200;
+    /** An empty slot is broken gear only if what was last seen there had this much durability left or less; otherwise it was taken off. */
+    public static final float BROKEN = 0.10f;
+    /** Calm: 20 seconds since the last blow struck or taken (CombatClock), the same quiet as a battle report's end. */
+    public static final long WARN_TICKS = 3 * 60 * 20, CALM_TICKS = 400;
     static final EquipmentSlot[] SLOTS = {EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND, EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
 
     private static final List<Map<UUID, Entity>> BUCKETS = new ArrayList<>();
@@ -95,6 +99,7 @@ public final class Resupply {
     public static void tick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         MinecraftServer server = event.getServer();
+        if (server.getTickCount() % 12000 == 0) SupplyData.get(server).prune(server.overworld().getGameTime());
         Map<UUID, Entity> due = BUCKETS.get(server.getTickCount() % PERIOD);
         if (due.isEmpty()) return;
         long now = server.overworld().getGameTime();
@@ -112,12 +117,13 @@ public final class Resupply {
 
     // ------------------------------------------------------------------ one recruit
 
-    /** Out of combat: no target, not in a Living Realms battle, not hurt for ten seconds, not eating. */
+    /** Out of combat: no target, no blow struck or taken for 20 seconds (CombatClock), not in a Living Realms battle, not eating. */
     public static boolean calm(Entity e) {
         if (BattleAI.fighting(e)) return false;
         if (e instanceof LivingEntity le && le.isUsingItem()) return false;
         if (e instanceof Mob m && m.getTarget() != null) return false;
-        return !(e instanceof LivingEntity le) || le.getLastHurtByMob() == null || le.tickCount - le.getLastHurtByMobTimestamp() > CALM_TICKS;
+        MinecraftServer server = e.getServer();
+        return server == null || !CombatClock.within(e.getUUID(), server.overworld().getGameTime(), CALM_TICKS);
     }
 
     /** The town record, when it is a player's Living Realms town (not an NPC town or a Village Expansion mirror). */
@@ -170,8 +176,11 @@ public final class Resupply {
         if (rec != null && rec.settlement().isAi()) return false; // NPC towns supply their own guards
         SupplyData data = SupplyData.get(server);
         SupplyData.Rec r = data.rec(e.getUUID());
+        if (r.seen == 0 || now - r.seen > 1200 || now < r.seen) { r.seen = now; data.setDirty(); }
         remember(data, r, e);
-        if (!r.auto || !calm(e)) return false;
+        // switched off: nothing taken, and no shortage left showing on the garrison card
+        if (!r.auto) { r.shortages = List.of(); r.warned = false; return false; }
+        if (!calm(e)) return false;
         List<SupplySource> sources = sources(e, owner);
         List<String> lacking = new ArrayList<>();
         List<String> took = new ArrayList<>();
@@ -190,7 +199,7 @@ public final class Resupply {
         Predicate<ItemStack> food = st -> food(e, st);
         int meals = countPack(e, food);
         if (meals < FOOD_REFILL) {
-            int got = fill(e, sources, food, Resupply::nourishment, FOOD_TARGET - meals, took, "food");
+            int got = fill(e, sources, food, Resupply::foodChoice, FOOD_TARGET - meals, took, "food");
             acted |= got > 0;
             if (meals + got == 0) lacking.add("food");
         }
@@ -207,33 +216,62 @@ public final class Resupply {
         if (acted) remember(data, r, e);
         r.shortages = lacking;
         if (!took.isEmpty()) { r.note = String.join("; ", took); r.noteAt = now; }
-        if (!lacking.isEmpty()) warn(e, owner, lacking, sources, now);
+        // one warning per shortage, and only when there was somewhere to look; the Supply card still shows it
+        if (lacking.isEmpty()) r.warned = false;
+        else if (!r.warned && !sources.isEmpty() && warn(e, owner, lacking, sources, now)) r.warned = true;
         return acted;
     }
 
-    /** Records sound gear in each slot, so a piece that breaks is replaced in kind. */
+    /**
+     * Records the gear in each slot and how worn it is, so a piece that breaks is replaced in kind. An empty slot whose
+     * last piece still had more than BROKEN durability was emptied by hand: it is forgotten, not replaced.
+     */
     static void remember(SupplyData data, SupplyData.Rec r, Entity e) {
         for (int i = 0; i < SLOTS.length; i++) {
             ItemStack st = RecruitsBridge.getSlot(e, SLOTS[i]);
+            if (st.isEmpty()) {
+                if (!r.last[i].isEmpty() && r.wear[i] > BROKEN) { r.last[i] = ""; r.wear[i] = 1; data.setDirty(); }
+                continue;
+            }
             if (kind(st) == null) continue;
             String id = BuiltInRegistries.ITEM.getKey(st.getItem()).toString();
-            if (!id.equals(r.last[i])) { r.last[i] = id; data.setDirty(); }
+            float left = left(st);
+            if (!id.equals(r.last[i]) || left != r.wear[i]) { r.last[i] = id; r.wear[i] = left; data.setDirty(); }
         }
+    }
+
+    /** Durability left, as a fraction (1 for gear that doesn't wear). */
+    static float left(ItemStack st) {
+        return !st.isDamageableItem() || st.getMaxDamage() <= 0 ? 1 : 1 - st.getDamageValue() / (float) st.getMaxDamage();
+    }
+
+    /** Room in the pack for more of this: a free slot or a stack of it that isn't full. */
+    static boolean room(Entity e, Predicate<ItemStack> want) {
+        Container inv = RecruitsBridge.inventory(e);
+        if (inv == null) return false;
+        for (int i = 6; i < inv.getContainerSize(); i++) {
+            ItemStack in = inv.getItem(i);
+            if (in.isEmpty() || want.test(in) && in.getCount() < in.getMaxStackSize()) return true;
+        }
+        return false;
     }
 
     /** Moves up to n matching items into the pack. Returns how many arrived. */
     static int fill(Entity e, List<SupplySource> sources, Predicate<ItemStack> want, ToDoubleFunction<ItemStack> prefer, int n, List<String> took, String what) {
         int got = 0;
         for (SupplySource src : sources) {
-            if (got >= n) break;
+            if (got >= n || !room(e, want)) break;
             int from = 0;
             for (ItemStack st : src.take(want, prefer, n - got)) {
                 int count = st.getCount();
                 ItemStack left = RecruitsBridge.addToPack(e, st);
                 from += count - left.getCount();
+                // what didn't fit goes back where it came from (its place there is free again)
+                if (!left.isEmpty()) left = src.putBack(left);
+                for (SupplySource back : sources) if (!left.isEmpty() && back != src) left = back.putBack(left);
                 if (!left.isEmpty()) {
-                    ItemStack lost = src.putBack(left);
-                    if (!lost.isEmpty()) e.spawnAtLocation(lost);
+                    LivingRealms.LOG.warn("Resupply: no room anywhere for {} taken by {}", left, e.getName().getString());
+                    e.spawnAtLocation(left);
                 }
             }
             if (from > 0) took.add(from + " " + what + " from " + src.label());
@@ -251,19 +289,21 @@ public final class Resupply {
         EquipmentSlot slot = SLOTS[i];
         ItemStack cur = RecruitsBridge.getSlot(e, slot);
         if (cur.isEmpty()) {
-            Item last = expected(e, r, i);
-            if (last == null) return "";
-            String k = kind(new ItemStack(last));
+            // only what broke here is replaced: a slot the recruit never filled, or one emptied by hand, stays empty
+            Item last = expected(r, i);
+            if (last == null || r.wear[i] > BROKEN) return "";
+            ItemStack was = new ItemStack(last);
+            String k = kind(was);
             if (k == null) return "";
+            double tier = tier(was);
             for (SupplySource src : withPack) {
-                List<ItemStack> got = src.take(st -> k.equals(kind(st)) && !worn(st), Resupply::tier, 1);
+                List<ItemStack> got = src.take(st -> spare(st, k, tier), st -> -tier(st), 1);
                 if (got.isEmpty()) continue;
                 RecruitsBridge.setSlot(e, slot, got.get(0));
                 took.add("a new " + got.get(0).getHoverName().getString() + " from " + src.label());
                 return null;
             }
-            // a unit's default weapon is only a hint: no warning until it has actually carried one
-            return r.last[i].isEmpty() ? "" : "a new " + new ItemStack(last).getHoverName().getString();
+            return "a new " + was.getHoverName().getString();
         }
         if (!worn(cur) || kind(cur) == null) return "";
         String k = kind(cur);
@@ -271,20 +311,36 @@ public final class Resupply {
         // enchanted or named gear is mended first; plain gear is swapped first
         boolean keep = cur.isEnchanted() || cur.hasCustomHoverName();
         if (keep && mend(e, slot, cur, sources, took)) return null;
+        boolean noRoom = false;
         for (SupplySource src : withPack) {
-            List<ItemStack> got = src.take(st -> k.equals(kind(st)) && !worn(st) && tier(st) >= tier, Resupply::tier, 1);
+            List<ItemStack> got = src.take(st -> spare(st, k, tier), st -> -tier(st), 1);
             if (got.isEmpty()) continue;
-            ItemStack old = cur.copy();
-            RecruitsBridge.setSlot(e, slot, got.get(0));
-            if (!src.keepWorn(old)) {
-                ItemStack left = RecruitsBridge.addToPack(e, old);
-                if (!left.isEmpty()) e.spawnAtLocation(left);
+            ItemStack spare = got.get(0), old = cur.copy();
+            // the worn piece goes back where the spare came from (the armoury keeps no worn gear), else into the pack;
+            // if neither holds it there is no swap, so nothing is dropped
+            if (!src.keepWorn(old) && !RecruitsBridge.addToPack(e, old).isEmpty()) {
+                ItemStack back = src.putBack(spare);
+                if (!back.isEmpty()) {
+                    LivingRealms.LOG.warn("Resupply: could not return {} to {}", back, src.label());
+                    e.spawnAtLocation(back);
+                }
+                noRoom = true;
+                break;
             }
-            took.add("swapped a worn " + old.getHoverName().getString() + " for " + got.get(0).getHoverName().getString() + " from " + src.label());
+            RecruitsBridge.setSlot(e, slot, spare);
+            took.add("swapped a worn " + old.getHoverName().getString() + " for " + spare.getHoverName().getString() + " from " + src.label());
             return null;
         }
         if (!keep && mend(e, slot, cur, sources, took)) return null;
-        return "a spare " + cur.getHoverName().getString();
+        return noRoom ? "" : "a spare " + cur.getHoverName().getString();
+    }
+
+    /**
+     * A spare for a slot: same family, not worn, at least the tier it replaces, and plain (enchanted or named gear is
+     * the owner's to hand out). Sources are asked for the lowest tier that qualifies, so the best gear stays put.
+     */
+    static boolean spare(ItemStack st, String kind, double tier) {
+        return kind.equals(kind(st)) && !worn(st) && !st.isEnchanted() && !st.hasCustomHoverName() && tier(st) >= tier;
     }
 
     static boolean mend(Entity e, EquipmentSlot slot, ItemStack cur, List<SupplySource> sources, List<String> took) {
@@ -298,17 +354,13 @@ public final class Resupply {
         return false;
     }
 
-    /** What belongs in an empty slot: what was there before it broke, or the unit's own weapon and shield. */
+    /** What belongs in an empty slot: what was there before it broke, or null if it has held nothing we know of. */
     @Nullable
-    static Item expected(Entity e, SupplyData.Rec r, int i) {
-        if (!r.last[i].isEmpty()) {
-            Item it = BuiltInRegistries.ITEM.get(new ResourceLocation(r.last[i]));
-            if (it != Items.AIR) return it;
-        }
-        UnitType u = RecruitsBridge.unitOf(e);
-        if (i == 0) return switch (u) { case BOWMAN, DRAGON_RIDER -> Items.BOW; case CROSSBOWMAN -> Items.CROSSBOW; default -> Items.IRON_SWORD; };
-        if (i == 1 && u == UnitType.SHIELDBEARER) return Items.SHIELD;
-        return null;
+    static Item expected(SupplyData.Rec r, int i) {
+        if (r.last[i].isEmpty()) return null;
+        ResourceLocation id = ResourceLocation.tryParse(r.last[i]);
+        Item it = id == null ? Items.AIR : BuiltInRegistries.ITEM.get(id);
+        return it == Items.AIR ? null : it;
     }
 
     // ------------------------------------------------------------------ what things are
@@ -365,6 +417,15 @@ public final class Resupply {
         return f == null ? 0 : f.getNutrition() + f.getNutrition() * f.getSaturationModifier() * 2;
     }
 
+    /** Which food to take first: everyday food (bread, cooked meat) before anything made with gold or rarer, then the most filling. */
+    static double foodChoice(ItemStack st) { return nourishment(st) - (luxury(st) ? 1000 : 0); }
+
+    /** Golden carrots, glistering melon and anything above common rarity. */
+    static boolean luxury(ItemStack st) {
+        String path = BuiltInRegistries.ITEM.getKey(st.getItem()).getPath();
+        return st.getRarity() != Rarity.COMMON || path.contains("golden") || path.contains("glistering");
+    }
+
     /** Matching items in the pack (slot 6 on; the off hand holds food only while eating). */
     static int countPack(Entity e, Predicate<ItemStack> want) {
         Container inv = RecruitsBridge.inventory(e);
@@ -381,16 +442,17 @@ public final class Resupply {
         return n.startsWith(unit) ? n : unit + " " + n;
     }
 
-    /** "Bowman Aldric is out of arrows and the armoury has none", at most once per WARN_TICKS per owner. */
-    static void warn(Entity e, @Nullable ServerPlayer owner, List<String> shortages, List<SupplySource> tried, long now) {
-        if (owner == null) return;
+    /** "Bowman Aldric is out of arrows and the armoury has none", at most once per WARN_TICKS per owner. True if sent. */
+    static boolean warn(Entity e, @Nullable ServerPlayer owner, List<String> shortages, List<SupplySource> tried, long now) {
+        if (owner == null) return false;
         Long last = LAST_WARN.get(owner.getUUID());
-        if (last != null && now - last < WARN_TICKS && now >= last) return;
+        if (last != null && now - last < WARN_TICKS && now >= last) return false;
         LAST_WARN.put(owner.getUUID(), now);
         String msg = name(e) + " " + needs(shortages) + " and " + where(tried);
         warnings++;
         lastWarning = msg;
         owner.sendSystemMessage(Component.literal(msg).withStyle(ChatFormatting.GOLD));
+        return true;
     }
 
     static String needs(List<String> shortages) {
@@ -435,7 +497,7 @@ public final class Resupply {
         int empty = 0;
         for (int i = 0; i < SLOTS.length; i++) {
             ItemStack st = RecruitsBridge.getSlot(e, SLOTS[i]);
-            if (st.isEmpty()) { if (r != null && !r.last[i].isEmpty()) empty++; continue; }
+            if (st.isEmpty()) { if (r != null && !r.last[i].isEmpty() && r.wear[i] <= BROKEN) empty++; continue; }
             if (!st.isDamageableItem() || st.getMaxDamage() <= 0) continue;
             float f = 1 - st.getDamageValue() / (float) st.getMaxDamage();
             if (f < worst) { worst = f; piece = st.getHoverName().getString(); }
@@ -472,7 +534,7 @@ public final class Resupply {
         Set<String> what = new TreeSet<>();
         for (Settlement.Soldier so : s.soldiers) {
             SupplyData.Rec r = data.peek(so.entity);
-            if (r == null || r.shortages.isEmpty()) continue;
+            if (r == null || !r.auto || r.shortages.isEmpty()) continue;
             n++;
             for (String x : r.shortages) what.add(x.startsWith("a ") ? "gear" : x);
         }

@@ -98,7 +98,7 @@ public final class RecruitCommand {
         Net.send(p, "recruit", t);
     }
 
-    static CompoundTag describe(ServerPlayer p, Entity e) {
+    public static CompoundTag describe(ServerPlayer p, Entity e) {
         CompoundTag t = new CompoundTag();
         t.putUUID("e", e.getUUID());
         t.putString("name", e.getName().getString());
@@ -117,7 +117,8 @@ public final class RecruitCommand {
         t.putInt("follow", RecruitsBridge.followState(e));
         t.putString("origin", RecruitOrigins.origin(e).name());
         t.putBoolean("worker", RecruitsBridge.isWorker(e));
-        t.put("supply", livingrealms.supply.Resupply.describe(p, e));
+        // workers aren't resupplied (Resupply skips them), so they get no Supply card
+        if (!RecruitsBridge.isWorker(e)) t.put("supply", livingrealms.supply.Resupply.describe(p, e));
         // Recruits' own inventory screen only finds recruits within 10 blocks of the player
         t.putBoolean("near", e.level() == p.level() && e.distanceTo(p) <= 8);
         t.put("bonds", Bonds.view(p.server, e));
@@ -225,6 +226,7 @@ public final class RecruitCommand {
         Entity n = RecruitsBridge.promote(e, profession, p);
         if (n == null) return null;
         Bonds.moved(p.server, e.getUUID(), n.getUUID());
+        livingrealms.supply.SupplyData.get(p.server).move(e.getUUID(), n.getUUID());
         if (hasOrigin) RecruitOrigins.assign(n, origin);
         if (rec != null) {
             rec.soldier().entity = n.getUUID();

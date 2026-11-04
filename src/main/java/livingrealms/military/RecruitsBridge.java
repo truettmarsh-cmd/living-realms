@@ -318,6 +318,7 @@ public final class RecruitsBridge {
             n.setUUID(UUID.randomUUID());
             if (!level.addFreshEntity(n)) return null;
             Bonds.moved(level.getServer(), e.getUUID(), n.getUUID());
+            livingrealms.supply.SupplyData.get(level.getServer()).move(e.getUUID(), n.getUUID());
         }
         return n;
     }

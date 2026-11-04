@@ -2,6 +2,8 @@ package livingrealms.supply;
 
 import com.mojang.authlib.GameProfile;
 import livingrealms.LivingRealms;
+import livingrealms.military.CombatClock;
+import livingrealms.military.RecruitCommand;
 import livingrealms.military.RecruitsBridge;
 import livingrealms.military.UnitType;
 import livingrealms.settlement.Plot;
@@ -16,6 +18,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -82,6 +85,12 @@ public final class SupplySelfTest {
         return st;
     }
 
+    static ItemStack nearlyBroken(Item item) {
+        ItemStack st = new ItemStack(item);
+        st.setDamageValue(st.getMaxDamage() - Math.max(1, st.getMaxDamage() / 20));
+        return st;
+    }
+
     static void run(ServerLevel level) {
         var server = level.getServer();
         SupplyData data = SupplyData.get(server);
@@ -112,12 +121,15 @@ public final class SupplySelfTest {
             // 1. the town stockpile: arrows to 64, plain food to 8, nothing with effects
             Entity bow = enlisted(level, s, UnitType.BOWMAN, s.center, "Aldric", spawned);
             RecruitsBridge.setSlot(bow, EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
-            s.stock.force(Items.ARROW, 100); s.stock.force(Items.BREAD, 20); s.stock.force(Items.ROTTEN_FLESH, 10);
+            s.stock.force(Items.ARROW, 100); s.stock.force(Items.BREAD, 20); s.stock.force(Items.ROTTEN_FLESH, 10); s.stock.force(Items.GOLDEN_CARROT, 10);
             check(Resupply.sources(bow, null).size() == 1 && Resupply.sources(bow, null).get(0) instanceof Sources.Stockpile, "Town recruit draws on its armoury");
             check(Resupply.check(bow, null, now), "Stockpile resupply acted");
             check(pack(bow, Items.ARROW) == Resupply.AMMO_TARGET && s.stock.count(Items.ARROW) == 100 - Resupply.AMMO_TARGET, "Arrows topped up to 64 from the stockpile: " + pack(bow, Items.ARROW));
             check(pack(bow, Items.BREAD) == Resupply.FOOD_TARGET && s.stock.count(Items.BREAD) == 20 - Resupply.FOOD_TARGET, "Bread topped up to 8 from the stockpile");
             check(pack(bow, Items.ROTTEN_FLESH) == 0 && s.stock.count(Items.ROTTEN_FLESH) == 10, "Food with effects is never taken");
+            check(pack(bow, Items.GOLDEN_CARROT) == 0 && s.stock.count(Items.GOLDEN_CARROT) == 10, "Everyday bread before the owner's golden carrots");
+            check(Resupply.foodChoice(new ItemStack(Items.COOKED_BEEF)) > Resupply.foodChoice(new ItemStack(Items.GOLDEN_CARROT))
+                    && Resupply.foodChoice(new ItemStack(Items.BREAD)) > Resupply.foodChoice(new ItemStack(Items.GOLDEN_CARROT)), "Cooked meat and bread rank above golden carrots");
             check(!Resupply.check(bow, null, now + 1) && s.stock.count(Items.ARROW) == 36, "A full recruit takes nothing more");
             // only below the refill mark
             Container inv = RecruitsBridge.inventory(bow);
@@ -137,6 +149,7 @@ public final class SupplySelfTest {
             check(!Resupply.check(bow, null, now + 4), "Auto resupply off: no action");
             check(pack(bow, Items.ARROW) == 0 && pack(bow, Items.BREAD) == 0 && s.stock.count(Items.ARROW) == arrows && s.stock.count(Items.BREAD) == bread, "Auto resupply off: nothing taken from the stockpile");
             check(!Resupply.describe(owner, bow).getBoolean("auto"), "Toggle shows off");
+            check(data.peek(bow.getUUID()).shortages.isEmpty(), "Auto off: no shortage left showing");
             data.setAuto(bow.getUUID(), true);
 
             // 3. never in combat
@@ -144,6 +157,16 @@ public final class SupplySelfTest {
             ((Mob) bow).setTarget(zombie);
             check(!Resupply.calm(bow) && !Resupply.check(bow, null, now + 5) && pack(bow, Items.ARROW) == 0, "No resupply while it has a target");
             ((Mob) bow).setTarget(null);
+            // the shared combat clock: a blow struck or taken keeps it from restocking for 20 seconds
+            long game = level.getGameTime();
+            bow.hurt(level.damageSources().mobAttack(zombie), 1);
+            ((Mob) bow).setTarget(null);
+            check(CombatClock.within(bow.getUUID(), game, 1) && !Resupply.calm(bow), "A real hit marks the recruit in combat");
+            CombatClock.mark(bow.getUUID(), game - Resupply.CALM_TICKS);
+            check(!Resupply.calm(bow), "Still not calm 20 seconds to the tick after the last blow");
+            CombatClock.mark(bow.getUUID(), game - Resupply.CALM_TICKS - 1);
+            check(Resupply.calm(bow), "Calm once 20 seconds have passed");
+            CombatClock.forget(bow.getUUID());
             check(Resupply.calm(bow) && Resupply.check(bow, null, now + 6) && pack(bow, Items.ARROW) == 64, "Resupplies once the fight is over");
 
             // 4. owner's inventory, behind the per-player toggle and the 16 block range
@@ -158,7 +181,10 @@ public final class SupplySelfTest {
             data.setAllowsInventory(owner.getUUID(), false);
             Resupply.LAST_WARN.clear();
             check(Resupply.sources(stray, owner).isEmpty(), "Owner's inventory is no source while not allowed");
+            int warned = Resupply.warnings;
             Resupply.check(stray, owner, now + 7);
+            check(Resupply.warnings == warned && data.peek(stray.getUUID()).shortages.contains("arrows")
+                    && Resupply.describe(owner, stray).getString("sources").equals("your inventory (off)"), "Nowhere to restock from: no warning, but the card shows the shortage");
             check(pack(stray, Items.ARROW) == 0 && owned(owner, Items.ARROW) == 56 && owned(owner, Items.COOKED_BEEF) == 10, "Toggle off: nothing taken from the owner");
             data.setAllowsInventory(owner.getUUID(), true);
             check(Resupply.check(stray, owner, now + 8), "Owner inventory resupply acted");
@@ -180,7 +206,11 @@ public final class SupplySelfTest {
             Container chest = (Container) level.getBlockEntity(chestAt);
             chest.setItem(0, new ItemStack(Items.ARROW, 30));
             chest.setItem(1, new ItemStack(Items.BREAD, 5));
-            chest.setItem(2, new ItemStack(Items.IRON_HELMET));
+            ItemStack fancy = new ItemStack(Items.IRON_HELMET);
+            fancy.enchant(net.minecraft.world.item.enchantment.Enchantments.ALL_DAMAGE_PROTECTION, 1);
+            chest.setItem(2, fancy);
+            chest.setItem(3, new ItemStack(Items.DIAMOND_HELMET));
+            chest.setItem(4, new ItemStack(Items.IRON_HELMET));
             RecruitsBridge.setUpkeepPos(camp, chestAt);
             data.setAllowsInventory(owner.getUUID(), false);
             check(Resupply.check(camp, owner, now + 10) && pack(camp, Items.ARROW) == 30 && chest.getItem(0).isEmpty(), "Bolts from the upkeep chest");
@@ -189,6 +219,8 @@ public final class SupplySelfTest {
             RecruitsBridge.setSlot(camp, EquipmentSlot.HEAD, worn(Items.IRON_HELMET));
             check(Resupply.check(camp, owner, now + 11) && RecruitsBridge.getSlot(camp, EquipmentSlot.HEAD).is(Items.IRON_HELMET)
                     && !RecruitsBridge.getSlot(camp, EquipmentSlot.HEAD).isDamaged(), "Worn helmet swapped for the chest's spare");
+            check(!RecruitsBridge.getSlot(camp, EquipmentSlot.HEAD).isEnchanted() && chest.getItem(2).isEnchanted() && chest.getItem(3).is(Items.DIAMOND_HELMET),
+                    "The lowest tier that will do: the plain iron helmet, not the diamond one or the enchanted one");
             boolean wornInChest = false;
             for (int i = 0; i < chest.getContainerSize(); i++) wornInChest |= chest.getItem(i).is(Items.IRON_HELMET) && chest.getItem(i).isDamaged();
             check(wornInChest && pack(camp, Items.IRON_HELMET) == 0, "The worn helmet goes back in the chest");
@@ -209,6 +241,17 @@ public final class SupplySelfTest {
             check(main.is(Items.IRON_SWORD) && !main.isDamaged() && s.stock.count(Items.IRON_SWORD) == 0 && s.stock.count(Items.STONE_SWORD) == 1, "Worn sword swapped for a fresh one");
             check(pack(foot, Items.IRON_SWORD) == 1, "The worn sword goes in the pack");
             check(Resupply.townWarning(server, s).isEmpty(), "Warning clears once supplied");
+            // a full pack and a spare from the armoury, which keeps no worn gear: no swap, and nothing on the ground
+            RecruitsBridge.setSlot(foot, EquipmentSlot.MAINHAND, worn(Items.IRON_SWORD));
+            Container fpack = RecruitsBridge.inventory(foot);
+            for (int i = 6; i < fpack.getContainerSize(); i++) fpack.setItem(i, new ItemStack(Items.DIRT, 64));
+            s.stock.force(Items.IRON_SWORD, 1);
+            Resupply.check(foot, null, now + 13);
+            check(RecruitsBridge.getSlot(foot, EquipmentSlot.MAINHAND).isDamaged() && s.stock.count(Items.IRON_SWORD) == 1
+                    && level.getEntitiesOfClass(ItemEntity.class, foot.getBoundingBox().inflate(6)).isEmpty(), "Full pack: the swap waits and nothing is dropped");
+            emptyPack(foot);
+            RecruitsBridge.setSlot(foot, EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+            s.stock.takeUpTo(Items.IRON_SWORD, 10);
             RecruitsBridge.setSlot(foot, EquipmentSlot.HEAD, worn(Items.IRON_HELMET));
             s.stock.force(Items.DIAMOND_HELMET, 1);
             Resupply.check(foot, null, now + 14);
@@ -224,19 +267,43 @@ public final class SupplySelfTest {
             s.plots.add(smithy);
             check(Resupply.check(foot, null, now + 16), "Repair acted");
             check(!RecruitsBridge.getSlot(foot, EquipmentSlot.CHEST).isDamaged() && s.stock.count(Items.IRON_INGOT) == 10 - cost && cost > 0, "Smiths mended the chestplate for " + cost + " iron ingots");
-            // broken weapon and shield
+            // broken weapon and shield: the last check saw them nearly worn through
+            SupplyData.Rec fr = data.rec(foot.getUUID());
+            RecruitsBridge.setSlot(foot, EquipmentSlot.MAINHAND, nearlyBroken(Items.IRON_SWORD));
+            Resupply.remember(data, fr, foot);
+            check(fr.wear[0] <= Resupply.BROKEN && fr.last[0].equals("minecraft:iron_sword"), "Wear recorded at each check: " + fr.wear[0]);
             RecruitsBridge.setSlot(foot, EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            check(Resupply.describe(owner, foot).getInt("broken") == 1, "Supply card: 1 broken");
             s.stock.force(Items.IRON_SWORD, 1);
             check(Resupply.check(foot, null, now + 17) && RecruitsBridge.getSlot(foot, EquipmentSlot.MAINHAND).is(Items.IRON_SWORD) && s.stock.count(Items.IRON_SWORD) == 0, "Broken sword replaced in kind");
+            // a sound piece taken off by hand is not broken: nothing replaces it, no nagging
+            ItemStack helm = RecruitsBridge.getSlot(foot, EquipmentSlot.HEAD).copy();
+            RecruitsBridge.setSlot(foot, EquipmentSlot.HEAD, ItemStack.EMPTY);
+            s.stock.force(Items.DIAMOND_HELMET, 1);
+            check(Resupply.describe(owner, foot).getInt("broken") == 0, "Supply card: a helmet taken off is not broken");
+            Resupply.check(foot, null, now + 17);
+            check(RecruitsBridge.getSlot(foot, EquipmentSlot.HEAD).isEmpty() && s.stock.count(Items.DIAMOND_HELMET) == 1 && fr.last[2].isEmpty()
+                    && fr.shortages.stream().noneMatch(x -> x.startsWith("a new")), "Emptied by hand: forgotten, not replaced: " + fr.shortages + " " + helm);
+            // a slot never filled takes nothing (no default weapon)
+            Entity bare = enlisted(level, s, UnitType.FOOTMAN, s.center.offset(1, 0, 1), "Wulf", spawned);
+            RecruitsBridge.setSlot(bare, EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+            s.stock.force(Items.IRON_SWORD, 1);
+            Resupply.check(bare, null, now + 17);
+            check(RecruitsBridge.getSlot(bare, EquipmentSlot.MAINHAND).isEmpty() && s.stock.count(Items.IRON_SWORD) == 1, "A recruit that never held a weapon gets none");
+            s.stock.takeUpTo(Items.IRON_SWORD, 10);
             Entity guard = enlisted(level, s, UnitType.SHIELDBEARER, s.center.offset(-2, 0, 0), "Edric", spawned);
             RecruitsBridge.setSlot(guard, EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_AXE));
             RecruitsBridge.setSlot(guard, EquipmentSlot.OFFHAND, new ItemStack(Items.SHIELD));
             Resupply.check(guard, null, now + 18);
+            RecruitsBridge.setSlot(guard, EquipmentSlot.MAINHAND, nearlyBroken(Items.IRON_AXE));
+            RecruitsBridge.setSlot(guard, EquipmentSlot.OFFHAND, nearlyBroken(Items.SHIELD));
+            Resupply.remember(data, data.rec(guard.getUUID()), guard);
             RecruitsBridge.setSlot(guard, EquipmentSlot.OFFHAND, ItemStack.EMPTY);
             RecruitsBridge.setSlot(guard, EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-            s.stock.force(Items.SHIELD, 1); s.stock.force(Items.STONE_AXE, 1); s.stock.force(Items.DIAMOND_SWORD, 1);
+            s.stock.force(Items.SHIELD, 1); s.stock.force(Items.STONE_AXE, 1); s.stock.force(Items.IRON_AXE, 1); s.stock.force(Items.DIAMOND_AXE, 1); s.stock.force(Items.DIAMOND_SWORD, 1);
             check(Resupply.check(guard, null, now + 19) && RecruitsBridge.getSlot(guard, EquipmentSlot.OFFHAND).is(Items.SHIELD), "Broken shield replaced");
-            check(RecruitsBridge.getSlot(guard, EquipmentSlot.MAINHAND).is(Items.STONE_AXE) && s.stock.count(Items.DIAMOND_SWORD) == 1, "A broken axe is replaced by an axe, not a sword");
+            check(RecruitsBridge.getSlot(guard, EquipmentSlot.MAINHAND).is(Items.IRON_AXE) && s.stock.count(Items.DIAMOND_SWORD) == 1, "A broken axe is replaced by an axe, not a sword");
+            check(s.stock.count(Items.STONE_AXE) == 1 && s.stock.count(Items.DIAMOND_AXE) == 1, "In kind: no worse stone axe, and the diamond axe is kept back");
 
             // 7. out of stock: one warning per owner per few minutes
             Entity dry = enlisted(level, s, UnitType.BOWMAN, s.center.offset(0, 0, 2), "Aldwin", spawned);
@@ -253,14 +320,33 @@ public final class SupplySelfTest {
             Resupply.check(bow, owner, now + 400);
             check(Resupply.warnings == 1, "Warnings throttled per owner: " + Resupply.warnings);
             Resupply.check(dry, owner, now + 100 + Resupply.WARN_TICKS + 1);
-            check(Resupply.warnings == 2, "Warned again after the quiet period");
-            Resupply.check(dry, null, now + 100 + 3 * Resupply.WARN_TICKS);
-            check(Resupply.warnings == 2, "No warning when the owner is offline");
+            check(Resupply.warnings == 1, "Once per shortage: Aldwin isn't told about again");
+            Resupply.check(bow, owner, now + 100 + Resupply.WARN_TICKS + 2);
+            check(Resupply.warnings == 2 && Resupply.lastWarning.startsWith("Bowman Aldric"), "Aldric's shortage is told after the quiet period: " + Resupply.lastWarning);
+            s.stock.force(Items.ARROW, 64); s.stock.force(Items.BREAD, 20);
+            Resupply.check(dry, owner, now + 100 + 2 * Resupply.WARN_TICKS);
+            check(!data.peek(dry.getUUID()).warned && data.peek(dry.getUUID()).shortages.isEmpty(), "Resupplied: the shortage is over");
+            emptyPack(dry);
+            s.stock.takeUpTo(Items.ARROW, 10000);
+            Resupply.check(dry, owner, now + 100 + 4 * Resupply.WARN_TICKS);
+            check(Resupply.warnings == 3, "A new shortage is told again");
+            data.peek(dry.getUUID()).warned = false;
+            Resupply.LAST_WARN.clear();
+            Resupply.check(dry, null, now + 100 + 5 * Resupply.WARN_TICKS);
+            check(Resupply.warnings == 3, "No warning when the owner is offline");
             data.setAuto(dry.getUUID(), false);
-            Resupply.check(dry, owner, now + 100 + 5 * Resupply.WARN_TICKS);
-            check(Resupply.warnings == 2, "No warning while auto resupply is off");
+            Resupply.check(dry, owner, now + 100 + 6 * Resupply.WARN_TICKS);
+            check(Resupply.warnings == 3 && data.peek(dry.getUUID()).shortages.isEmpty(), "No warning, and no shortage shown, while auto resupply is off");
+            SupplyData.Rec dr = data.peek(dry.getUUID());
+            dr.shortages = List.of("arrows");
+            String off = Resupply.townWarning(server, s);
+            dr.auto = true;
+            String on = Resupply.townWarning(server, s);
+            dr.auto = false; dr.shortages = List.of();
+            check(!off.equals(on), "The garrison card skips recruits with auto resupply off: " + off + " / " + on);
             data.setAllowsInventory(owner.getUUID(), true);
             owner.getInventory().clearContent();
+            data.peek(bow.getUUID()).warned = false;
             Resupply.LAST_WARN.clear();
             Resupply.check(bow, owner, now + 100 + 7 * Resupply.WARN_TICKS);
             check(Resupply.lastWarning.contains("neither the armoury nor your inventory has any"), "Warning names every source: " + Resupply.lastWarning);
@@ -279,7 +365,34 @@ public final class SupplySelfTest {
             CompoundTag saved = data.save(new CompoundTag());
             SupplyData back = SupplyData.load(saved);
             check(!back.auto(dry.getUUID()) && back.auto(bow.getUUID()) && back.allowsInventory(owner.getUUID()), "Toggles saved");
-            check(back.peek(guard.getUUID()).last[1].equals("minecraft:shield"), "Last-carried gear saved");
+            check(back.peek(guard.getUUID()).last[1].equals("minecraft:shield") && back.peek(guard.getUUID()).wear[1] == 1f, "Last-carried gear and its wear saved");
+            check(back.peek(guard.getUUID()).seen == data.peek(guard.getUUID()).seen && back.peek(guard.getUUID()).seen > 0, "Last check time saved");
+
+            // promotion moves the settings; long-unseen records are dropped
+            UUID promoted = UUID.randomUUID();
+            data.move(dry.getUUID(), promoted);
+            check(data.peek(dry.getUUID()) == null && !data.auto(promoted), "Supply settings follow a promotion");
+            data.move(promoted, dry.getUUID());
+            UUID old = UUID.randomUUID();
+            data.rec(old).auto = false;
+            data.rec(old).seen = now + 9000 - SupplyData.FORGET_TICKS - 1;
+            UUID legacy = UUID.randomUUID();
+            data.rec(legacy).auto = false;
+            check(data.prune(now + 9000) >= 1 && data.peek(old) == null && data.peek(legacy) != null && data.peek(legacy).seen == now + 9000
+                    && data.peek(dry.getUUID()) != null, "Records unseen for 60 days are pruned; older saves start counting");
+            data.forget(legacy);
+
+            // workers get no Supply card (they are never resupplied)
+            check(RecruitCommand.describe(owner, bow).contains("supply"), "A soldier's Recruit Command packet has the Supply card");
+            var workerType = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(new net.minecraft.resources.ResourceLocation("workers:farmer"));
+            if (net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.containsKey(new net.minecraft.resources.ResourceLocation("workers:farmer"))) {
+                Entity w = workerType.create(level);
+                w.moveTo(s.center.getX() + 4.5, s.center.getY(), s.center.getZ() + .5);
+                level.addFreshEntity(w);
+                spawned.add(w);
+                RecruitsBridge.allegiance(w, owner.getUUID());
+                check(RecruitsBridge.isWorker(w) && !RecruitCommand.describe(owner, w).contains("supply"), "A worker's packet has no Supply card");
+            } else LivingRealms.LOG.info("Supply test: Workers not loaded, worker packet check skipped");
             manager.remove(s);
             check(!SupplyData.get(server).auto(dry.getUUID()), "Settings outlive the town");
         } finally {

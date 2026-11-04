@@ -18,13 +18,22 @@ public final class SupplyData extends SavedData {
         public boolean auto = true;
         /** Item ids last seen in MAINHAND, OFFHAND, HEAD, CHEST, LEGS, FEET ("" = nothing yet). */
         public final String[] last = {"", "", "", "", "", ""};
+        /** Durability left (fraction) of each of those at the last check: an empty slot only counts as broken from low wear. */
+        public final float[] wear = {1, 1, 1, 1, 1, 1};
+        /** Game time of the last check; a record unseen for FORGET_TICKS is dropped. */
+        public long seen;
         // the last check, for the Recruit Command screen and the garrison card; not saved
         public transient List<String> shortages = List.of();
         public transient String note = "";
         public transient long noteAt;
+        /** The owner was already warned about the shortage going on now. */
+        public transient boolean warned;
 
         boolean plain() { return auto && Arrays.stream(last).allMatch(String::isEmpty); }
     }
+
+    /** Records of recruits not checked (loaded) for this long are dropped: 60 in-game days. */
+    public static final long FORGET_TICKS = 60 * 24000L;
 
     final Map<UUID, Rec> recruits = new HashMap<>();
     final Set<UUID> ownerInventory = new HashSet<>();
@@ -51,6 +60,23 @@ public final class SupplyData extends SavedData {
 
     public void forget(UUID recruit) { if (recruits.remove(recruit) != null) setDirty(); }
 
+    /** A recruit was replaced by a new entity (a promotion): its settings and remembered gear follow it. */
+    public void move(UUID from, UUID to) {
+        if (from.equals(to)) return;
+        Rec r = recruits.remove(from);
+        if (r != null) { recruits.put(to, r); setDirty(); }
+    }
+
+    /** Drops records not seen for FORGET_TICKS; records from before "seen" was kept start counting now. Returns how many went. */
+    public int prune(long now) {
+        int before = recruits.size();
+        for (Rec r : recruits.values()) if (r.seen == 0 || r.seen > now) r.seen = now;
+        recruits.values().removeIf(r -> now - r.seen > FORGET_TICKS);
+        int gone = before - recruits.size();
+        if (gone > 0) setDirty();
+        return gone;
+    }
+
     public static SupplyData load(CompoundTag t) {
         SupplyData d = new SupplyData();
         CompoundTag r = t.getCompound("recruits");
@@ -60,6 +86,9 @@ public final class SupplyData extends SavedData {
             rec.auto = !c.contains("auto") || c.getBoolean("auto");
             ListTag last = c.getList("last", Tag.TAG_STRING);
             for (int i = 0; i < Math.min(last.size(), rec.last.length); i++) rec.last[i] = last.getString(i);
+            ListTag wear = c.getList("wear", Tag.TAG_FLOAT);
+            for (int i = 0; i < Math.min(wear.size(), rec.wear.length); i++) rec.wear[i] = wear.getFloat(i);
+            rec.seen = c.getLong("seen");
             try { d.recruits.put(UUID.fromString(k), rec); } catch (IllegalArgumentException ignored) {}
         }
         for (Tag x : t.getList("ownerInventory", Tag.TAG_INT_ARRAY)) d.ownerInventory.add(net.minecraft.nbt.NbtUtils.loadUUID(x));
@@ -76,6 +105,10 @@ public final class SupplyData extends SavedData {
             ListTag last = new ListTag();
             for (String s : rec.last) last.add(StringTag.valueOf(s));
             c.put("last", last);
+            ListTag wear = new ListTag();
+            for (float f : rec.wear) wear.add(net.minecraft.nbt.FloatTag.valueOf(f));
+            c.put("wear", wear);
+            c.putLong("seen", rec.seen);
             r.put(k.toString(), c);
         });
         t.put("recruits", r);
