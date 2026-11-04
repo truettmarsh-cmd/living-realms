@@ -206,6 +206,23 @@ public final class Strategy {
         return 3 + (int) Math.round(2 * Math.min(3, Math.max(0, defeats)));
     }
 
+    /**
+     * NPC kingdoms answer a raid with royal decrees (docs/decrees.md), when their rank and treasury allow: an attacker of
+     * City rank sounds the War Horn; a defender sounds it too, and a defending Capital-rank kingdom calls the banners to the
+     * city under attack. Village Expansion factions issue none.
+     */
+    static void decrees(MinecraftServer server, SettlementManager m, Settlement source, Settlement target) {
+        try {
+            if (source.isAi() && !source.mirror()) Decrees.npc(server, m, source, Decree.WAR_HORN);
+            if (target.isAi() && !target.mirror()) {
+                Decrees.npc(server, m, target, Decree.WAR_HORN);
+                Decrees.npc(server, m, target, Decree.CALL_THE_BANNERS);
+            }
+        } catch (RuntimeException e) {
+            livingrealms.LivingRealms.LOG.error("NPC decrees failed", e);
+        }
+    }
+
     // ------------------------------------------------------------------ recovery and growth (Living Realms NPC towns)
 
     public static boolean threatened(SettlementManager m, Settlement s, long now) {

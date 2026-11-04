@@ -547,6 +547,7 @@ public final class Siege {
             for (LivingEntity a : attackers) if (crew.contains(a.getUUID()) && horizontal(a, out) <= CREW_REACH) working++;
             double rate = working == 0 ? 0 : (.5 + .5 * Math.min(CREW, working));
             rate += engines; // siege engines pound the same stretch
+            rate *= Decrees.breachFactor(target); // Martial Law
             progress += (int) Math.round(20 * rate);
             if (rate > 0) {
                 level.playSound(null, at, gate ? SoundEvents.ZOMBIE_ATTACK_IRON_DOOR : SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 1, .7f);

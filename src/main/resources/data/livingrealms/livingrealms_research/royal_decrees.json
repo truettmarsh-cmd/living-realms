@@ -1,0 +1,16 @@
+{
+ "name": "Royal Decrees",
+ "branch": "Construction",
+ "cost": 500,
+ "requires": [
+  "urban_planning"
+ ],
+ "icon": "minecraft:goat_horn",
+ "x": 5,
+ "y": 4,
+ "description": "Royal decrees on the Kingdom page: the first at City rank, the strongest at Capital.",
+ "items": {
+  "minecraft:paper": 16,
+  "minecraft:gold_ingot": 4
+ }
+}

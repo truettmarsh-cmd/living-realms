@@ -124,6 +124,11 @@ minecraft {
                 workingDirectory project.file(project.property('supplyTestDir'))
                 property 'livingrealms.supplyTest', 'true'
             }
+            // ./gradlew runServer -PdecreesTest -PdecreesTestDir=<fresh dir> : royal decrees (see DecreesSelfTest, docs/decrees.md)
+            if (project.hasProperty('decreesTest')) {
+                workingDirectory project.file(project.property('decreesTestDir'))
+                property 'livingrealms.decreesTest', 'true'
+            }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')
                 property 'livingrealms.militaryTest', 'true'
