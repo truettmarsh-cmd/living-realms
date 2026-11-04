@@ -98,6 +98,7 @@ public final class SoldierProgression {
                 s.log(so.name + " developed the legendary perk " + perk.label);
             if (previous != so.legendaryLevelChecked) s.dirty = true;
             applySkills(le, so);
+            SoldierPaths.pulse(s, so, le, server.overworld().getGameTime());
             if (!so.seen || so.health != le.getHealth() || so.maxHealth != le.getMaxHealth()) s.dirty = true;
             so.seen = true;
             so.health = le.getHealth(); so.maxHealth = le.getMaxHealth();

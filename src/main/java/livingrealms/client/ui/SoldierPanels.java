@@ -159,16 +159,20 @@ final class SoldierPanels {
         CompoundTag current = null;
         for (Tag t : paths) if (((CompoundTag) t).getString("id").equals(chosen)) current = (CompoundTag) t;
         int w2 = (cw - 16) / 2, pathRows = (paths.size() + 1) / 2;
-        int treeH = current == null ? 0 : 52 + 4 * 46 + 26 + 92;
+        String warning = so.getString("pathWarning"), epithet = so.getString("epithet");
+        int treeH = current == null ? 0 : 52 + (warning.isEmpty() ? 0 : 14) + 4 * 46 + 26 + 92;
         int off = ui.beginScroll("soldierPath", cx, sy, cw, sh, 60 + treeH + 22 + pathRows * 88);
         int y = sy - off;
         if (current == null) {
             ui.text(ui.clip("Specialist path · choose one from skill rank " + so.getInt("pathRank"), cw - 12), cx + 4, y + 3, GOLD);
             ui.wrap("A path makes this recruit a specialist: four skills learned in order, then one legendary mastery. They cost skill points from the same pool as the Skills tab, so a specialist gives up part of the general tree.", cx + 4, y + 17, cw - 12, MUTED);
         } else {
-            ui.text(ui.clip(current.getString("label") + " path · " + points + (points == 1 ? " point" : " points") + " available", cw - 12), cx + 4, y + 3, GOLD);
-            ui.wrap(current.getString("desc") + " Path skills work only with " + current.getString("gear").replace("Needs ", "") + ".", cx + 4, y + 17, cw - 12, MUTED);
+            String gear = current.getString("gear");
+            ui.text(ui.clip(current.getString("label") + " path" + (epithet.isEmpty() ? "" : " · " + so.getString("name") + " " + epithet)
+                    + " · " + points + (points == 1 ? " point" : " points") + " available", cw - 12), cx + 4, y + 3, GOLD);
+            ui.wrap(current.getString("desc") + (gear.startsWith("Needs ") ? " Path skills work only with " + gear.substring(6) + "." : " " + gear + "."), cx + 4, y + 17, cw - 12, MUTED);
             int ty = y + 52;
+            if (!warning.isEmpty()) { ui.text(ui.clip("⚠ " + warning, cw - 12), cx + 4, ty - 4, RED); ty += 14; }
             for (int i = 0; i < tree.size(); i++) {
                 CompoundTag sk = tree.getCompound(i);
                 if (sk.getInt("tier") == 5) continue;

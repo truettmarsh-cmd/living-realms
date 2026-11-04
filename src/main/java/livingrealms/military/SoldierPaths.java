@@ -6,6 +6,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -20,6 +21,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -32,7 +36,9 @@ import java.util.UUID;
 public final class SoldierPaths {
     public static final double PATH_CAP = .30, PATH_DEFENCE_CAP = .40, RECKLESS_PENALTY = .05;
     public static final float COLOSSUS_SIZE = 1.6f, TITAN_SIZE = 1.8f, JUGGERNAUT_SIZE = 1.4f;
-    public static final int UNDYING_COOLDOWN = 3600, RAGE_TICKS = 200, RAMPAGE_TICKS = 120, MARK_TICKS = 160;
+    public static final int UNDYING_COOLDOWN = 3600, RAGE_TICKS = 200, RAMPAGE_TICKS = 120, MARK_TICKS = 160, SAINT_COOLDOWN = 2400;
+    /** Each morning a recruit with a mastery teaches up to MENTOR_STUDENTS lower-ranked recruits who could follow its path. */
+    public static final int MENTOR_XP = 20, MENTOR_STUDENTS = 3;
     static final String MARK = "LivingRealmsMarkedBy", MARK_UNTIL = "LivingRealmsMarkedUntil", SIZE_KEY = "LivingRealmsPath";
     private static final UUID ARMOUR = UUID.fromString("5b0e2c4d-6a1f-4c55-9e1e-2f3a7d5c0a01");
     private static final UUID RESIST = UUID.fromString("5b0e2c4d-6a1f-4c55-9e1e-2f3a7d5c0a02");
@@ -108,7 +114,8 @@ public final class SoldierPaths {
         if (e == null || !e.isAlive()) return "Your recruit must be loaded and still belong to you";
         so.pathSkills.add(sk);
         if (e instanceof LivingEntity le) apply(le, so);
-        s.log(so.name + (sk.mastery() ? " attained the legendary mastery " : " learned ") + sk.label);
+        s.log(so.name + (sk.mastery() ? " attained the legendary mastery " + sk.label + " and is now " + so.name + " " + sk.epithet() : " learned " + sk.label));
+        if (sk.mastery()) livingrealms.chronicle.Chronicle.record(s, livingrealms.chronicle.Chronicle.Kind.LEGEND, so.name, sk.label, sk.epithet());
         s.dirty = true;
         return null;
     }
@@ -117,6 +124,7 @@ public final class SoldierPaths {
 
     /** Called every second with the other skills: armour, range, giant bodies and the knight's horse. */
     public static void apply(LivingEntity e, Settlement.Soldier so) {
+        so.pathReady = so.path == null || so.path.equipped(e, WeaponProficiency.classify(e.getMainHandItem()));
         boolean shield = e.getOffhandItem().getItem() instanceof ShieldItem;
         long now = e.getServer() == null ? 0 : e.getServer().overworld().getGameTime();
         PathSkill m = mastery(so);
@@ -156,6 +164,52 @@ public final class SoldierPaths {
             PehkuiBridge.scale(horse, SIZE_KEY, 1);
         }
         if (e.getHealth() > e.getMaxHealth()) e.setHealth(e.getMaxHealth());
+    }
+
+    // ------------------------------------------------------------------ every second: healing and mentoring
+
+    /** Called once a second for each loaded town recruit, after its skills are applied. */
+    public static void pulse(Settlement s, Settlement.Soldier so, LivingEntity e, long time) {
+        mentor(s, so, time);
+        if (so.path != SoldierPath.HEALER) return;
+        long second = time / 20;
+        PathSkill m = mastery(so);
+        if (has(so, PathSkill.BANDAGE) && second % 4 == 0) {
+            boolean surgeon = has(so, PathSkill.SURGEON);
+            List<LivingEntity> near = new ArrayList<>(SoldierSpecials.allies(s, e, surgeon ? 10 : 6));
+            near.add(e);
+            near.removeIf(x -> x.getHealth() >= x.getMaxHealth());
+            near.sort(Comparator.comparingDouble(x -> x.getHealth() / Math.max(1, x.getMaxHealth())));
+            for (LivingEntity x : near.subList(0, Math.min(surgeon ? 2 : 1, near.size())))
+                x.heal(has(so, PathSkill.TRIAGE) && x.getHealth() < x.getMaxHealth() / 2 ? 4 : 2);
+        }
+        if (has(so, PathSkill.CLEANSE) && second % 10 == 0) {
+            List<LivingEntity> near = new ArrayList<>(SoldierSpecials.allies(s, e, 6));
+            near.add(e);
+            for (LivingEntity x : near) for (var effect : List.of(MobEffects.POISON, MobEffects.WITHER, MobEffects.WEAKNESS, MobEffects.MOVEMENT_SLOWDOWN))
+                x.removeEffect(effect);
+        }
+        if (m == PathSkill.SAINT && second % 2 == 0) e.heal(1);
+        if (m == PathSkill.WAR_CHAPLAIN && second % 3 == 0) {
+            e.heal(1);
+            for (LivingEntity x : SoldierSpecials.allies(s, e, 8)) x.heal(1);
+        }
+    }
+
+    /** Once a day a master trains the town's juniors who could follow its path. Returns how many it taught. */
+    public static int mentor(Settlement s, Settlement.Soldier so, long time) {
+        long day = time / 24000;
+        if (mastery(so) == null || so.mentorDay == day) return 0;
+        so.mentorDay = day;
+        int rank = SoldierRanks.rank(so), taught = 0;
+        List<Settlement.Soldier> students = new ArrayList<>();
+        for (Settlement.Soldier other : s.soldiers)
+            if (other != so && other.seen && SoldierRanks.rank(other) < rank && (other.path == so.path || other.path == null && so.path.fits(other.type))) students.add(other);
+        students.sort(Comparator.comparingInt(x -> x.skillXp));
+        for (Settlement.Soldier st : students.subList(0, Math.min(MENTOR_STUDENTS, students.size())))
+            if (SoldierRanks.grant(s, st, null, MENTOR_XP, false, time) > 0) taught++;
+        s.dirty = true;
+        return taught;
     }
 
     private static void modifier(LivingEntity e, Attribute attribute, UUID id, double amount, AttributeModifier.Operation op) {
@@ -217,22 +271,23 @@ public final class SoldierPaths {
         return Math.min(PATH_CAP, path) + mastery;
     }
 
-    /** Hunter's mark and the banner auras of other recruits of the same town. */
+    /** Hunter's mark, the banner auras and the war chaplain's blessing from recruits of the same town. */
     static double aura(Settlement s, LivingEntity attacker, LivingEntity victim, long time) {
         double bonus = 0;
         CompoundTag tag = victim.getPersistentData();
         if (tag.hasUUID(MARK) && tag.getUUID(MARK).equals(s.id) && time < tag.getLong(MARK_UNTIL)) bonus += .25;
-        double banner = 0;
+        double banner = 0, chaplain = 0;
         for (Settlement.Soldier other : s.soldiers) {
-            if (other.path != SoldierPath.KNIGHT) continue;
             PathSkill m = mastery(other);
-            double radius = m == PathSkill.WARLORD ? 12 : has(other, PathSkill.BANNER) ? 8 : 0;
+            boolean preacher = m == PathSkill.WAR_CHAPLAIN;
+            double radius = preacher ? 8 : other.path != SoldierPath.KNIGHT ? 0 : m == PathSkill.WARLORD ? 12 : has(other, PathSkill.BANNER) ? 8 : 0;
             if (radius == 0) continue;
             Entity e = attacker.level() instanceof ServerLevel level ? level.getEntity(other.entity) : null;
             if (e == null || !e.isAlive() || e.distanceToSqr(attacker) > radius * radius) continue;
-            banner = Math.max(banner, m == PathSkill.WARLORD ? .15 : .05);
+            if (preacher) chaplain = .10;
+            else banner = Math.max(banner, m == PathSkill.WARLORD ? .15 : .05);
         }
-        return bonus + banner;
+        return bonus + banner + chaplain;
     }
 
     /** Damage reduction for a town recruit: its own path and the shield and banner auras around it. May be negative. */
@@ -319,12 +374,33 @@ public final class SoldierPaths {
         if (event.isCanceled() || event.getAmount() < victim.getHealth() || !(victim.level() instanceof ServerLevel level)
                 || event.getSource().is(DamageTypeTags.BYPASSES_INVULNERABILITY) || !RecruitsBridge.isRecruit(victim)) return;
         var r = SoldierProgression.record(level.getServer(), victim);
-        if (r == null || mastery(r.soldier()) != PathSkill.UNDYING_RAGE) return;
+        if (r == null) return;
         long now = level.getServer().overworld().getGameTime();
-        if (!undying(r.soldier(), now)) return;
-        event.setAmount(Math.max(0, victim.getHealth() - 1));
-        r.settlement().log(r.soldier().name + " refused to fall");
+        if (mastery(r.soldier()) == PathSkill.UNDYING_RAGE && undying(r.soldier(), now)) {
+            event.setAmount(Math.max(0, victim.getHealth() - 1));
+            r.settlement().log(r.soldier().name + " refused to fall");
+            r.settlement().dirty = true;
+            return;
+        }
+        Settlement.Soldier saint = saint(r.settlement(), victim, level, now);
+        if (saint == null) return;
+        event.setAmount(0);
+        victim.setHealth(Math.min(victim.getMaxHealth(), 6));
+        r.settlement().log(saint.name + " " + PathSkill.SAINT.epithet() + " pulled " + r.soldier().name + " back from death");
         r.settlement().dirty = true;
+    }
+
+    /** A Saint of the town within 10 blocks whose blessing is ready, now spent; it may save itself. */
+    @Nullable
+    static Settlement.Soldier saint(Settlement s, LivingEntity victim, ServerLevel level, long now) {
+        for (Settlement.Soldier other : s.soldiers) {
+            if (mastery(other) != PathSkill.SAINT || now < other.undyingReadyAt && other.undyingReadyAt - now <= SAINT_COOLDOWN) continue;
+            Entity e = other.entity.equals(victim.getUUID()) ? victim : level.getEntity(other.entity);
+            if (e == null || !e.isAlive() && e != victim || e.distanceToSqr(victim) > 10 * 10) continue;
+            other.undyingReadyAt = now + SAINT_COOLDOWN;
+            return other;
+        }
+        return null;
     }
 
     /** Spends the berserker's undying charge if it's ready. */
@@ -337,18 +413,22 @@ public final class SoldierPaths {
 
     // ------------------------------------------------------------------ UI contract
 
-    /** {path, paths:[{id,label,desc,gear,state,req,becomes}], pathTree:[{id,label,desc,tier,cost,rank,state,req}], points} */
+    /** {path, pathLabel, epithet, pathWarning, paths:[{id,label,desc,gear,state,req,becomes}], pathTree:[{id,label,desc,tier,cost,rank,state,req}], points} */
     public static void describe(Settlement.Soldier so, CompoundTag out) {
         int rank = SoldierSkills.earnedPoints(so.skillXp), points = available(so);
+        PathSkill mastered = mastery(so);
         out.putInt("points", points);
         out.putString("path", so.path == null ? "" : so.path.name());
+        out.putString("pathLabel", so.path == null ? "" : so.path.label);
+        out.putString("epithet", mastered == null ? "" : mastered.epithet());
+        out.putString("pathWarning", so.path != null && so.seen && !so.pathReady ? "Path skills inactive: needs " + so.path.gear() : "");
         out.putInt("pathRank", SoldierPath.CHOOSE_RANK);
         ListTag paths = new ListTag();
         for (SoldierPath p : SoldierPath.values()) {
             CompoundTag t = new CompoundTag();
             String why = so.path == p ? null : so.path != null && !so.pathSkills.isEmpty() ? "Respec to change path" : p.blocker(so);
             t.putString("id", p.name()); t.putString("label", p.label); t.putString("desc", p.description);
-            t.putString("gear", "Needs " + p.gear()); t.putString("fits", p.fitsWho());
+            t.putString("gear", p == SoldierPath.HEALER ? "Works with any weapon" : "Needs " + p.gear()); t.putString("fits", p.fitsWho());
             t.putString("becomes", p.becomes != null && p.becomes != so.type ? "Retrains as a " + p.becomes.label.toLowerCase() : "");
             t.putString("state", so.path == p ? "chosen" : why == null ? "available" : "locked");
             t.putString("req", why == null ? "" : why);
