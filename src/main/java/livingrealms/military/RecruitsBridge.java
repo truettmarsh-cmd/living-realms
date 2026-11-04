@@ -300,6 +300,7 @@ public final class RecruitsBridge {
         if (!level.addFreshEntity(n)) {
             n.setUUID(UUID.randomUUID());
             if (!level.addFreshEntity(n)) return null;
+            Bonds.moved(level.getServer(), e.getUUID(), n.getUUID());
         }
         return n;
     }
