@@ -211,7 +211,9 @@ public class RecruitScreen extends Screen {
     void overview() {
         CompoundTag so = soldier();
         String town = so != null ? d.getString("town") : "not in a town garrison";
-        header(d.getString("name"), d.getString("type") + " · Recruits level " + d.getInt("lvl") + " · " + town);
+        String path = so == null || so.getString("pathLabel").isEmpty() ? "" : " · " + so.getString("pathLabel");
+        String epithet = so == null ? "" : so.getString("epithet");
+        header(d.getString("name") + (epithet.isEmpty() ? "" : " " + epithet), d.getString("type") + path + " · Recruits level " + d.getInt("lvl") + " · " + town);
         // rename
         int ry = cy + 30;
         ui.round(cx, ry, cw - 84, 18, 4, nameBox.isFocused() ? GOLD_DK : BORDER);

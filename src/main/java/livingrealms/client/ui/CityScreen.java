@@ -1773,7 +1773,8 @@ public class CityScreen extends Screen {
             ui.item(u.icon, cx + 8, y + 3);
             float hp0 = s.getFloat("max") <= 0 ? 0 : s.getFloat("hp") / s.getFloat("max");
             ui.bar(cx + 8, y + 20, 16, 2, hp0, hp0 > 0.5 ? GREEN : hp0 > 0.25 ? GOLD : RED, hp0 > 0.5 ? GREEN : hp0 > 0.25 ? GOLD : RED);
-            ui.text(ui.clip((s.getBoolean("royalGuard") ? "♛ " : "") + s.getString("name"), 116), cx + 28, y + 2, s.getBoolean("royalGuard") ? GOLD : seen ? TEXT : MUTED);
+            boolean legend = !s.getString("epithet").isEmpty();
+            ui.text(ui.clip((s.getBoolean("royalGuard") ? "♛ " : legend ? "✦ " : "") + s.getString("name") + (legend ? " " + s.getString("epithet") : ""), 116), cx + 28, y + 2, s.getBoolean("royalGuard") ? GOLD : legend ? PURPLE : seen ? TEXT : MUTED);
             int lvl = s.getInt("lvl");
             String stars = "★".repeat(Math.max(0, Math.min(5, lvl))) + (lvl > 5 ? "+" : "");
             ui.text(stars, cx + 28, y + 12, GOLD);
@@ -1790,7 +1791,7 @@ public class CityScreen extends Screen {
             ui.button("inventory" + id, rx, y + 4, 54, 14, "Inventory", Style.GHOST, seen && mine(), () -> recruitOp(id, "inventory"));
             if (rx - 42 >= bx + 68) ui.button("skills" + id, rx - 42, y + 4, 40, 14, "Skills", Style.GHOST, true, () -> selectedSoldier = id);
             if (row && !ui.over(rx - 42, y + 4, cx + cw - rx + 34, 14))
-                ui.tip(s.getString("name"), seen ? s.getString("gear") : "Away from town", "HP " + Math.round(hp * 100) + "% · morale " + (int) s.getFloat("morale"),
+                ui.tip(s.getString("name") + (s.getString("pathLabel").isEmpty() ? "" : " · " + s.getString("pathLabel")), seen ? s.getString("gear") : "Away from town", "HP " + Math.round(hp * 100) + "% · morale " + (int) s.getFloat("morale"),
                         s.getInt("kills") + " kills · Recruits level " + lvl, "Click for skills, weapons and legendary perks");
             y += 24;
         }

@@ -153,8 +153,11 @@ From skill rank 4, a town recruit can follow a specialist path on the new **Path
 | Spearman | footmen, shieldbearers (spear, polearm) | Dragonbane: +50% damage against foes with 60+ health. Hedgehog: +15% damage, melee attackers take 4 damage |
 | Marksman | bowmen, crossbowmen, dragon riders | Deadshot: every fourth shot hits for triple damage. Hunter's Mark: marked foes take +25% from all your town recruits for 8s |
 | Knight | horsemen | Warlord: recruits within 12 blocks deal +15% and take 10% less. Juggernaut: rider and horse become 1.4x giants with +20 health each and +20% damage |
+| Healer | footmen, shieldbearers, bowmen, crossbowmen (any weapon) | Saint: once every 2 minutes saves a recruit within 10 blocks from a killing blow on 6 HP, and mends itself. War Chaplain: recruits within 8 blocks heal 1 HP every 3s and deal +10% damage |
 
 Path skills work only with the path's gear (its weapons, a shield, or a horse). They have their own budgets on top of the general ones: +30% damage and 40% damage reduction; masteries add their fixed bonus beyond that. Retraining keeps the same recruit, UUID, inventory and levels. Giants need the optional Pehkui mod to change size; without it they keep the stats. Undying Rage never stops void or administrative kills.
+
+The Healer's skills bandage the most wounded recruits nearby (more on the badly hurt, two at a time with Surgeon) and cure poison, wither, weakness and slowness. A recruit with a mastery earns a title ("Bjorn Ironside the Titan") shown in Recruit Command and the roster, and the town's chronicle records it. Each morning such a master trains up to three lower-ranked town recruits who could follow its path, for 20 skill XP each. When a recruit is missing its path's gear, the Path page warns that its path skills are inactive.
 
 ## Battle reports
 

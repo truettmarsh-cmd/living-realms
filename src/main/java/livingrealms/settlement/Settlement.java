@@ -132,7 +132,10 @@ public final class Settlement {
         public livingrealms.military.SoldierPath path;
         public final Set<livingrealms.military.PathSkill> pathSkills = EnumSet.noneOf(livingrealms.military.PathSkill.class);
         public int pathHits;
-        public long rampageUntil, rageUntil, undyingReadyAt;
+        /** undyingReadyAt is also the Saint's cooldown: a recruit has only one mastery. */
+        public long rampageUntil, rageUntil, undyingReadyAt, mentorDay;
+        /** Whether the recruit carries its path's gear, refreshed every second; not saved. */
+        public boolean pathReady = true;
         public final Merit.Record merit = new Merit.Record();
 
         public CompoundTag save() {
@@ -181,7 +184,7 @@ public final class Settlement {
             pathSkills.forEach(sk -> pathLearned.add(StringTag.valueOf(sk.name())));
             t.put("pathSkills", pathLearned);
             t.putInt("pathHits", pathHits);
-            t.putLong("rampageUntil", rampageUntil); t.putLong("rageUntil", rageUntil); t.putLong("undyingReadyAt", undyingReadyAt);
+            t.putLong("rampageUntil", rampageUntil); t.putLong("rageUntil", rageUntil); t.putLong("undyingReadyAt", undyingReadyAt); t.putLong("mentorDay", mentorDay);
             Merit.save(merit, t);
             return t;
         }
@@ -236,7 +239,7 @@ public final class Settlement {
                 if (sk != null && sk.path == s.path && (!sk.mastery() || s.pathSkills.stream().noneMatch(livingrealms.military.PathSkill::mastery))) s.pathSkills.add(sk);
             }
             s.pathHits = Math.max(0, t.getInt("pathHits"));
-            s.rampageUntil = Math.max(0, t.getLong("rampageUntil")); s.rageUntil = Math.max(0, t.getLong("rageUntil")); s.undyingReadyAt = Math.max(0, t.getLong("undyingReadyAt"));
+            s.rampageUntil = Math.max(0, t.getLong("rampageUntil")); s.rageUntil = Math.max(0, t.getLong("rageUntil")); s.undyingReadyAt = Math.max(0, t.getLong("undyingReadyAt")); s.mentorDay = t.getLong("mentorDay");
             Merit.load(s.merit, t);
             return s;
         }

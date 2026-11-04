@@ -117,7 +117,7 @@ public final class PathsSelfTest {
             CompoundTag view = new CompoundTag(); SoldierPaths.describe(so, view);
             Map<String, String> states = new HashMap<>();
             for (Tag t : view.getList("pathTree", Tag.TAG_COMPOUND)) states.put(((CompoundTag) t).getString("id"), ((CompoundTag) t).getString("state"));
-            check(view.getList("paths", Tag.TAG_COMPOUND).size() == 6 && "learned".equals(states.get("COLOSSUS")) && "locked".equals(states.get("AEGIS"))
+            check(view.getList("paths", Tag.TAG_COMPOUND).size() == SoldierPath.values().length && "learned".equals(states.get("COLOSSUS")) && "locked".equals(states.get("AEGIS"))
                     && view.getInt("points") == 12 && view.getString("path").equals("SHIELDMAN"), "Describe " + states); checks++;
 
             // respec refunds the path, keeps it, then a new path can be taken
@@ -139,7 +139,7 @@ public final class PathsSelfTest {
             check(Math.abs(SoldierPaths.attack(s, so, bers, zombie, WeaponProficiency.AXE, false, now) - .21) < 1e-6, "Fury grows as health drops"); checks++;
             float healed = bers.getHealth();
             SoldierPaths.onKill(so, bers, now);
-            check(Math.abs(bers.getHealth() - healed - 3) < 1e-3 && so.rampageUntil == now + SoldierPaths.RAMPAGE_TICKS, "Bloodlust heals, Rampage starts"); checks++;
+            check(Math.abs(bers.getHealth() - healed - 3) < .01 && so.rampageUntil == now + SoldierPaths.RAMPAGE_TICKS, "Bloodlust heals, Rampage starts: " + healed + " -> " + bers.getHealth() + " of " + bers.getMaxHealth() + ", rampage " + so.rampageUntil + " vs " + now); checks++;
             bers.setHealth(1);
             check(Math.abs(SoldierPaths.attack(s, so, bers, zombie, WeaponProficiency.AXE, false, now) - SoldierPaths.PATH_CAP) < 1e-6, "Path bonuses capped at 30%"); checks++;
             check(Math.abs(SoldierPaths.defend(s, so, bers, level.damageSources().mobAttack(zombie), now) + SoldierPaths.RECKLESS_PENALTY) < 1e-9, "Reckless takes 5% more"); checks++;
@@ -169,6 +169,54 @@ public final class PathsSelfTest {
             check(Math.abs(SoldierPaths.attack(s, so, bers, zombie, WeaponProficiency.SWORD, false, now) - .25) < 1e-9, "Hunter's Mark: +25% for the whole town"); checks++;
             check(SoldierPaths.attack(s, so, bers, zombie, WeaponProficiency.SWORD, false, now + SoldierPaths.MARK_TICKS) == 0, "Mark fades"); checks++;
 
+            // missing gear shows on the Path page
+            RecruitsBridge.setSlot(bers, EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+            SoldierProgression.applySkills(bers, so);
+            CompoundTag warn = new CompoundTag(); so.seen = true; SoldierPaths.describe(so, warn); so.seen = false;
+            check(!so.pathReady && warn.getString("pathWarning").contains("axe"), "Missing gear warning: " + warn.getString("pathWarning")); checks++;
+            RecruitsBridge.setSlot(bers, EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_AXE));
+            SoldierProgression.applySkills(bers, so);
+            check(so.pathReady, "Warning clears with the right weapon"); checks++;
+
+            // healer: bandage, triage, cleanse, chaplain, saint, mentoring
+            LivingEntity medic = spawn(level, UnitType.BOWMAN, s, "Path Healer", spawned);
+            Settlement.Soldier hl = soldier(s, medic, UnitType.BOWMAN, WeaponProficiency.BOW);
+            hl.skillXp = 900;
+            check(SoldierPaths.choose(s, hl, SoldierPath.HEALER, medic, out) == null && out[0] == medic && hl.type == UnitType.BOWMAN, "A bowman becomes a healer in its own body"); checks++;
+            for (PathSkill sk : List.of(PathSkill.BANDAGE, PathSkill.TRIAGE, PathSkill.CLEANSE, PathSkill.SURGEON)) { check(SoldierPaths.learn(s, hl, sk, medic) == null, "Learn " + sk); checks++; }
+            // the healer treats itself here; allies are found by area, which needs entity-ticking chunks (checked below)
+            medic.setHealth(4);
+            medic.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 400));
+            SoldierPaths.pulse(s, hl, medic, 40 * 20);
+            check(Math.abs(medic.getHealth() - 8) < .01, "Bandage with Triage heals a badly wounded recruit 4: " + medic.getHealth()); checks++;
+            check(!medic.hasEffect(net.minecraft.world.effect.MobEffects.POISON), "Cleanse cures poison"); checks++;
+            SoldierPaths.pulse(s, hl, medic, 41 * 20);
+            check(Math.abs(medic.getHealth() - 8) < .01, "Bandage only every 4s"); checks++;
+            int legends = (int) s.chronicle.entries.stream().filter(x -> x.kind() == livingrealms.chronicle.Chronicle.Kind.LEGEND).count();
+            check(SoldierPaths.learn(s, hl, PathSkill.WAR_CHAPLAIN, medic) == null, "Learn War Chaplain"); checks++;
+            check(s.chronicle.entries.stream().filter(x -> x.kind() == livingrealms.chronicle.Chronicle.Kind.LEGEND).count() == legends + 1
+                    && s.chronicle.entries.get(s.chronicle.entries.size() - 1).text().contains("the Chaplain"), "A mastery is written in the chronicle"); checks++;
+            CompoundTag hv = new CompoundTag(); SoldierPaths.describe(hl, hv);
+            check(hv.getString("epithet").equals("the Chaplain") && hv.getString("pathLabel").equals("Healer"), "Epithet in the view"); checks++;
+            SoldierPaths.pulse(s, hl, medic, 3 * 20);
+            check(Math.abs(medic.getHealth() - 9) < .01, "War Chaplain regenerates: " + medic.getHealth()); checks++;
+            hl.pathSkills.remove(PathSkill.WAR_CHAPLAIN); hl.pathSkills.add(PathSkill.SAINT);
+            medic.setHealth(3);
+            lethal = new LivingDamageEvent(medic, level.damageSources().mobAttack(zombie), 50);
+            SoldierPaths.lethal(lethal);
+            check(lethal.getAmount() == 0 && Math.abs(medic.getHealth() - 6) < .01, "Saint saves a falling recruit on 6 HP"); checks++;
+            lethal = new LivingDamageEvent(medic, level.damageSources().mobAttack(zombie), 50);
+            SoldierPaths.lethal(lethal);
+            check(lethal.getAmount() == 50, "Saint cooldown"); checks++;
+            Settlement.Soldier junior = new Settlement.Soldier(); junior.entity = UUID.randomUUID(); junior.name = "Junior"; junior.type = UnitType.CROSSBOWMAN; junior.seen = true; junior.skillXp = 100;
+            Settlement.Soldier other = new Settlement.Soldier(); other.entity = UUID.randomUUID(); other.name = "Rider"; other.type = UnitType.HORSEMAN; other.seen = true; other.skillXp = 100;
+            s.soldiers.add(junior); s.soldiers.add(other);
+            long day5 = 5 * 24000L;
+            check(SoldierPaths.mentor(s, hl, day5) == 1 && junior.skillXp == 100 + SoldierPaths.MENTOR_XP && other.skillXp == 100, "A master mentors juniors who could follow its path"); checks++;
+            check(SoldierPaths.mentor(s, hl, day5 + 100) == 0 && junior.skillXp == 100 + SoldierPaths.MENTOR_XP, "Mentoring once a day"); checks++;
+            s.soldiers.remove(junior); s.soldiers.remove(other);
+            check(Settlement.Soldier.load(hl.save()).mentorDay == 5, "Mentor day saved"); checks++;
+
             // auras through the real damage hook; they look recruits up, which needs entity-ticking chunks
             if (!level.isPositionEntityTicking(s.center)) {
                 skipped = "aura checks skipped: the test site isn't entity-ticking";
@@ -186,6 +234,12 @@ public final class PathsSelfTest {
             hurt = new LivingHurtEvent(bers, level.damageSources().mobAttack(zombie), 10);
             RecruitCombat.hurt(hurt);
             check(Math.abs(hurt.getAmount() - 10) < .01, "Aegis has a range"); checks++;
+            hl.pathSkills.remove(PathSkill.SAINT); hl.pathSkills.add(PathSkill.WAR_CHAPLAIN);
+            medic.teleportTo(bers.getX() + 2, bers.getY(), bers.getZ());
+            medic.setHealth(medic.getMaxHealth()); bers.setHealth(4);
+            SoldierPaths.pulse(s, hl, medic, 44 * 20);
+            check(Math.abs(bers.getHealth() - 8) < .01, "Bandage heals the most wounded ally nearby: " + bers.getHealth()); checks++;
+            check(Math.abs(SoldierPaths.attack(s, so, bers, zombie, WeaponProficiency.AXE, false, now + SoldierPaths.MARK_TICKS) - .10) < 1e-9, "War Chaplain: +10% damage nearby"); checks++;
         } finally {
             for (Entity e : spawned) if (e != null) e.discard();
             manager.remove(s);

@@ -84,7 +84,7 @@ final class ChroniclePanel {
                 case "FIRE", "DISASTER", "RAID_LOST", "FALLEN", "REBELLION" -> RED;
                 case "WAR", "RAID_REPELLED", "RAID_WON", "RAID_FAILED", "SIEGE", "CONQUERED", "DRAGON" -> ORANGE;
                 case "GROWTH", "NOTE" -> FAINT;
-                case "HERO", "RANK", "CAPITAL", "CASTLE", "FOUNDING" -> GOLD;
+                case "HERO", "LEGEND", "RANK", "CAPITAL", "CASTLE", "FOUNDING" -> GOLD;
                 default -> BLUE;
             };
             ui.round(x + 10, ry + 3, 4, 4, 2, kc);

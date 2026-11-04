@@ -22,7 +22,9 @@ public enum SoldierPath {
     MARKSMAN("Marksman", "Bow or crossbow: long, armour-piercing shots and marks for the rest of the army.",
             EnumSet.of(UnitType.BOWMAN, UnitType.CROSSBOWMAN, UnitType.DRAGON_RIDER), EnumSet.of(WeaponProficiency.BOW, WeaponProficiency.CROSSBOW), null),
     KNIGHT("Knight", "Mounted shock cavalry: charges, an armoured horse and a banner the army rallies to.",
-            EnumSet.of(UnitType.HORSEMAN), null, null);
+            EnumSet.of(UnitType.HORSEMAN), null, null),
+    HEALER("Healer", "Patches up the recruits around it mid-fight, cures poison and keeps the army on its feet.",
+            EnumSet.of(UnitType.FOOTMAN, UnitType.SHIELDBEARER, UnitType.BOWMAN, UnitType.CROSSBOWMAN), null, null);
 
     public static final int CHOOSE_RANK = 4;
     public final String label, description;
@@ -42,11 +44,12 @@ public enum SoldierPath {
 
     public boolean fits(UnitType unit) { return units.contains(unit); }
 
-    /** The path's skills only work with its gear: its weapon families, a shield, or a horse. */
+    /** The path's skills only work with its gear: its weapon families, a shield, or a horse. Healers need nothing. */
     public boolean equipped(LivingEntity e, WeaponProficiency weapon) {
         return switch (this) {
             case SHIELDMAN -> e.getOffhandItem().getItem() instanceof ShieldItem;
             case KNIGHT -> e.isPassenger();
+            case HEALER -> true;
             default -> weapon != null && weapons.contains(weapon);
         };
     }
@@ -55,6 +58,7 @@ public enum SoldierPath {
         return switch (this) {
             case SHIELDMAN -> "a shield in the off hand";
             case KNIGHT -> "a horse to ride";
+            case HEALER -> "any weapon";
             default -> {
                 StringBuilder b = new StringBuilder();
                 int i = 0;
@@ -68,6 +72,7 @@ public enum SoldierPath {
         return switch (this) {
             case MARKSMAN -> "Bowmen, crossbowmen and dragon riders";
             case KNIGHT -> "Horsemen";
+            case HEALER -> "Footmen, shieldbearers, bowmen and crossbowmen";
             default -> "Footmen and shieldbearers";
         };
     }

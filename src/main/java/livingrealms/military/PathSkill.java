@@ -48,7 +48,14 @@ public enum PathSkill {
     LANCE_CHARGE(SoldierPath.KNIGHT, 3, "Lance Charge", "+20% damage on hits struck at a gallop"),
     BANNER(SoldierPath.KNIGHT, 4, "Banner", "Town recruits within 8 blocks deal +5% damage"),
     WARLORD(SoldierPath.KNIGHT, 5, "Warlord", "Town recruits within 12 blocks deal +15% damage and take 10% less"),
-    JUGGERNAUT(SoldierPath.KNIGHT, 5, "Juggernaut", "Rider and horse grow into giants: 1.4x size, +20 max health each, +20% damage, cannot be knocked back");
+    JUGGERNAUT(SoldierPath.KNIGHT, 5, "Juggernaut", "Rider and horse grow into giants: 1.4x size, +20 max health each, +20% damage, cannot be knocked back"),
+
+    BANDAGE(SoldierPath.HEALER, 1, "Bandage", "Every 4s, heals the most wounded town recruit within 6 blocks (itself included) for 2 HP"),
+    TRIAGE(SoldierPath.HEALER, 2, "Triage", "Bandage heals 4 HP on recruits below half health"),
+    CLEANSE(SoldierPath.HEALER, 3, "Cleanse", "Every 10s, cures poison, wither, weakness and slowness on town recruits within 6 blocks"),
+    SURGEON(SoldierPath.HEALER, 4, "Surgeon", "Bandage reaches 10 blocks and treats two recruits at once"),
+    SAINT(SoldierPath.HEALER, 5, "Saint", "Once every 2 minutes, a town recruit within 10 blocks that would fall is saved on 6 HP; the healer itself mends 1 HP every 2s"),
+    WAR_CHAPLAIN(SoldierPath.HEALER, 5, "War Chaplain", "Town recruits within 8 blocks heal 1 HP every 3s and deal +10% damage");
 
     public static final int[] TIER_RANKS = {0, 5, 7, 10, 13, 16};
     public static final int MASTERY_COST = 2;
@@ -68,6 +75,27 @@ public enum PathSkill {
     public boolean mastery() { return tier == 5; }
     public int cost() { return mastery() ? MASTERY_COST : 1; }
     public int requiredRank() { return TIER_RANKS[tier]; }
+    /** What the town calls a recruit with this mastery: "Bjorn the Titan". */
+    public String epithet() {
+        return switch (this) {
+            case BLADEMASTER -> "the Blademaster";
+            case WHIRLWIND -> "the Whirlwind";
+            case COLOSSUS -> "the Colossus";
+            case AEGIS -> "the Unbroken";
+            case TITAN -> "the Titan";
+            case UNDYING_RAGE -> "the Undying";
+            case DRAGONBANE -> "Dragonbane";
+            case HEDGEHOG -> "the Thorn";
+            case DEADSHOT -> "Deadeye";
+            case HUNTERS_MARK -> "the Hunter";
+            case WARLORD -> "the Warlord";
+            case JUGGERNAUT -> "the Juggernaut";
+            case SAINT -> "the Saint";
+            case WAR_CHAPLAIN -> "the Chaplain";
+            default -> "";
+        };
+    }
+
     public boolean giant() { return this == COLOSSUS || this == TITAN || this == JUGGERNAUT; }
 
     public static List<PathSkill> of(SoldierPath path) { return Arrays.stream(values()).filter(s -> s.path == path).toList(); }

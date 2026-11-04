@@ -64,6 +64,9 @@ public final class Chronicle {
         /** (soldier name, title) */
         HERO("Hero", "{0} was raised to {1}, and their name is spoken in the taverns.", "For valour, {0} was made {1}.",
                 "{0} earned the rank of {1}."),
+        /** (soldier name, mastery, epithet) a recruit attained a legendary mastery */
+        LEGEND("Legend", "{0} mastered {1}, and the town took to calling them {0} {2}.", "Word spread of {0} {2}, who had mastered {1}.",
+                "{0} attained the legendary mastery {1}; songs now name them {2}."),
         /** (soldier name, title, kills or "") */
         FALLEN("Fallen", "{1} {0} fell in battle{2?, after }{2}{2? kills}. The town mourned.", "{town} lost {1} {0}{2?, slayer of }{2}{2? foes}.",
                 "{1} {0} died defending the realm{2?, with }{2}{2? kills to their name}."),
