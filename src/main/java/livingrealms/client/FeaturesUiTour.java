@@ -106,6 +106,11 @@ public final class FeaturesUiTour {
             case 425 -> page(mc, "OVERVIEW");
             case 440 -> shot(mc, "854_gs2_overview");
             case 450 -> { window(mc, 1280, 720); mc.options.guiScale().set(2); mc.resizeDisplay(); }
+            // 0.11.0: the Kingdom page's Royal decrees and Wonders cards, at its foot
+            case 452 -> page(mc, "KINGDOM");
+            case 460 -> shot(mc, "720p_gs2_kingdom");
+            case 462 -> { if (mc.screen != null) mc.screen.mouseScrolled(mc.getWindow().getGuiScaledWidth() / 2.0 + 60, mc.getWindow().getGuiScaledHeight() / 2.0, -400); }
+            case 468 -> shot(mc, "720p_gs2_kingdom_decrees_wonders");
             // the caravan leaves by the high street
             case 470 -> server.execute(() -> watchRoad(server.getPlayerList().getPlayer(id)));
             case 480 -> mc.setScreen(null);
