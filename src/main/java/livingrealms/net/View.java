@@ -42,6 +42,7 @@ public final class View {
         t.putInt("garrisonTarget", s.garrisonTarget);
         t.putInt("garrisonGoal", Autonomy.target(s));
         t.putInt("garrisonNow", s.soldiers.size() + s.training.size());
+        t.putString("supplyLow", livingrealms.supply.Resupply.townWarning(p.server, s));
         t.putBoolean("researchAuto", s.researchAuto);
         t.putInt("researchSkips", s.researchSkip.size());
         String next = s.activeResearch.isEmpty() ? Autonomy.pickResearch(s) : null;

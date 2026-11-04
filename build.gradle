@@ -109,6 +109,11 @@ minecraft {
                 workingDirectory project.file(project.property('dragonTestDir'))
                 property 'livingrealms.dragonTest', 'true'
             }
+            // ./gradlew runServer -PsupplyTest -PsupplyTestDir=<fresh dir> : recruit auto-resupply (see SupplySelfTest, docs/resupply.md)
+            if (project.hasProperty('supplyTest')) {
+                workingDirectory project.file(project.property('supplyTestDir'))
+                property 'livingrealms.supplyTest', 'true'
+            }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')
                 property 'livingrealms.militaryTest', 'true'

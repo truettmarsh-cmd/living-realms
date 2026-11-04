@@ -76,6 +76,7 @@ public final class RecruitCommand {
             case "wander" -> RecruitsBridge.wander(e);
             case "rename" -> err = rename(p, e, d.getString("name"));
             case "enlist" -> err = enlist(p, e);
+            case "supplyAuto", "supplyOwner" -> err = livingrealms.supply.Resupply.handle(p, e, op, d);
             case "promote" -> {
                 int prof = d.getInt("profession");
                 err = RecruitsBridge.promotionBlocker(e, prof);
@@ -116,6 +117,7 @@ public final class RecruitCommand {
         t.putInt("follow", RecruitsBridge.followState(e));
         t.putString("origin", RecruitOrigins.origin(e).name());
         t.putBoolean("worker", RecruitsBridge.isWorker(e));
+        t.put("supply", livingrealms.supply.Resupply.describe(p, e));
         // Recruits' own inventory screen only finds recruits within 10 blocks of the player
         t.putBoolean("near", e.level() == p.level() && e.distanceTo(p) <= 8);
         SoldierProgression.Record rec = SoldierProgression.record(p.server, e);
