@@ -106,7 +106,7 @@ public final class Simulation {
         }
         d.foodNeedPerDay = s.population * 4 + s.soldiers.size() * 5 * (s.has("logistics") ? 0.7 : 1.0);
         d.researchPerDay = researchRate(s, d);
-        d.emeraldsPerDay = (s.population * TAX[s.taxLevel] + d.workers.getOrDefault(Job.MERCHANT, 0) * 3.0 * (s.has("banking") ? 1.5 : 1))
+        d.emeraldsPerDay = (s.population * TAX[s.taxLevel] * Decrees.taxFactor(s) + d.workers.getOrDefault(Job.MERCHANT, 0) * 3.0 * (s.has("banking") ? 1.5 : 1))
                 * livingrealms.citizen.Citizens.taxBonus(s);
         double food = 0;
         for (Plot p : s.plots) {
@@ -153,6 +153,7 @@ public final class Simulation {
         h += Statecraft.mood(s, why);
         h += livingrealms.hardship.Hardships.mood(s, why);
         h += livingrealms.citizen.Citizens.townMood(s, why);
+        h += Decrees.mood(s, why);
         d.happinessTarget = Math.max(0, Math.min(100, h));
     }
 

@@ -166,6 +166,7 @@ public final class Wars {
                 if (mine != null && Realms.offersPeace(es.vxFaction, mine, server.overworld().getGameTime())) will += 25;
             } catch (RuntimeException ignored) {}
         }
+        will += Decrees.peaceBonus(proposer);
         return will >= cost(t, days);
     }
 

@@ -76,6 +76,7 @@ public final class RecruitCombat {
         long time = level.getServer().overworld().getGameTime();
         float damage = event.getAmount();
         if (source.getEntity() instanceof LivingEntity attacker) {
+            damage *= (float) (1 + livingrealms.settlement.Decrees.warHorn(attacker)); // War Horn decree: its own +15% term, outside the budgets
             var record = SoldierProgression.record(level.getServer(), attacker);
             if (record != null) {
                 WeaponProficiency weapon = weapon(source, attacker);

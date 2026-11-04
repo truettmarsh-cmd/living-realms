@@ -182,6 +182,7 @@ public final class Hardships {
         if (hasChapel(s)) out.add(Map.entry("chapel", .75));
         if (hasApothecary(s)) out.add(Map.entry("apothecary", .6));
         if (s.has(RESEARCH)) out.add(Map.entry("Herb Lore", .6));
+        livingrealms.settlement.Decrees.sickness(s, now, out);
         return out;
     }
 

@@ -98,6 +98,16 @@ The City Manager's **Kingdom** page (last tab) keeps the kingdom's affairs: its 
 
 The warfare test (`-PwarfareTest`) and the Village Expansion test (`-PvillageExpansionTest`, with and without `-PvillageExpansion`) include these rules.
 
+## Royal decrees
+
+A kingdom of City rank can issue royal decrees from the **Royal decrees** card of the Kingdom page, after the **Royal Decrees** research (after Urban Planning) in any of its cities. Each has a cost from the capital's stockpile and a cooldown; the ruler gets a chat line and a toast when one is issued and when it ends.
+
+- **City rank.** **War Horn** (24 emeralds, 1-day cooldown, needs Command): for 3 minutes every recruit you own deals +15% damage, a term of its own outside the other buff budgets, gains 20 morale and does not fall below 50 (Morale addon too). **Royal Feast** (32 emeralds and 2 food per person): +10 mood and +4 loyalty a day for 2 days, but sickness 1.5x likelier for half a day. **Tax Holiday** (free): no head tax for 2 days, +8 mood, +3 loyalty a day. **Royal Levy** (free): 1 emerald per person at once in every town, then −10 mood and −3 loyalty a day for 2 days. **Amnesty** (96 emeralds, 8 gold): a restless conquered city rises to loyalty 55, and for a day NPC kingdoms weigh your peace offers +15.
+- **Capital rank.** **Call the Banners** (48 emeralds + 4 and 10 food a levy, 5-day cooldown, needs Command): every town sends 1 to 6 militia levies by rank (at most 20) to the city you issue it from. They are real Villager Recruits soldiers who join its garrison for a day and are then removed, also from unloaded ground and after a restart. **Martial Law** (40 emeralds, only while one of your cities is raided): breaches go 40% slower, the garrison heals 1 HP every 3 seconds, every town has −10 mood, until the raid ends.
+- NPC kingdoms sound the War Horn when they raid or are raided, and an NPC Capital calls its banners when attacked. Call the Banners and Amnesty go into the chronicle.
+
+Details in [docs/decrees.md](docs/decrees.md); test with `./gradlew runServer -PdecreesTest -PdecreesTestDir=<fresh dir>`.
+
 ## Quests and bounties
 
 The City Manager's **Quests** page follows a quest line from your first charter to a crown: five chapters (A Charter and a Hearth, Stone and Scholarship, Walls and Watchmen, The Realm Widens, The Crown) of 5–6 steps each, from founding a town and training soldiers through ranks, research, walls, holding off a raid, a second city, a truce, the Capital Castle and taking a rival capital. Steps complete by themselves when your kingdom gets there, only within the current chapter, and each pays once (emeralds, items, stockpile goods, research or soldier merit) with a toast and a chime. Progress is per player and saved with the world.

@@ -368,6 +368,7 @@ public final class Statecraft {
             truces.add(tt);
         }
         t.put("truces", truces);
+        t.put("decrees", Decrees.view(p, m, s));
         return t;
     }
 
@@ -381,6 +382,7 @@ public final class Statecraft {
             case "scAccept" -> Wars.answer(player.server, m, s.kingdomId(), d.hasUUID("enemy") ? d.getUUID("enemy") : null, true);
             case "scReject" -> Wars.answer(player.server, m, s.kingdomId(), d.hasUUID("enemy") ? d.getUUID("enemy") : null, false);
             case "scPacify" -> Loyalty.pacify(player.server, m, s);
+            case "scDecree" -> Decrees.issue(player, m, s, Decree.of(d.getString("decree")));
             default -> "Unknown action";
         };
     }

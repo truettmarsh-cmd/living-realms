@@ -56,6 +56,8 @@ public final class Chronicle {
         CONQUERED("Ruler", "{town} passed into the hands of {0}.", "The banners of {0} now fly over {town}.", "{town} bent the knee to {0}."),
         /** (former ruler) */
         REBELLION("Rebellion", "{town} rose in rebellion against {0}.", "The people of {town} threw off the rule of {0}."),
+        /** (text) a major royal decree (settlement.Decrees) */
+        DECREE("Decree", "{0}"),
         /** (enemy kingdom) */
         WAR("War", "War was declared with {0}.", "The kingdom went to war with {0}; the smiths worked through the night.",
                 "Heralds brought word of war with {0}."),

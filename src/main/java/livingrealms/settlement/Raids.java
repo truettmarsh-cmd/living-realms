@@ -97,6 +97,7 @@ public final class Raids {
         raid.siege = Siege.begin(server.getLevel(target.dim), source, target);
         m.raids.add(raid);
         Strategy.raidStarted(m, raid, server.overworld().getGameTime());
+        Strategy.decrees(server, m, source, target);
         Statecraft.raidStarted(server, m, raid, source, target);
         livingrealms.compat.Compat.raidStarted(server, raid, source, target);
         livingrealms.dragon.Sorties.raidStarted(server, m, raid, source, target);

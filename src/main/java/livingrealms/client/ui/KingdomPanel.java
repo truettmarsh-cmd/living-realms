@@ -11,7 +11,7 @@ import java.util.function.BiConsumer;
 
 import static livingrealms.client.ui.Imm.*;
 
-/** Kingdom page: loyalty of this city and the provinces, the war ledger with peace terms, tribute and truces. */
+/** Kingdom page: loyalty of this city and the provinces, the war ledger with peace terms, tribute and truces, royal decrees. */
 final class KingdomPanel {
     static final String[] TERMS = {"White peace", "Tribute", "Cede city", "Pay tribute"};
     static final String[] TERM_IDS = {"WHITE", "TRIBUTE", "CITY", "PAY"};
@@ -37,7 +37,9 @@ final class KingdomPanel {
         int warsH = wars.isEmpty() ? 34 + 6 : 0;
         for (Tag t : wars) warsH += warHeight((CompoundTag) t) + 6;
         int ledgerH = 22 + Math.max(1, tribute.size() + truces.size()) * 13 + 4;
-        int total = loyH + 6 + (provH > 0 ? provH + 6 : 0) + warsH + ledgerH;
+        CompoundTag decrees = sc.getCompound("decrees");
+        int decH = DecreesPanel.height(decrees);
+        int total = loyH + 6 + (provH > 0 ? provH + 6 : 0) + warsH + ledgerH + (decH > 0 ? decH + 6 : 0);
         int off = ui.beginScroll("kingdom", x, y + 30, w, h - 30, total);
         int cy = y + 30 - off;
 
@@ -130,6 +132,10 @@ final class KingdomPanel {
             ui.right(r.getInt("minutes") + " min left", x + w - 12, ly, FAINT);
             ly += 13;
         }
+        cy += ledgerH + 6;
+
+        // ---- royal decrees
+        if (decH > 0) DecreesPanel.draw(ui, x, cy, w - 4, decrees, ruler, act);
         ui.endScroll();
     }
 
