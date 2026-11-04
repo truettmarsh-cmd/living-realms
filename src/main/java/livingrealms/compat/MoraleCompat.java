@@ -38,6 +38,13 @@ final class MoraleCompat {
         return n;
     }
 
+    static void steady(Entity e, float min) {
+        IMorale m = of(e);
+        if (m == null) return;
+        if (m.getMorale() < min) m.setMorale(Math.min(min, m.getMaxMorale()));
+        if (m.isPanicking()) m.setPanicking(false);
+    }
+
     static float morale(Entity e) { IMorale m = of(e); return m == null ? -1 : m.getMorale(); }
 
     private MoraleCompat() {}

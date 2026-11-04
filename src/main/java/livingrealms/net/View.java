@@ -173,6 +173,7 @@ public final class View {
         livingrealms.military.SoldierRanks.describe(s, so, t);
         livingrealms.military.SoldierSpecials.describe(s, so, t);
         livingrealms.military.SoldierPaths.describe(so, t);
+        livingrealms.military.Heroes.describe(s, so, t);
         return t;
     }
 

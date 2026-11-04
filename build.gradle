@@ -134,6 +134,11 @@ minecraft {
                 workingDirectory project.file(project.property('wondersTestDir'))
                 property 'livingrealms.wondersTest', 'true'
             }
+            // ./gradlew runServer -PheroesTest -PheroesTestDir=<fresh dir> : heroes, ultimates and Valor (see HeroesSelfTest, docs/heroes.md)
+            if (project.hasProperty('heroesTest')) {
+                workingDirectory project.file(project.property('heroesTestDir'))
+                property 'livingrealms.heroesTest', 'true'
+            }
             if (project.hasProperty('militaryTest')) {
                 workingDirectory project.file(project.findProperty('militaryTestDir') ?: 'run-military-test')
                 property 'livingrealms.militaryTest', 'true'

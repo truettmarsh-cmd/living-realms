@@ -40,7 +40,7 @@ The lowest score wins. Shieldbearers choose first and archers last. The result: 
 
 **Archers keep their distance.** An archer between 10 and 22 blocks from its target holds where it stands. Closer or farther, it holds a point 14 blocks from the target, on its own side.
 
-**Falling back.** A soldier below 30% health leaves the line. With broken Recruits morale (below 20) the threshold is 45%. It turns passive, drops its target and walks to the rally point:
+**Falling back.** A soldier below 30% health leaves the line. With broken Recruits morale (below 20) the threshold is 45%. Within 12 blocks of one of its owner's Heroes it is 20%, broken morale or not (docs/heroes.md). It turns passive, drops its target and walks to the rally point:
 
 - for attackers, the city edge on the side they came from;
 - for defenders, 8 blocks behind the centre, away from the attackers.

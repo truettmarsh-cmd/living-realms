@@ -59,7 +59,7 @@ Each wonder works for every city of the kingdom that holds it, as long as it sta
 - **Citadel of Heroes**
   - Recruits who finish training in any city of the kingdom start 2 levels higher (on top of Veterans) with one skill point (50 skill XP).
   - Every city's garrison cap rises by 25%, and by at least 4.
-  - For other features: `Wonders.has(kingdom, Wonder.CITADEL)` tells whether a kingdom holds it. The kingdom is a player's UUID or an NPC kingdom's id.
+  - The kingdom may keep 2 more Heroes (see [heroes](heroes.md)).
 
 ## Showing it
 

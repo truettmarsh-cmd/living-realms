@@ -250,7 +250,8 @@ public final class PeoplePanel {
         for (Tag e : mem) {
             CompoundTag m = (CompoundTag) e;
             if (cy + 20 > y + h) break;
-            ui.text(ui.clip(m.getString("n") + ", " + m.getInt("a") + (m.getBoolean("mayor") ? " · mayor" : ""), w - 18), x + 10, cy, m.getBoolean("mayor") ? GOLD_DK : TEXT);
+            boolean hero = m.getBoolean("hero");
+            ui.text(ui.clip(m.getString("n") + (hero ? " · Hero" + (m.getInt("a") > 0 ? ", Valor " + m.getInt("a") : "") : ", " + m.getInt("a")) + (m.getBoolean("mayor") ? " · mayor" : ""), w - 18), x + 10, cy, hero ? GOLD : m.getBoolean("mayor") ? GOLD_DK : TEXT);
             ui.text(ui.clip(m.getString("j") + ", died " + m.getString("c") + " · day " + m.getLong("d"), w - 18), x + 10, cy + 9, FAINT);
             cy += 21;
         }

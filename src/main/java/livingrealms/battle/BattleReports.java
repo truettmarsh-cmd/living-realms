@@ -270,6 +270,7 @@ public final class BattleReports {
         }
         if (r.kills.isEmpty() && r.fallen().isEmpty() && damage < MIN_DAMAGE) return null;
         r.place = BattleContext.place(server, b.dim, b.pos);
+        Heroes.survived(server, r);
         BattleData.get(server).add(b.owner, r);
         BattleContext.chronicle(server, b.owner, r);
         notify(server, b.owner, r);

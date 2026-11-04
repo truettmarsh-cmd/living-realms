@@ -91,7 +91,8 @@ public final class BattleAI {
             if (out.size() >= max) break;
             double h = health(e);
             boolean already = e.getPersistentData().getBoolean(FALLBACK);
-            double limit = already ? RETURN : RecruitsBridge.isRecruit(e) && RecruitsBridge.morale(e) < SHAKEN_MORALE ? SHAKEN_FALL_BACK : FALL_BACK;
+            double limit = already ? RETURN : Heroes.inspired(e) ? Heroes.INSPIRED_FALL_BACK
+                    : RecruitsBridge.isRecruit(e) && RecruitsBridge.morale(e) < SHAKEN_MORALE ? SHAKEN_FALL_BACK : FALL_BACK;
             if (h < limit) out.add(e);
         }
         return out;

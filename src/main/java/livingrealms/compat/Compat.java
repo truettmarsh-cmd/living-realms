@@ -106,6 +106,12 @@ public final class Compat {
         try { MoraleCompat.add(e, delta); } catch (Throwable t) { fail(MORALE, t); }
     }
 
+    /** A Hero knows no fear: its battle morale is kept at least {@code min} and it never panics. */
+    public static void steady(Entity e, float min) {
+        if (!loaded(MORALE) || !on(CompatConfig.MORALE) || !ok(MORALE)) return;
+        try { MoraleCompat.steady(e, min); } catch (Throwable t) { fail(MORALE, t); }
+    }
+
     /** Workers-mod workers fill town jobs before townsfolk do. */
     public static void staff(Settlement s, Settlement.Derived d) {
         if (loaded(WORKERS) && on(CompatConfig.WORKERS_STAFF)) WorkersCompat.staff(s, d);

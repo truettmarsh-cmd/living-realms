@@ -20,7 +20,7 @@ public enum Wonder {
     EXCHANGE("grand_exchange", "Grand Exchange", Category.MARKET, Items.EMERALD_BLOCK,
             "Caravans sell for ×" + Wonders.EXCHANGE_CARAVAN + ". Every city's treasury gains +" + Wonders.EXCHANGE_TRICKLE + " emeralds a day."),
     CITADEL("citadel_of_heroes", "Citadel of Heroes", Category.BARRACKS, Items.GOLDEN_SWORD,
-            "Recruits trained in the kingdom start " + Wonders.CITADEL_LEVELS + " levels higher with a skill point. Garrison cap +" + pct(Wonders.CITADEL_GARRISON - 1) + " (at least +" + Wonders.CITADEL_GARRISON_MIN + ").");
+            "Recruits trained in the kingdom start " + Wonders.CITADEL_LEVELS + " levels higher with a skill point. Garrison cap +" + pct(Wonders.CITADEL_GARRISON - 1) + " (at least +" + Wonders.CITADEL_GARRISON_MIN + "). 2 more Hero places.");
 
     /** Procedural kind, also the research id. */
     public final String kind;
