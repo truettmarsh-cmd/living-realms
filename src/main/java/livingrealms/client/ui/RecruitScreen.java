@@ -25,7 +25,7 @@ public class RecruitScreen extends Screen {
     public enum Page {
         OVERVIEW("Overview", Items.BELL), PROMOTIONS("Promotions", Items.GOLDEN_HELMET), SKILLS("Skills", Items.ENCHANTED_BOOK), PATH("Path", Items.IRON_SWORD),
         WEAPONS("Weapons", Items.STONE_AXE), LEGENDARY("Legendary", Items.NETHER_STAR),
-        REPORTS("Reports", Items.WRITABLE_BOOK), SPECIAL("Special", Items.BLAZE_POWDER);
+        SPECIAL("Special", Items.BLAZE_POWDER), REPORTS("Reports", Items.WRITABLE_BOOK);
         final String label;
         final Item icon;
         Page(String label, Item icon) { this.label = label; this.icon = icon; }
@@ -431,7 +431,7 @@ public class RecruitScreen extends Screen {
             if (key != GLFW.GLFW_KEY_ESCAPE) return nameBox.keyPressed(key, scan, mods) || true;
         }
         if (!livingrealms.client.ClientSetup.RECRUIT.isUnbound() && livingrealms.client.ClientSetup.RECRUIT.matches(key, scan)) { onClose(); return true; }
-        // pages follow the hotbar keybinds (1–6 by default); Tab and Shift+Tab step through them
+        // pages follow the hotbar keybinds (1–8 by default: Special is 7, Reports 8); Tab and Shift+Tab step through them
         CompoundTag so = soldier();
         java.util.List<Page> shown = new java.util.ArrayList<>(java.util.List.of(Page.values()));
         if (so == null || !SoldierPanels.hasSpecials(so)) shown.remove(Page.SPECIAL);

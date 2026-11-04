@@ -32,6 +32,9 @@ public final class ReportsPanel {
 
     ReportsPanel(Imm ui) { this.ui = ui; }
 
+    /** Forgets the last server's reports (on logout), so another world or server never shows them. */
+    public static void clear() { reports = List.of(); active = 0; received = false; requested = 0; }
+
     /** The "reports" packet from the server. */
     public static void receive(CompoundTag data) {
         List<BattleReport> list = new ArrayList<>();

@@ -51,6 +51,7 @@ public final class ClientEvents {
     public static void logout(ClientPlayerNetworkEvent.LoggingOut e) {
         ClientState.clear();
         Placement.cancel();
+        livingrealms.client.ui.ReportsPanel.clear();
     }
 
     private ClientEvents() {}
