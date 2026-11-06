@@ -22,11 +22,17 @@ import java.util.*;
 /** Persistent, physical battles. Missing/unloaded soldiers are never counted as defeated. */
 public final class Raids {
     public static final int HOLD_TICKS = 1200, MAX_TICKS = 12000;
+    /** A raid stalled this long in a row (cities or armies unloaded) is called off, so no raid can hang forever. */
+    public static final int PAUSE_LIMIT = 6000;
 
     public static final class Raid {
         public UUID source, target, attacker, defender;
         public final Set<UUID> soldiers = new LinkedHashSet<>();
         public int held, elapsed;
+        /** Ticks in a row the raid has been paused; reaching PAUSE_LIMIT calls it off. */
+        public int paused;
+        /** Defending soldiers of the target kingdom who died while the raid lasted (war exhaustion and score). */
+        public int defendersLost;
         /** Whether the defenders were closing ranks last second; only for announcing the change. */
         boolean regrouped;
         /** The siege of a walled town (docs/sieges.md); an open-field assault for an unwalled one. */
@@ -38,7 +44,7 @@ public final class Raids {
             t.putUUID("source", source); t.putUUID("target", target);
             t.putUUID("attacker", attacker); t.putUUID("defender", defender);
             ListTag ids = new ListTag(); soldiers.forEach(id -> ids.add(StringTag.valueOf(id.toString())));
-            t.put("soldiers", ids); t.putInt("held", held); t.putInt("elapsed", elapsed);
+            t.put("soldiers", ids); t.putInt("held", held); t.putInt("elapsed", elapsed); t.putInt("paused", paused); t.putInt("defendersLost", defendersLost);
             t.put("siege", siege.save());
             return t;
         }
@@ -48,6 +54,8 @@ public final class Raids {
             for (Tag id : t.getList("soldiers", Tag.TAG_STRING)) r.soldiers.add(UUID.fromString(id.getAsString()));
             r.held = Math.max(0, Math.min(HOLD_TICKS, t.getInt("held")));
             r.elapsed = Math.max(0, t.getInt("elapsed"));
+            r.paused = Math.max(0, t.getInt("paused"));
+            r.defendersLost = Math.max(0, t.getInt("defendersLost"));
             r.siege = Siege.load(t.getCompound("siege")); return r;
         }
     }
@@ -71,6 +79,8 @@ public final class Raids {
         String realms = Realms.raidBlocker(server, m, source, target);
         if (realms != null) return realms;
         if (!source.dim.equals(target.dim)) return "Raids require cities in the same dimension";
+        if (!source.isAi() && !target.isAi() && target.owner != null && !Config.RAID_OFFLINE.get()
+                && server.getPlayerList().getPlayer(target.owner) == null) return target.ownerName + " is offline: their cities can be raided only while they play";
         if (source.center.distSqr(target.center) > (double) Config.RAID_RANGE.get() * Config.RAID_RANGE.get()) return "Target is beyond raid range";
         if (engaged(m, source) || engaged(m, target)) return "One of these kingdoms already has a raid in progress";
         String peace = Statecraft.raidBlocker(server, m, source, target);
@@ -121,7 +131,14 @@ public final class Raids {
     /** The target is untrusted client data; the attacking kingdom always comes from the authenticated player. */
     public static String playerStart(ServerPlayer player, SettlementManager m, Settlement target) {
         Settlement source = playerSource(player.server, m, player.getUUID(), target);
-        if (source == null) return "No eligible city: need 3 soldiers, loaded nearby cities, no active raid, and no recovery cooldown";
+        if (source == null) {
+            // say why the nearest city of the player's own can't march, not a catch-all list
+            Settlement near = m.ownedBy(player.getUUID()).stream().filter(t -> t.dim.equals(target.dim))
+                    .min(Comparator.comparingDouble(t -> t.center.distSqr(target.center))).orElse(null);
+            if (near == null) return m.ownedBy(player.getUUID()).isEmpty() ? "You rule no city to raid from" : "Raids require cities in the same dimension";
+            String why = canStart(player.server, m, near, target);
+            return why == null ? "No city of yours can march on " + target.name : near.name + ": " + why;
+        }
         return start(player.server, m, source, target);
     }
 
@@ -169,25 +186,21 @@ public final class Raids {
             finish(server, m, raid, "Raid ended because control of a city changed"); return;
         }
         ServerLevel level = server.getLevel(target.dim);
-        if (level == null || !level.hasChunkAt(source.center) || !level.hasChunkAt(target.center)) {
-            status(source, target, "Raid paused: waiting for both cities to load"); return;
-        }
+        // only the fight's city has to be loaded: the attacking city plays no part once its army has marched
+        if (level == null || !level.hasChunkAt(target.center)) { pause(server, m, raid, source, target, "waiting for " + target.name + " to load"); return; }
         // Death removes the soldier record; unload does not. Never turn an unloaded army into a defeat.
         raid.soldiers.removeIf(id -> source.soldiers.stream().noneMatch(so -> so.entity.equals(id)));
         if (raid.soldiers.isEmpty()) { finish(server, m, raid, "Raid defeated: the attacking force was lost"); return; }
         List<LivingEntity> attackers = new ArrayList<>(), defenders = new ArrayList<>();
         for (UUID id : raid.soldiers) {
             Entity e = level.getEntity(id);
-            if (!(e instanceof LivingEntity living) || !e.isAlive()) {
-                status(source, target, "Raid paused: attacking soldiers are unloaded"); return;
-            }
+            if (!(e instanceof LivingEntity living) || !e.isAlive()) { pause(server, m, raid, source, target, "attacking soldiers are unloaded"); return; }
             attackers.add(living);
         }
         for (Settlement town : Kingdoms.cities(m, target)) for (var so : town.soldiers) {
+            // a soldier missing at the last garrison count (far off, or gone without dying) is not waited for
             Entity e = livingrealms.military.SoldierProgression.findEntity(server, so.entity);
-            if (e == null && town == target) {
-                status(source, target, "Raid paused: defending soldiers are unloaded"); return;
-            }
+            if (e == null && so.seen && town == target) { pause(server, m, raid, source, target, "defending soldiers are unloaded"); return; }
             if (e instanceof LivingEntity living && e.isAlive() && e.level() == level && target.contains(e.blockPosition())) {
                 defenders.add(living);
                 if ((raid.elapsed + 20) % SoldierRanks.RAID_DEFEND_TICKS == 0)
@@ -196,6 +209,7 @@ public final class Raids {
         }
         for (ServerPlayer p : level.players()) if (p.getUUID().equals(target.owner) && !p.isCreative() && !p.isSpectator()
                 && p.isAlive() && target.contains(p.blockPosition())) defenders.add(p);
+        raid.paused = 0;
         raid.elapsed += 20;
         if (raid.elapsed >= raid.maxTicks()) { finish(server, m, raid, "Raid repelled: attackers failed to take the city in time"); return; }
         target.alarmUntil = level.getGameTime() + 100;
@@ -298,6 +312,13 @@ public final class Raids {
             ServerPlayer p = server.getPlayerList().getPlayer(s.owner);
             if (p != null) p.sendSystemMessage(Component.literal(message));
         }
+    }
+
+    /** The raid can't be fought this second; one stalled for PAUSE_LIMIT in a row is called off with no winner. */
+    static void pause(MinecraftServer server, SettlementManager m, Raid raid, Settlement source, Settlement target, String why) {
+        raid.paused += 20;
+        if (raid.paused >= PAUSE_LIMIT) { finish(server, m, raid, "Raid called off: the armies never met (" + why + ")"); return; }
+        status(source, target, "Raid paused: " + why + " · called off in " + Math.max(1, (PAUSE_LIMIT - raid.paused + 1199) / 1200) + " min");
     }
 
     static void finish(MinecraftServer server, SettlementManager m, Raid raid, String message) {

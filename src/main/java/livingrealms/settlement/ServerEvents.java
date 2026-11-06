@@ -75,6 +75,10 @@ public final class ServerEvents {
     public static void onChunkLoad(ChunkEvent.Load e) {
         if (!(e.getLevel() instanceof ServerLevel level) || !(e.getChunk() instanceof LevelChunk chunk)) return;
         if (!Config.AI_VILLAGES.get() || chunk.getAllStarts().isEmpty() || livingrealms.settlement.vx.Vx.active()) return;
+        // only villages' own start chunks are remembered, so the set stays small however far the world is explored
+        var registry = level.registryAccess().registryOrThrow(Registries.STRUCTURE);
+        if (chunk.getAllStarts().entrySet().stream().noneMatch(en -> en.getValue().isValid() && en.getValue().getChunkPos().equals(chunk.getPos())
+                && registry.wrapAsHolder(en.getKey()).is(StructureTags.VILLAGE))) return;
         long key = chunk.getPos().toLong() ^ ((long) level.dimension().location().hashCode() << 40);
         if (!SEEN.add(key)) return;
         PENDING.add(new Pending(level.dimension(), chunk.getPos()));
@@ -92,7 +96,10 @@ public final class ServerEvents {
             if (!registry.wrapAsHolder(structure).is(StructureTags.VILLAGE)) return;
             BoundingBox bb = start.getBoundingBox();
             int x = (bb.minX() + bb.maxX()) / 2, z = (bb.minZ() + bb.maxZ()) / 2;
-            int y = level.getChunk(x >> 4, z >> 4).getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x & 15, z & 15);
+            // never generate a chunk on the server thread for this: fall back to the start chunk's middle
+            LevelChunk mid = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
+            int y = mid != null ? mid.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x & 15, z & 15)
+                    : chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, 8, 8);
             var center = new net.minecraft.core.BlockPos(x, y, z);
             if (!m.roomFor(level.dimension(), center)) return;
             var key = registry.getKey(structure);
@@ -122,9 +129,21 @@ public final class ServerEvents {
         for (Settlement s : SettlementManager.get(level.getServer()).all()) {
             if (s.soldiers.removeIf(so -> so.entity.equals(id))) {
                 s.log(e.getEntity().getName().getString() + " fell in battle");
+                for (Raids.Raid r : SettlementManager.get(level.getServer()).raids) if (r.defender.equals(s.kingdomId())) r.defendersLost++;
                 return;
             }
         }
+    }
+
+    /** Nothing of one world may reach the next one opened in the same game. */
+    @SubscribeEvent
+    public static void stopped(net.minecraftforge.event.server.ServerStoppedEvent e) {
+        PENDING.clear();
+        SEEN.clear();
+        tick = 0;
+        Realms.NEXT_WAR.clear();
+        Realms.PEACE_OFFERS.clear();
+        TownClaims.RAIDED.clear();
     }
 
     @SubscribeEvent

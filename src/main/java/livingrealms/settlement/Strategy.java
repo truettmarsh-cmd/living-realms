@@ -14,13 +14,14 @@ import java.util.*;
  * recent battles, whom to raid, when to start a war, when to sue for peace and when to regroup. Design notes: docs/kingdom-ai.md.
  */
 public final class Strategy {
-    public static final long DAY = 24000;
+    /** A day of the mod's clock (the dayLength setting), like Wars and Statecraft. */
+    public static long day() { return Statecraft.dayLength(); }
     /** An expedition with lower odds than this is expected to die; NPC kingdoms do not send it. */
     public static final double HOPELESS = 0.35;
     /** A Village Expansion faction this outmatched by a realm it is at war with, and bloodied, sues for peace; below ROUT it always does. */
     public static final double SUE = 0.4, ROUT = 0.25;
     /** How long an attacked NPC town stays on a war footing. */
-    public static final long FOOTING = 2 * DAY;
+    public static long footing() { return 2 * day(); }
     static final long NEVER = Long.MIN_VALUE / 4;
 
     // ------------------------------------------------------------------ memory
@@ -34,16 +35,16 @@ public final class Strategy {
 
         void decay(long now) {
             if (now <= updated) return;
-            double k = Math.pow(0.5, (now - updated) / (double) DAY);
+            double k = Math.pow(0.5, (now - updated) / (double) day());
             defeats *= k;
             victories *= k;
             updated = now;
         }
 
-        double defeatsAt(long now) { return now <= updated ? defeats : defeats * Math.pow(0.5, (now - updated) / (double) DAY); }
+        double defeatsAt(long now) { return now <= updated ? defeats : defeats * Math.pow(0.5, (now - updated) / (double) day()); }
 
         boolean stale(long now) {
-            return defeatsAt(now) < 0.05 && victories < 0.05 && now - attacked > FOOTING && repelledBy.values().stream().allMatch(t -> now - t > FOOTING);
+            return defeatsAt(now) < 0.05 && victories < 0.05 && now - attacked > footing() && repelledBy.values().stream().allMatch(t -> now - t > footing());
         }
 
         public CompoundTag save() {
@@ -197,7 +198,7 @@ public final class Strategy {
         double score = odds * odds * value(m, t) / (1 + Math.sqrt(source.center.distSqr(t.center)) / range);
         Memory mem = m.memory.get(source.kingdomId());
         Long repelled = mem == null ? null : mem.repelledBy.get(t.kingdomId());
-        if (repelled != null && now - repelled < FOOTING) score *= 0.5;
+        if (repelled != null && now - repelled < footing()) score *= 0.5;
         return score;
     }
 
@@ -227,7 +228,7 @@ public final class Strategy {
 
     public static boolean threatened(SettlementManager m, Settlement s, long now) {
         Memory mem = m.memory.get(s.kingdomId());
-        return mem != null && now - mem.attacked < FOOTING;
+        return mem != null && now - mem.attacked < footing();
     }
 
     /** An NPC town attacked in the last two days keeps half again its usual guard (at least two more). */

@@ -119,11 +119,11 @@ public final class WarfareSelfTest {
         Strategy.raidStarted(m, raid, 1000);
         Strategy.raidEnded(m, raid, 1000);
         check(Strategy.defeats(m, a, 1000) == 1.5 && m.memory.get(b).victories == 1 && m.memory.get(a).repelledBy.get(b) == 1000, "A destroyed expedition is remembered as a heavy defeat");
-        check(Math.abs(Strategy.defeats(m, a, 1000 + Strategy.DAY) - 0.75) < 1e-9, "Defeats fade by half a day");
+        check(Math.abs(Strategy.defeats(m, a, 1000 + Strategy.day()) - 0.75) < 1e-9, "Defeats fade by half a day");
         var town = new Settlement(); town.kingdom = b;
         check(Strategy.threatened(m, town, 2000) && Strategy.guardGoal(m, town, 5, 2000) == 7 && Strategy.guardGoal(m, town, 12, 2000) == 18,
                 "An attacked town goes on a war footing");
-        check(!Strategy.threatened(m, town, 1000 + Strategy.FOOTING + 1) && Strategy.guardGoal(m, town, 5, 1000 + Strategy.FOOTING + 1) == 5, "The war footing ends after two days");
+        check(!Strategy.threatened(m, town, 1000 + Strategy.footing() + 1) && Strategy.guardGoal(m, town, 5, 1000 + Strategy.footing() + 1) == 5, "The war footing ends after two days");
         var back = SettlementManager.load(m.save(new CompoundTag()));
         check(back.memory.size() == 2 && Strategy.defeats(back, a, 1000) == 1.5 && back.memory.get(b).attacked == 1000, "War memory survives reload");
         check(!new SettlementManager().save(new CompoundTag()).contains("warMemory"), "No war memory, no save change");
@@ -205,10 +205,16 @@ public final class WarfareSelfTest {
             target.soldiers.add(unknown);
             int before = raid.elapsed;
             Raids.tickRaid(server,m,raid);
-            check(raid.elapsed == before && target.raidStatus.contains("unloaded"), "Unknown/unloaded defenders pause raid rather than lose city");
+            check(raid.elapsed == before + 20 && raid.paused == 0, "A defender already missing at the last garrison count is not waited for");
+            unknown.seen = true;
+            before = raid.elapsed;
+            Raids.tickRaid(server,m,raid);
+            check(raid.elapsed == before && raid.paused == 20 && target.raidStatus.contains("unloaded") && target.raidStatus.contains("called off in"),
+                    "A defender that was just here and is now unloaded pauses the raid rather than lose city, and the pause counts down: " + target.raidStatus);
             target.soldiers.remove(unknown);
             ((LivingEntity) defender).hurt(level.damageSources().genericKill(), 10000);
             check(target.soldiers.isEmpty(), "Real soldier death removes defending record");
+            check(raid.defendersLost == 1, "A defender's death counts for the war: " + raid.defendersLost);
             for (int i=0;i<30;i++) Raids.tickRaid(server,m,raid);
             check(raid.held == 600 && target.owner.equals(owner.getUUID()), "No capture before 60 second occupation");
             var restored = SettlementManager.load(m.save(new CompoundTag()));
@@ -247,6 +253,15 @@ public final class WarfareSelfTest {
             m.nextRaidCheck = 0;
             Raids.tick(server, m);
             check(m.raids.size() == 1 && m.raids.get(0).target.equals(enemy.id), "Once recovered it marches");
+            // a raid that can never be fought (a defender stuck unloaded) is called off, not left hanging
+            var stuck = m.raids.get(0);
+            var lost = new Settlement.Soldier(); lost.entity = UUID.randomUUID(); lost.type = UnitType.FOOTMAN; lost.name = "Lost guard"; lost.seen = true;
+            enemy.soldiers.add(lost);
+            stuck.paused = Raids.PAUSE_LIMIT - 20;
+            Raids.tickRaid(server, m, stuck);
+            check(m.raids.isEmpty() && enemy.owner.equals(stranger.getUUID()) && enemy.log.stream().anyMatch(l -> l.contains("called off")),
+                    "A raid paused too long is called off with no winner");
+            enemy.soldiers.remove(lost);
         } finally {
             online(server, owner, false);
             online(server, stranger, false);
