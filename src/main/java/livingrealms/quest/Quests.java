@@ -316,6 +316,7 @@ public final class Quests {
             int carried = 0;
             for (ItemStack st : p.getInventory().items) if (st.getItem() == x.item && !st.hasTag()) carried += st.getCount();
             b.putInt("carried", carried);
+            b.putBoolean("near", p.hasPermissions(2) || Net.near(p, s, 16));
         }
         if (x.kind == QuestData.Kind.ESCORT) {
             Trade.Caravan c = m.trade.caravan(x.caravan);
@@ -349,7 +350,7 @@ public final class Quests {
         return switch (action) {
             case "questAccept" -> Bounties.accept(data, m, s, p, id, now);
             case "questAbandon" -> Bounties.abandon(data, town, p, id);
-            case "questDeliver" -> Bounties.deliver(data, m, town, p, id, now);
+            case "questDeliver" -> !p.hasPermissions(2) && !Net.near(p, town, 16) ? "Bring the goods to " + town.name + " to deliver them" : Bounties.deliver(data, m, town, p, id, now);
             default -> "Unknown quest action";
         };
     }

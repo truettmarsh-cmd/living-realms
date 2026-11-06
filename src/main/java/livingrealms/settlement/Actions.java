@@ -111,8 +111,8 @@ public final class Actions {
             case "equipAll" -> equipAll(level, s);
             case "autoEquip" -> { s.autoEquip = d.getBoolean("on"); yield null; }
             case "alarm" -> { s.manualAlarm = d.getBoolean("on"); if (!s.manualAlarm) s.alarmUntil = Math.min(s.alarmUntil, level.getGameTime() + 20); Simulation.watch(level, s); yield null; }
-            case "withdraw" -> withdraw(player, s, d);
-            case "deposit" -> deposit(player, s, d.getString("item"));
+            case "withdraw" -> !player.hasPermissions(2) && !livingrealms.net.Net.near(player, s, 16) ? "You must be in " + s.name + " to take from its stockpile" : withdraw(player, s, d);
+            case "deposit" -> !player.hasPermissions(2) && !livingrealms.net.Net.near(player, s, 16) ? "You must be in " + s.name + " to put goods in its stockpile" : deposit(player, s, d.getString("item"));
             case "royalGuard" -> royalGuard(player, level, s, d);
             case "learnSoldierSkill" -> learnSoldierSkill(player, s, d);
             case "drillSoldier" -> drillSoldier(player, s, d);
@@ -135,9 +135,7 @@ public final class Actions {
 
     static final String DEFERRED = "Builders finish placing it when the area is loaded";
 
-    static void tell(ServerPlayer p, String msg) {
-        p.displayClientMessage(Component.literal(msg).withStyle(ChatFormatting.GOLD), true);
-    }
+    static void tell(ServerPlayer p, String msg) { livingrealms.net.Net.notice(p, msg); }
 
     interface PlotAction { String run(Plot p); }
 

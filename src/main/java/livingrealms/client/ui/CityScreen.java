@@ -127,6 +127,9 @@ public class CityScreen extends Screen {
 
     static boolean mine() { return v().getBoolean("mine"); }
 
+    /** The player stands in this town (or is an op): the stockpile can be used by hand. */
+    static boolean here() { return v().getBoolean("here"); }
+
     static ListTag list(String k) { return v().getList(k, Tag.TAG_COMPOUND); }
 
     static List<String> strings(String k) {
@@ -259,6 +262,7 @@ public class CityScreen extends Screen {
         } catch (Exception e) {
             ui.text("Something went wrong drawing this page: " + e, cx, cy + 20, RED);
         }
+        ui.notice(px + pw / 2, py + ph, pw - 40);
         g.pose().popPose();
         super.render(g, mx, my, partial);
         ui.end();
@@ -1517,9 +1521,9 @@ public class CityScreen extends Screen {
             ui.g.pose().translate(0, 0, 200);
             ui.textShadow(n, x + cell - 3 - ui.width(n), y + cell - 11, TEXT);
             ui.g.pose().popPose();
-            if (on) ui.tip(st.getHoverName().getString(), e.getValue() + " in store", mine() ? "Click: take a stack · Shift-click: take 4 stacks" : "");
+            if (on) ui.tip(st.getHoverName().getString(), e.getValue() + " in store", !mine() ? "" : here() ? "Click: take a stack · Shift-click: take 4 stacks" : "Come to " + v().getString("name") + " to take goods out");
             final Item it = e.getKey();
-            if (mine()) ui.area(x, y, cell - 2, cell - 2, () -> act("withdraw", tag("item", BuiltInRegistries.ITEM.getKey(it).toString(),
+            if (mine() && here()) ui.area(x, y, cell - 2, cell - 2, () -> act("withdraw", tag("item", BuiltInRegistries.ITEM.getKey(it).toString(),
                     "count", it.getMaxStackSize() * (Screen.hasShiftDown() ? 4 : 1))));
         }
         if (items.isEmpty()) ui.text(stock.isEmpty() ? "The stockpile is empty." : "Nothing matches.", cx + 10, top + 10, FAINT);
@@ -1530,8 +1534,9 @@ public class CityScreen extends Screen {
         ui.text("Bring goods in", sx + 8, y, MUTED);
         y += 14;
         if (mine()) {
-            ui.button("dep", sx + 6, y, sw - 12, 16, "Deposit my pack", Style.PRIMARY, true, () -> act("deposit", tag("item", "")));
-            if (ui.over(sx + 6, y, sw - 12, 16)) ui.tip("Moves everything in your inventory except the hotbar, armour, and named or enchanted items.");
+            ui.button("dep", sx + 6, y, sw - 12, 16, "Deposit my pack", Style.PRIMARY, here(), () -> act("deposit", tag("item", "")));
+            if (ui.over(sx + 6, y, sw - 12, 16)) ui.tip(here() ? "Moves everything in your inventory except the hotbar, armour, and named or enchanted items."
+                    : "You must be in " + v().getString("name") + " to deposit goods.");
             y += 22;
         }
         y += ui.wrap("A Delivery Barrel anywhere in town carries whatever is put in it into the stockpile: by hand, by hopper, or by Villager Workers.", sx + 8, y, sw - 16, FAINT);

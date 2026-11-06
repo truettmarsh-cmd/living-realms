@@ -63,8 +63,32 @@ public final class Imm {
         hits = building;
         scrolls.clear();
         scrolls.addAll(scrollsBuilding);
-        if (!tooltipStack.isEmpty()) g.renderTooltip(font, tooltipStack, mx, my);
-        else if (tooltip != null) g.renderTooltip(font, tooltip, mx, my);
+        if (tooltipStack.isEmpty() && tooltip == null) return;
+        // tooltips go back to the GUI's own scale: vanilla keeps them on screen using the unscaled screen size, so drawing
+        // them inside a finer-scaled layout would clamp them against the wrong edges
+        g.pose().pushPose();
+        g.pose().scale(1 / scale, 1 / scale, 1);
+        int tx = Math.round(mx * scale), ty = Math.round(my * scale);
+        if (!tooltipStack.isEmpty()) g.renderTooltip(font, tooltipStack, tx, ty);
+        else g.renderTooltip(font, tooltip, tx, ty);
+        g.pose().popPose();
+    }
+
+    /** The server's last answer to the player's action, for a few seconds, centred at the bottom of a screen's panel. */
+    public void notice(int cx, int bottom, int maxW) {
+        String msg = livingrealms.client.ClientState.notice;
+        long age = System.currentTimeMillis() - livingrealms.client.ClientState.noticeAt;
+        if (msg.isEmpty() || age > 4500) return;
+        int a = age > 4000 ? (int) (255 * (4500 - age) / 500f) : 255;
+        if (a < 8) return;
+        msg = clip(msg, maxW - 16);
+        int w = width(msg) + 16, x = cx - w / 2, y = bottom - 22;
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 300);
+        round(x, y, w, 16, 4, alpha(0x2A313B, a * 240 / 255));
+        round(x + 1, y + 1, w - 2, 14, 3, alpha(0x13161B, a * 240 / 255));
+        text(msg, x + 8, y + 4, alpha(GOLD, a));
+        g.pose().popPose();
     }
 
     public boolean click(double x, double y) {

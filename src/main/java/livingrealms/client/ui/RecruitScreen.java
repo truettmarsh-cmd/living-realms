@@ -153,6 +153,7 @@ public class RecruitScreen extends Screen {
         } catch (Exception e) {
             ui.text("Something went wrong drawing this page: " + e, cx, cy + 20, RED);
         }
+        ui.notice(px + pw / 2, py + ph, pw - 40);
         g.pose().popPose();
         super.render(g, mx, my, partial);
         ui.end();

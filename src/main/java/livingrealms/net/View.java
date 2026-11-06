@@ -60,6 +60,7 @@ public final class View {
         t.put("trade", livingrealms.settlement.Trade.view(p, manager, s));
         t.put("people", livingrealms.citizen.Citizens.view(s, p));
         t.putBoolean("mine", p.getUUID().equals(s.owner) || p.hasPermissions(2));
+        t.putBoolean("here", p.hasPermissions(2) || Net.near(p, s, 16));
         t.putBoolean("ai", s.isAi());
         t.putString("style", s.style);
         t.putInt("tier", s.tier.number());
