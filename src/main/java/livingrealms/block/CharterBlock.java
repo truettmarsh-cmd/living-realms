@@ -5,6 +5,7 @@ import livingrealms.building.BuildingCatalog;
 import livingrealms.net.Net;
 import livingrealms.settlement.*;
 import net.minecraft.ChatFormatting;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -91,7 +92,13 @@ public class CharterBlock extends BaseEntityBlock {
         var hall = BuildingCatalog.blueprint(BuildingCatalog.get("livingrealms:town_hall").blueprintKey(1, s.style));
         if (hall != null) hall.bill().forEach((it, n) -> s.stock.force(it, n));
         s.stock.force(Items.BREAD, 48);
-        s.stock.force(Items.EMERALD, 12);
+        // the founding purse comes with a player's first charter only, so charters can't be farmed for emeralds
+        CompoundTag kept = player.getPersistentData().getCompound(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG);
+        if (!kept.getBoolean("livingrealms:foundingPurse")) {
+            s.stock.force(Items.EMERALD, 12);
+            kept.putBoolean("livingrealms:foundingPurse", true);
+            player.getPersistentData().put(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG, kept);
+        }
         s.stock.force(Items.TORCH, 16);
         s.log(s.name + " was founded by " + s.ownerName);
         m.add(s);

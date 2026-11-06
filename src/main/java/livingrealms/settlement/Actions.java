@@ -501,6 +501,8 @@ public final class Actions {
     @Nullable
     static String withdraw(ServerPlayer player, Settlement s, CompoundTag d) {
         Item it = BuiltInRegistries.ITEM.get(new ResourceLocation(d.getString("item")));
+        if (!s.d.hasTownHall && !s.isAi() && charterGoods(s).contains(it))
+            return "The charter's goods are for the Town Hall: they can be taken out once it stands";
         int n = s.stock.takeUpTo(it, Math.max(1, Math.min(it.getMaxStackSize() * 4, d.getInt("count"))));
         while (n > 0) {
             int c = Math.min(n, it.getMaxStackSize());
@@ -509,6 +511,15 @@ public final class Actions {
             n -= c;
         }
         return null;
+    }
+
+    /** What a charter brings for the first Town Hall: locked in the stockpile until the hall is built. */
+    static java.util.Set<Item> charterGoods(Settlement s) {
+        java.util.Set<Item> out = new java.util.HashSet<>(java.util.List.of(net.minecraft.world.item.Items.BREAD, net.minecraft.world.item.Items.TORCH, net.minecraft.world.item.Items.EMERALD));
+        var type = livingrealms.building.BuildingCatalog.get("livingrealms:town_hall");
+        var hall = type == null ? null : livingrealms.building.BuildingCatalog.blueprint(type.blueprintKey(1, s.style));
+        if (hall != null) out.addAll(hall.bill().keySet());
+        return out;
     }
 
     @Nullable

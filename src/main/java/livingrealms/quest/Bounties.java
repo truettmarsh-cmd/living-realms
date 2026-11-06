@@ -265,11 +265,13 @@ public final class Bounties {
         if (!b.bounties.remove(x)) return;
         livingrealms.citizen.Requests.done(s, x);
         if (x.kind != Kind.ESCORT) b.nextPost = Math.max(b.nextPost, now + gap());
-        Quests.give(p, new ItemStack(Items.EMERALD, x.reward));
+        // a ruler filling their own town's delivery keeps the goods in their own stockpile, so no purse besides
+        boolean ownGoods = x.kind == Kind.DELIVER && p.getUUID().equals(s.owner);
+        if (!ownGoods) Quests.give(p, new ItemStack(Items.EMERALD, x.reward));
         data.of(p.getUUID()).bump(QuestData.BOUNTIES, 1);
         s.log(p.getGameProfile().getName() + " completed a bounty: " + title(x));
         s.dirty = true;
-        Quests.notify(p, "Bounty complete", title(x) + " · " + x.reward + " emeralds", Items.EMERALD, false);
+        Quests.notify(p, "Bounty complete", title(x) + (ownGoods ? " · the goods stay in your stockpile" : " · " + x.reward + " emeralds"), Items.EMERALD, false);
     }
 
     // ------------------------------------------------------------------ progress from the world

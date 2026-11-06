@@ -307,7 +307,7 @@ public final class Quests {
                 : x.kind == QuestData.Kind.SLAY ? Items.IRON_SWORD : x.kind == QuestData.Kind.ESCORT ? Items.LEAD : Items.COMPASS).toString());
         b.putInt("have", x.progress);
         b.putInt("need", x.need);
-        b.putInt("reward", x.reward);
+        b.putInt("reward", x.kind == QuestData.Kind.DELIVER && p.getUUID().equals(s.owner) ? 0 : x.reward);
         b.putLong("left", Math.max(0, x.expires - now));
         b.putLong("day", day);
         b.putBoolean("mine", p.getUUID().equals(x.taker));

@@ -128,7 +128,9 @@ final class QuestPanel {
         ui.text(ui.clip(b.getString("title") + (town.isEmpty() ? "" : " · " + town), room), x + 26, y + 4, TEXT);
         long left = b.getLong("left"), day = Math.max(1, b.getLong("day"));
         String time = left >= day ? (left / day) + "d " + (left % day * 24 / day) + "h left" : (left * 24 / day) + "h left";
-        String status = b.getInt("reward") + " emeralds · " + time;
+        int reward = b.getInt("reward");
+        String purse = reward > 0 ? reward + " emeralds" : "No purse: your own town";
+        String status = purse + " · " + time;
         if (kind.equals("DELIVER") && mine) status += " · carrying " + b.getInt("carried");
         if ((kind.equals("PATROL") || kind.equals("ESCORT")) && mine && !b.getString("next").isEmpty()) status = b.getString("next") + " · " + status;
         ui.text(ui.clip(status, room), x + 26, y + 14, GOLD_DK);
@@ -141,7 +143,7 @@ final class QuestPanel {
             tip.add(b.getString("title"));
             tip.add(b.getString("detail"));
             if (!b.getString("next").isEmpty()) tip.add(b.getString("next"));
-            tip.add(b.getInt("reward") + " emeralds on completion · " + time);
+            tip.add((reward > 0 ? reward + " emeralds on completion" : "Your own town: the goods go to your stockpile, so it pays no purse") + " · " + time);
             ui.tip(tip);
         }
     }

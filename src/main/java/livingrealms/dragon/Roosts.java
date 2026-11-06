@@ -143,6 +143,27 @@ public final class Roosts {
         r.eggElement = element; r.eggVariant = variant; r.hatchAt = hatchAt;
     }
 
+    /** A roost dragon died, wherever it was (even far from its roost or in another dimension): the roost is free again. */
+    public static void died(net.minecraft.server.MinecraftServer server, Entity dead) {
+        if (!DragonApi.dragon(dead)) return;
+        DragonData data = DragonData.get(server);
+        SettlementManager m = SettlementManager.get(server);
+        for (var e : data.roosts.entrySet()) {
+            DragonData.Roost r = e.getValue();
+            if (!dead.getUUID().equals(r.dragon)) continue;
+            Settlement s = m.get(e.getKey());
+            if (s != null) {
+                Chronicle.record(s, Chronicle.Kind.DRAGON, r.name + ", the dragon of " + s.name + "'s roost, died.");
+                ServerLevel level = server.getLevel(s.dim);
+                if (level != null) tell(level, s, r.name + ", the dragon of " + s.name + ", has died", ChatFormatting.RED);
+            }
+            r.clearDragon();
+            r.state = "Empty";
+            data.setDirty();
+            return;
+        }
+    }
+
     static boolean housed(DragonData data, UUID dragon) {
         for (DragonData.Roost o : data.roosts.values()) if (dragon.equals(o.dragon)) return true;
         return false;

@@ -49,6 +49,11 @@ public final class DragonEvents {
     }
 
     @SubscribeEvent
+    public static void died(net.minecraftforge.event.entity.living.LivingDeathEvent e) {
+        if (e.getEntity().level() instanceof net.minecraft.server.level.ServerLevel sl && DragonApi.installed()) Roosts.died(sl.getServer(), e.getEntity());
+    }
+
+    @SubscribeEvent
     public static void stopping(ServerStoppingEvent e) {
         Flight.ACTIVE.clear();
         DragonAttacks.LAST.clear();
