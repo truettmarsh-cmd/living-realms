@@ -90,6 +90,23 @@ public final class HeroData extends SavedData {
         setDirty();
     }
 
+    /** Ticks a hero discarded for good is remembered (a retrained recruit comes back at once with its UUID). */
+    static final long FORGET_REMOVED = 7 * 24000L;
+
+    /**
+     * Keeps the file from growing without end: heroes discarded for good a week ago, and battle counts of recruits
+     * that are in no town's garrison and aren't Heroes (only a town soldier can ascend).
+     */
+    void prune(MinecraftServer server, long now) {
+        boolean changed = heroes.values().removeIf(h -> h.removed && now - h.seen > FORGET_REMOVED && now >= h.seen);
+        if (!battles.isEmpty()) {
+            Set<UUID> soldiers = new HashSet<>();
+            for (var s : livingrealms.settlement.SettlementManager.get(server).all()) for (var so : s.soldiers) if (so.entity != null) soldiers.add(so.entity);
+            changed |= battles.keySet().removeIf(id -> !soldiers.contains(id) && !heroes.containsKey(id));
+        }
+        if (changed) setDirty();
+    }
+
     static HeroData load(CompoundTag t) {
         HeroData d = new HeroData();
         CompoundTag h = t.getCompound("heroes");

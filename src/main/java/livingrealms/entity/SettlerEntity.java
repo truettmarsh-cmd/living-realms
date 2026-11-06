@@ -142,13 +142,14 @@ public class SettlerEntity extends PathfinderMob {
 
     @Override
     public void die(DamageSource source) {
+        boolean wasDead = dead;
         super.die(source);
+        if (wasDead || !dead) return; // a death another mod cancelled, or a second call: the citizen lives on
         Settlement s = settlement();
         if (s != null && !leaving) {
             livingrealms.citizen.Citizens.killed(s, citizen, source.is(net.minecraft.tags.DamageTypeTags.IS_FIRE) ? "in a fire"
-                    : source.getEntity() != null ? "at the hands of " + source.getEntity().getName().getString() : "by misadventure");
+                    : source.getEntity() != null ? "at the hands of " + livingrealms.Text.who(source.getEntity()) : "by misadventure");
             s.population = Math.max(1, s.population - 1);
-            s.log(getName().getString() + " the " + job().label.toLowerCase() + " was killed");
         }
     }
 

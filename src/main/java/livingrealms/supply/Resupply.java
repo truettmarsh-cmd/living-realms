@@ -448,7 +448,9 @@ public final class Resupply {
         Long last = LAST_WARN.get(owner.getUUID());
         if (last != null && now - last < WARN_TICKS && now >= last) return false;
         LAST_WARN.put(owner.getUUID(), now);
-        String msg = name(e) + " " + needs(shortages) + " and " + where(tried);
+        String where = where(tried), needs = needs(shortages);
+        // "is out of arrows and the armoury has none", but "is out of arrows and food, and needs a spare Iron Helmet; the armoury has none"
+        String msg = name(e) + " " + needs + (where.startsWith("has ") || !needs.contains(" and ") ? " and " : "; ") + where;
         warnings++;
         lastWarning = msg;
         owner.sendSystemMessage(Component.literal(msg).withStyle(ChatFormatting.GOLD));
@@ -461,7 +463,7 @@ public final class Resupply {
         List<String> parts = new ArrayList<>();
         if (!out.isEmpty()) parts.add("is out of " + list(out, "and"));
         if (!want.isEmpty()) parts.add("needs " + list(want, "and"));
-        return String.join(" and ", parts);
+        return String.join(", and ", parts);
     }
 
     static String where(List<SupplySource> tried) {

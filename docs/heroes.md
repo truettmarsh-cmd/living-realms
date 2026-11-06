@@ -37,10 +37,10 @@ Each path has one ultimate. The Hero uses it on its own while it has a target, w
 | Path | Ultimate | Used when | Effect |
 |---|---|---|---|
 | Swordsman | Blade Storm | 2+ foes within 4 blocks, or a large foe within 3 | Spins for 4s: every half second, 3 damage to every hostile within 3.5 blocks |
-| Shieldman | Bulwark | 3+ foes within 10 blocks, or it or a recruit within 6 blocks below half health | A 5-block dome for 8s where it stood: your recruits (and you) inside take 50% less damage; enemy projectiles entering it are stopped |
+| Shieldman | Bulwark | 3+ foes within 10 blocks, or it or a recruit within 6 blocks below half health | A 5-block dome for 8s where it stood: your recruits (and you) inside take 50% less damage; enemy projectiles entering it are stopped (tridents and arrows that can be picked up drop to the ground instead of vanishing) |
 | Berserker | Earthshaker | 3+ foes within 6 blocks, or a large foe within 4 | 6 damage to every hostile within 6 blocks, hurled back and up, Slowness II for 5s |
 | Spearman | Impale | Its target 4 to 12 blocks away in sight | Charges through the line toward it: 8 damage to every foe within 1.5 blocks of the line; the first large one (40+ health, wide, or riding) is pinned (Slowness VII, Weakness II) for 3s |
-| Marksman | Rain of Arrows | Its target 8 to 40 blocks away with another foe within 4 blocks of it, or a large target | A volley over a 4-block circle around the target for 5s: 3 arrows (3 damage) every quarter second. They never hurt your side and can't be picked up |
+| Marksman | Rain of Arrows | Its target 8 to 40 blocks away with another foe within 4 blocks of it, or a large target | A volley over a 4-block circle around the target for 5s: 3 arrows (3 damage) every quarter second. They never hurt your side (you, your team, your recruits, pets, mounts and townsfolk) and can't be picked up |
 | Knight | Royal Charge | Mounted (not on a dragon), its target 6 to 28 blocks away | It and your mounted recruits within 12 blocks charge: Speed III for their horses and +20% damage for 6s |
 | Healer | Miracle | A recruit (or itself, or you) within 10 blocks below 30% health, or two below half | Full health, fire put out and every harmful effect removed for you and your recruits within 10 blocks. Once a battle: again only after 30 seconds out of combat, and the cooldown |
 
@@ -75,7 +75,7 @@ When a Hero dies:
 
 1. Every player on the server reads "✝ The hero Bjorn the Titan of Ashford has fallen, slain by a Zombie."
 2. If it served in a town, the town's chronicle gets a Legend entry ("The hero Bjorn the Titan fell to a Zombie, after 12 days as a Hero and Valor 3. All the realm mourned.") instead of the usual Fallen line, and its name goes into the town's memorial (the People tab's "Remembered" list, in gold).
-3. The weapon in its hand becomes an **heirloom**: named "Bjorn the Titan's Iron Sword", with a line of lore. The first town recruit armed with it gains **150 skill XP**, once (at the top rank that goes to Valor, if it is a Hero). The item keeps its name afterwards.
+3. The weapon in its hand becomes an **heirloom**: named "Bjorn the Titan's Iron Sword", with a line of lore. The first town recruit armed with it gains **150 skill XP**, once (at the top rank that goes to Valor, if it is a Hero; a top-rank recruit that isn't a Hero leaves it unclaimed for the next). The item keeps its name afterwards.
 
 Its place under the cap is free again. Undying Rage and the Saint still save a Hero like any recruit.
 

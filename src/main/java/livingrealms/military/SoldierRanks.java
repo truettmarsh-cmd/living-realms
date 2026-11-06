@@ -165,7 +165,7 @@ public final class SoldierRanks {
         // the path stays; its skills and mastery are refunded, so a new path can be chosen
         so.pathSkills.clear();
         if (e instanceof LivingEntity le) { SoldierProgression.clearSkills(le); SoldierProgression.applySkills(le, so); }
-        s.log(so.name + " unlearned their skills; " + refunded + " points are free to spend again");
+        s.log(so.name + " unlearned their skills; " + livingrealms.Text.count(refunded, "point") + " " + livingrealms.Text.isAre(refunded) + " free to spend again");
         return null;
     }
 

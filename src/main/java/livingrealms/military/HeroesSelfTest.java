@@ -153,6 +153,12 @@ public final class HeroesSelfTest {
 
             // ---------------------------------------------------------------- perks
             check(Math.abs(bjorn.getMaxHealth() - before * 1.2f) < .01f && bjorn.getHealth() == bjorn.getMaxHealth(), "+20% max health, healed: " + before + " -> " + bjorn.getMaxHealth());
+            {   // the bonus health is saved with the entity: a reload (chunk or restart) doesn't clamp the hero back to its unbuffed maximum
+                Entity copy = bjorn.getType().create(level);
+                copy.load(bjorn.saveWithoutId(new net.minecraft.nbt.CompoundTag()));
+                check(copy instanceof LivingEntity lc && Math.abs(lc.getMaxHealth() - bjorn.getMaxHealth()) < .01f && Math.abs(lc.getHealth() - bjorn.getHealth()) < .01f,
+                        "Health survives a save and reload: " + (copy instanceof LivingEntity lc2 ? lc2.getHealth() + "/" + lc2.getMaxHealth() : "?") + " vs " + bjorn.getHealth());
+            }
             check(bjorn.getCustomName() != null && TextColor.fromLegacyFormat(ChatFormatting.GOLD).equals(bjorn.getCustomName().getStyle().getColor())
                     && bjorn.isCustomNameVisible() && bjorn.getName().getString().equals("Bjorn"), "Gold nameplate, same name");
             bjorn.setCustomName(net.minecraft.network.chat.Component.literal("Bjorn"));
@@ -265,15 +271,21 @@ public final class HeroesSelfTest {
             friendly.setPos(shield.getX() - 2, shield.getY() + 1, shield.getZ());
             level.addFreshEntity(friendly);
             spawned.add(friendly);
+            net.minecraft.world.entity.projectile.ThrownTrident trident = new net.minecraft.world.entity.projectile.ThrownTrident(level, pack.get(2), new net.minecraft.world.item.ItemStack(Items.TRIDENT));
+            trident.setPos(shield.getX(), shield.getY() + 1, shield.getZ() + 2);
+            trident.setDeltaMovement(0, 0, -1.5);
+            level.addFreshEntity(trident);
+            spawned.add(trident);
             int blocked = Heroes.blocked;
             Heroes.run(server, t + 1);
-            check(incoming.isRemoved() && !friendly.isRemoved() && Heroes.blocked == blocked + 1, "Enemy arrows entering the dome are stopped, ours are not");
+            check(incoming.isRemoved() && !friendly.isRemoved() && Heroes.blocked == blocked + 2, "Enemy arrows entering the dome are stopped, ours are not");
+            check(!trident.isRemoved() && trident.getDeltaMovement().horizontalDistanceSqr() < .01, "A trident is knocked down, not destroyed");
             check(Heroes.defend(inside, t + Heroes.BULWARK_TICKS + 1) == 0 || !Heroes.running(Ultimate.BULWARK, shield.getUUID()), "Dome lasts 8s");
             for (long k = 2; k <= Heroes.BULWARK_TICKS + 2; k++) Heroes.run(server, t + k);
             check(!Heroes.running(Ultimate.BULWARK, shield.getUUID()) && Heroes.defend(inside, t + Heroes.BULWARK_TICKS + 2) == 0, "Then it falls");
             cooldown(server, (Mob) shield, hs, t, Ultimate.BULWARK);
             clear(pack.toArray(new Mob[0]));
-            clear(incoming, friendly, inside, outside);
+            clear(incoming, friendly, trident, inside, outside);
 
             // Earthshaker
             LivingEntity berserk = hero(level, data, UnitType.FOOTMAN, base.offset(0, 0, -10), owner, "Ulfa", SoldierPath.BERSERKER, spawned);
@@ -322,13 +334,21 @@ public final class HeroesSelfTest {
             check(Heroes.shot - shot >= 60 && !Heroes.running(Ultimate.RAIN_OF_ARROWS, archer.getUUID()), "3 arrows every quarter second for 5s: " + (Heroes.shot - shot));
             List<Arrow> rain = level.getEntitiesOfClass(Arrow.class, new AABB(mark.blockPosition()).inflate(8, 20, 8), a -> a.getPersistentData().getBoolean(Heroes.ULTIMATE_SHOT));
             check(!rain.isEmpty() && rain.stream().allMatch(a -> a.getOwner() == archer && a.position().distanceToSqr(mark.position().add(0, 12, 0)) < 40), "Volleys fall from above the target area");
-            float rained = capture.hit(mark, level.damageSources().arrow(rain.get(0), archer), Heroes.RAIN_DAMAGE);
-            check(Math.abs(rained - Heroes.RAIN_DAMAGE) < .01 && hurt(mark), "A rain arrow's hit lands on a foe through the real hurt event: " + rained);
+            float rained = capture.hit(mark, level.damageSources().arrow(rain.get(0), archer), 9);
+            check(Math.abs(rained - Heroes.RAIN_DAMAGE) < .01 && hurt(mark), "A rain arrow hits for its fixed damage, whatever its speed: " + rained);
             float before2 = friend.getHealth();
             check(!friend.hurt(level.damageSources().arrow(rain.get(1), archer), 5) && friend.getHealth() == before2, "The rain never hurts our own");
+            net.minecraft.world.entity.animal.horse.Horse mount = EntityType.HORSE.create(level);
+            mount.moveTo(base.getX() + 21.5, base.getY(), base.getZ() + 4.5, 0, 0);
+            mount.setTamed(true);
+            mount.setOwnerUUID(owner);
+            level.addFreshEntity(mount);
+            spawned.add(mount);
+            float horseBefore = mount.getHealth();
+            check(!mount.hurt(level.damageSources().arrow(rain.get(1), archer), 5) && mount.getHealth() == horseBefore, "Nor our horses");
             for (Arrow a : rain) a.discard();
             cooldown(server, (Mob) archer, ha, t, Ultimate.RAIN_OF_ARROWS);
-            clear(around.toArray(new Mob[0])); clear(friend);
+            clear(around.toArray(new Mob[0])); clear(friend, mount);
 
             // Royal Charge
             LivingEntity knight = hero(level, data, UnitType.HORSEMAN, base.offset(-15, 0, -15), owner, "Edric", SoldierPath.KNIGHT, spawned);

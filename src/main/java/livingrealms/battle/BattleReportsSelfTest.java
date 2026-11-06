@@ -123,7 +123,7 @@ public final class BattleReportsSelfTest {
             check(saved.size() == 1 && saved.get(0) == r, "Saved for the owner");
             check(r.kind == BattleReport.Kind.SKIRMISH && r.place.equals("Reportford"), "A skirmish at Reportford: " + r.kind + " " + r.place);
             check(r.start == t0 && r.end >= r.start && r.day() == t0 / 24000 + 1, "Start and duration");
-            check(r.slain() == 3 && r.killList().equals("3 Zombie"), "Enemies by type: " + r.killList());
+            check(r.slain() == 3 && r.killList().equals("3 Zombies"), "Enemies by type: " + r.killList());
             check(r.fallen().size() == 1 && r.fallen().get(0).name.equals("Cade") && r.fallen().get(0).id.equals(c.getUUID()), "Cade fell, by name and UUID");
             check(r.wounded().size() == 1 && r.wounded().get(0).name.equals("Bryn") && r.wounded().get(0).taken > 0, "Bryn is wounded");
             BattleReport.Fighter mvp = r.mvp();

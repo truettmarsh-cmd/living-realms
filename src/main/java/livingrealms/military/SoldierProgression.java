@@ -184,7 +184,10 @@ public final class SoldierProgression {
         var old = instance.getModifier(id);
         if (old != null && old.getAmount() == amount && old.getOperation() == op) return;
         if (old != null) instance.removeModifier(id);
-        if (amount != 0) instance.addTransientModifier(new AttributeModifier(id, "Living Realms recruit skill", amount, op));
+        if (amount == 0) return;
+        // bonus health is saved with the entity, or a reload clamps its health to the unbuffed maximum
+        var mod = new AttributeModifier(id, "Living Realms recruit skill", amount, op);
+        if (attribute == Attributes.MAX_HEALTH) instance.addPermanentModifier(mod); else instance.addTransientModifier(mod);
     }
 
     private SoldierProgression() {}

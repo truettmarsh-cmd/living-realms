@@ -32,7 +32,7 @@ Raids and sieges are recognised from Living Realms raids: a raid on a town you o
 
 - A toast: the kind and place, the tally ("5 slain · 1 fallen · 2 wounded") and the MVP.
 - For raids, sieges, dragon attacks and any battle where a recruit fell, a gold chat line with the same in full.
-- A skirmish or dragon attack near one of your towns in which recruits fell adds a line to that town's chronicle ("In a skirmish against 3 zombie near Ashford, Cade fell."). Raids and sieges are chronicled already. A recruit whose fall has its own entry (a notable soldier, or a bonded partner's grief) is left out of the line, and the line is skipped if nobody is left.
+- A skirmish or dragon attack near one of your towns in which recruits fell adds a line to that town's chronicle ("In a skirmish against 3 zombies near Ashford, Cade fell."). Raids and sieges are chronicled already. A recruit whose fall has its own entry (a notable soldier, or a bonded partner's grief) is left out of the line, and the line is skipped if nobody is left.
 
 ## The Reports page
 

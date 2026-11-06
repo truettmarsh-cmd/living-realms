@@ -39,7 +39,7 @@ public final class SoldierPaths {
     public static final int UNDYING_COOLDOWN = 3600, RAGE_TICKS = 200, RAMPAGE_TICKS = 120, MARK_TICKS = 160, SAINT_COOLDOWN = 2400;
     /** Each morning a recruit with a mastery teaches up to MENTOR_STUDENTS lower-ranked recruits who could follow its path. */
     public static final int MENTOR_XP = 20, MENTOR_STUDENTS = 3;
-    static final String MARK = "LivingRealmsMarkedBy", MARK_UNTIL = "LivingRealmsMarkedUntil", SIZE_KEY = "LivingRealmsPath";
+    static final String MARK = "LivingRealmsMarkedBy", MARK_UNTIL = "LivingRealmsMarkedUntil", SIZE_KEY = "LivingRealmsPath", MOUNT_RIDER = "LivingRealmsKnightMount";
     private static final UUID ARMOUR = UUID.fromString("5b0e2c4d-6a1f-4c55-9e1e-2f3a7d5c0a01");
     private static final UUID RESIST = UUID.fromString("5b0e2c4d-6a1f-4c55-9e1e-2f3a7d5c0a02");
     private static final UUID RANGE = UUID.fromString("5b0e2c4d-6a1f-4c55-9e1e-2f3a7d5c0a03");
@@ -145,9 +145,29 @@ public final class SoldierPaths {
             modifier(horse, Attributes.ARMOR, MOUNT_ARMOUR, has(so, PathSkill.BARDING) ? 4 : 0, AttributeModifier.Operation.ADDITION);
             modifier(horse, Attributes.KNOCKBACK_RESISTANCE, MOUNT_RESIST, big ? 1 : 0, AttributeModifier.Operation.ADDITION);
             PehkuiBridge.scale(horse, SIZE_KEY, big ? JUGGERNAUT_SIZE : 1);
+            if (big || has(so, PathSkill.BARDING)) horse.getPersistentData().putUUID(MOUNT_RIDER, e.getUUID());
             if (horse.getHealth() > horse.getMaxHealth()) horse.setHealth(horse.getMaxHealth());
         }
         if (e.getHealth() > e.getMaxHealth()) e.setHealth(e.getMaxHealth());
+    }
+
+    /** A horse loses its barding and Juggernaut size once its knight is no longer on it (dismounted, dead, dismissed). */
+    @SubscribeEvent
+    public static void mountTick(net.minecraftforge.event.entity.living.LivingEvent.LivingTickEvent event) {
+        LivingEntity horse = event.getEntity();
+        if (horse.tickCount % 40 != 0 || horse.level().isClientSide || !horse.getPersistentData().hasUUID(MOUNT_RIDER)) return;
+        UUID knight = horse.getPersistentData().getUUID(MOUNT_RIDER);
+        for (Entity rider : horse.getPassengers()) if (rider.getUUID().equals(knight)) return;
+        unbuffMount(horse);
+    }
+
+    static void unbuffMount(LivingEntity horse) {
+        modifier(horse, Attributes.MAX_HEALTH, MOUNT_HEALTH, 0, AttributeModifier.Operation.ADDITION);
+        modifier(horse, Attributes.ARMOR, MOUNT_ARMOUR, 0, AttributeModifier.Operation.ADDITION);
+        modifier(horse, Attributes.KNOCKBACK_RESISTANCE, MOUNT_RESIST, 0, AttributeModifier.Operation.ADDITION);
+        PehkuiBridge.scale(horse, SIZE_KEY, 1);
+        horse.getPersistentData().remove(MOUNT_RIDER);
+        if (horse.getHealth() > horse.getMaxHealth()) horse.setHealth(horse.getMaxHealth());
     }
 
     public static void clear(LivingEntity e) {
@@ -157,12 +177,7 @@ public final class SoldierPaths {
             if (instance != null) instance.removeModifier(id);
         }
         PehkuiBridge.scale(e, SIZE_KEY, 1);
-        if (e.getVehicle() instanceof LivingEntity horse) {
-            modifier(horse, Attributes.MAX_HEALTH, MOUNT_HEALTH, 0, AttributeModifier.Operation.ADDITION);
-            modifier(horse, Attributes.ARMOR, MOUNT_ARMOUR, 0, AttributeModifier.Operation.ADDITION);
-            modifier(horse, Attributes.KNOCKBACK_RESISTANCE, MOUNT_RESIST, 0, AttributeModifier.Operation.ADDITION);
-            PehkuiBridge.scale(horse, SIZE_KEY, 1);
-        }
+        if (e.getVehicle() instanceof LivingEntity horse) unbuffMount(horse);
         if (e.getHealth() > e.getMaxHealth()) e.setHealth(e.getMaxHealth());
     }
 
@@ -218,7 +233,10 @@ public final class SoldierPaths {
         var old = instance.getModifier(id);
         if (old != null && old.getAmount() == amount && old.getOperation() == op) return;
         if (old != null) instance.removeModifier(id);
-        if (amount != 0) instance.addTransientModifier(new AttributeModifier(id, "Living Realms path", amount, op));
+        if (amount == 0) return;
+        // bonus health is saved with the entity, or a reload clamps its health to the unbuffed maximum
+        var mod = new AttributeModifier(id, "Living Realms path", amount, op);
+        if (attribute == Attributes.MAX_HEALTH) instance.addPermanentModifier(mod); else instance.addTransientModifier(mod);
     }
 
     // ------------------------------------------------------------------ combat

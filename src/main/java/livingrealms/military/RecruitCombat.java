@@ -29,7 +29,7 @@ public final class RecruitCombat {
         if (event.getLevel().isClientSide || !(event.getEntity() instanceof Projectile projectile)
                 || !(projectile.getOwner() instanceof LivingEntity owner) || !RecruitsBridge.isRecruit(owner)) return;
         // Snapshot the family on launch, so changing equipment cannot turn a flying arrow into spear practice.
-        if (projectile.getPersistentData().contains(SHOT_WEAPON)) return;
+        if (projectile.getPersistentData().contains(SHOT_WEAPON) || projectile.getPersistentData().getBoolean(Heroes.ULTIMATE_SHOT)) return;
         WeaponProficiency weapon = WeaponProficiency.classify(owner.getMainHandItem());
         projectile.getPersistentData().putString(SHOT_WEAPON, weapon != null && weapon.ranged() ? weapon.name() : "NONE");
     }
@@ -75,7 +75,7 @@ public final class RecruitCombat {
         var source = event.getSource();
         long time = level.getServer().overworld().getGameTime();
         float damage = event.getAmount();
-        if (source.getEntity() instanceof LivingEntity attacker) {
+        if (source.getEntity() instanceof LivingEntity attacker && !Heroes.ultimate(source)) {
             damage *= (float) (1 + livingrealms.settlement.Decrees.warHorn(attacker)); // War Horn decree: its own +15% term, outside the budgets
             var record = SoldierProgression.record(level.getServer(), attacker);
             if (record != null) {
@@ -116,7 +116,7 @@ public final class RecruitCombat {
     public static void practice(LivingDamageEvent event) {
         if (event.isCanceled() || event.getAmount() <= 0 || !(event.getEntity() instanceof Enemy)
                 || !(event.getEntity().level() instanceof ServerLevel level)
-                || !(event.getSource().getEntity() instanceof LivingEntity attacker)) return;
+                || !(event.getSource().getEntity() instanceof LivingEntity attacker) || Heroes.ultimate(event.getSource())) return;
         var record = SoldierProgression.record(level.getServer(), attacker);
         if (record == null) return;
         int xp = Math.max(1, Math.min(8, (int)Math.ceil(Math.min(event.getAmount(), event.getEntity().getHealth()))));
