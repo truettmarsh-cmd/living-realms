@@ -140,7 +140,7 @@ public final class Loyalty {
         Statecraft.Fealty l = m.state.loyalty.get(s.id);
         if (l == null) return s.name + " is already loyal";
         long now = server.overworld().getGameTime();
-        if (l.pacifiedUntil > now) return "The people still remember your last largesse: wait " + Math.max(1, (l.pacifiedUntil - now) / 1200) + " min";
+        if (l.pacifiedUntil > now) return "The people still remember your last largesse: wait " + livingrealms.TimeText.span(l.pacifiedUntil - now, Statecraft.dayLength());
         if (s.stock.count(Items.EMERALD) < PACIFY_COST) return "Needs " + PACIFY_COST + " emeralds in this city's stockpile";
         s.stock.take(Items.EMERALD, PACIFY_COST);
         l.value = Statecraft.clamp(l.value + PACIFY_GAIN, 0, 100);

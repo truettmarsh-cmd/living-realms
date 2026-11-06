@@ -13,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.List;
 
 /**
@@ -83,6 +84,26 @@ public final class Stockpile {
             if (n <= 0) break;
             if (it.builtInRegistryHolder().is(tag)) n -= takeUpTo(it, n);
         }
+        return true;
+    }
+
+    /** Takes an ingredient (item id or {@code #tag}) and notes in {@code paid} exactly which items went. */
+    public boolean takeIngredient(String ing, int n, Map<Item, Integer> paid) {
+        if (countIngredient(ing) < n) return false;
+        if (ing.startsWith("#")) {
+            TagKey<Item> tag = TagKey.create(net.minecraft.core.registries.Registries.ITEM, new ResourceLocation(ing.substring(1)));
+            for (Item it : new ArrayList<>(items.keySet())) {
+                if (n <= 0) break;
+                if (!it.builtInRegistryHolder().is(tag)) continue;
+                int got = takeUpTo(it, n);
+                if (got > 0) paid.merge(it, got, Integer::sum);
+                n -= got;
+            }
+            return true;
+        }
+        Item it = BuiltInRegistries.ITEM.get(new ResourceLocation(ing));
+        if (it == Items.AIR || !take(it, n)) return false;
+        paid.merge(it, n, Integer::sum);
         return true;
     }
 

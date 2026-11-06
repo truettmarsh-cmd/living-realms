@@ -170,6 +170,8 @@ public final class SoldierPaths {
         if (horse.getHealth() > horse.getMaxHealth()) horse.setHealth(horse.getMaxHealth());
     }
 
+    static boolean hasHealthBonus(net.minecraft.world.entity.ai.attributes.AttributeInstance hp) { return hp.getModifier(HEALTH) != null; }
+
     public static void clear(LivingEntity e) {
         for (UUID id : new UUID[]{ARMOUR, RESIST, RANGE, HEALTH, SPEED}) for (Attribute a : new Attribute[]{Attributes.ARMOR,
                 Attributes.KNOCKBACK_RESISTANCE, Attributes.FOLLOW_RANGE, Attributes.MAX_HEALTH, Attributes.MOVEMENT_SPEED}) {

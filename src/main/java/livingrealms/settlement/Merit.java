@@ -148,15 +148,30 @@ public final class Merit {
         MinecraftServer server = event.getServer();
         long now = now(server);
         for (Settlement s : SettlementManager.get(server).all())
-            for (Settlement.Soldier so : List.copyOf(s.soldiers)) update(s, so, so.seen ? SoldierProgression.findEntity(server, so.entity) : null, now, TICKS);
+        {
+            ServerLevel level = server.getLevel(s.dim);
+            boolean townLoaded = level != null && level.hasChunkAt(s.center);
+            for (Settlement.Soldier so : List.copyOf(s.soldiers)) {
+                Entity e = so.seen ? SoldierProgression.findEntity(server, so.entity) : null;
+                // one missing from a loaded town for a long while is gone (moved off by another mod), not on duty
+                boolean away = e == null && (!townLoaded || now - so.seenAt < AWAY_GRACE);
+                update(s, so, e, now, TICKS, away);
+            }
+        }
     }
 
+    /** How long a soldier may be missing from its loaded town and still count as on duty (out on patrol, just unloaded). */
+    static final long AWAY_GRACE = 6000;
+
     /** Duty accrual, decay, and the request lifecycle for one soldier. */
-    public static void update(Settlement s, Settlement.Soldier so, @Nullable Entity e, long now, int ticks) {
+    public static void update(Settlement s, Settlement.Soldier so, @Nullable Entity e, long now, int ticks) { update(s, so, e, now, ticks, false); }
+
+    /** {@code away}: the soldier is not loaded but presumed on duty (its town is unloaded, or it was here a moment ago). */
+    public static void update(Settlement s, Settlement.Soldier so, @Nullable Entity e, long now, int ticks, boolean away) {
         Record r = so.merit;
         boolean alive = e instanceof LivingEntity le && le.isAlive();
         // a soldier on the roll whose chunk is unloaded is still on duty (the dead leave the roll), so it accrues like the rest
-        boolean onDuty = alive || e == null;
+        boolean onDuty = alive || away;
         add(r, onDuty ? (SURVIVE_DAY + (so.royalGuard ? GUARD_DAY : 0)) * ticks / (float) DAY : 0, now);
         if (r.want != Want.NONE) {
             if (alive && satisfied(s, so, e, r.want)) {

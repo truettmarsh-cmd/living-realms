@@ -19,6 +19,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.*;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
@@ -62,11 +63,17 @@ public final class Settlement {
     /** Housing in buildings that came with a generated village. */
     public int baseHousing;
     public int taxLevel = 1;
+    /** What a town charter granted, by item: kept in the stockpile for the first Town Hall (see charterLocked). */
+    public final Map<Item, Integer> charterLeft = new HashMap<>();
+    /** Who founded the town with that charter; the lock is theirs alone and ends when the town changes hands. */
+    @Nullable public UUID charterOwner;
     public double wealth;
     public final Map<String, Double> accum = new HashMap<>();
 
     public final Set<String> research = new LinkedHashSet<>();
     public String activeResearch = "";
+    /** The items actually paid to start the active research (refunded if it is cancelled or switched; empty if it cost nothing). */
+    public final Map<Item, Integer> researchPaid = new HashMap<>();
     public double researchProgress;
     public double researchBank;
 
@@ -100,6 +107,12 @@ public final class Settlement {
 
     /** Recomputed every simulation step; not saved. */
     public transient Derived d = new Derived();
+
+    /** How many of this item the charter's grant still holds back from withdrawals and caravans: all of it until the Town Hall stands. */
+    public int charterLocked(Item it) {
+        if (charterLeft.isEmpty() || charterOwner == null || !charterOwner.equals(owner) || d.hasTownHall) return 0;
+        return Math.min(stock.count(it), charterLeft.getOrDefault(it, 0));
+    }
     public transient boolean dirty = true;
 
     public static final class Soldier {
@@ -111,6 +124,8 @@ public final class Settlement {
         public int level, kills;
         public String gear = "";
         public boolean seen;
+        /** Game time this soldier was last seen loaded and alive (0: not since this was recorded). */
+        public long seenAt;
         public boolean royalGuard;
         public int skillXp;
         public RecruitOrigin origin = RecruitOrigin.HUMAN;
@@ -150,6 +165,7 @@ public final class Settlement {
             t.putInt("kills", kills);
             t.putString("gear", gear);
             t.putBoolean("seen", seen);
+            t.putLong("seenAt", seenAt);
             t.putBoolean("royalGuard", royalGuard);
             t.putInt("skillXp", skillXp);
             t.putString("origin", origin.name());
@@ -201,6 +217,7 @@ public final class Settlement {
             s.kills = t.getInt("kills");
             s.gear = t.getString("gear");
             s.seen = t.getBoolean("seen");
+            s.seenAt = t.getLong("seenAt");
             s.royalGuard = t.getBoolean("royalGuard");
             s.origin = RecruitOrigin.byId(t.getString("origin"));
             s.skillXp = Math.max(0, Math.min(SoldierSkills.MAX_POINTS * SoldierSkills.XP_PER_POINT, t.getInt("skillXp")));
@@ -454,6 +471,12 @@ public final class Settlement {
         t.putBoolean("starving", starving);
         t.putInt("baseHousing", baseHousing);
         t.putInt("tax", taxLevel);
+        if (!charterLeft.isEmpty() && charterOwner != null) {
+            CompoundTag ch = new CompoundTag();
+            charterLeft.forEach((it, n) -> ch.putInt(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).toString(), n));
+            t.put("charterLeft", ch);
+            t.putUUID("charterOwner", charterOwner);
+        }
         t.putDouble("wealth", wealth);
         CompoundTag acc = new CompoundTag();
         accum.forEach(acc::putDouble);
@@ -462,6 +485,11 @@ public final class Settlement {
         research.forEach(r -> rl.add(StringTag.valueOf(r)));
         t.put("research", rl);
         t.putString("activeResearch", activeResearch);
+        if (!researchPaid.isEmpty()) {
+            CompoundTag paid = new CompoundTag();
+            researchPaid.forEach((it, n) -> paid.putInt(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).toString(), n));
+            t.put("researchPaid", paid);
+        }
         t.putDouble("researchProgress", researchProgress);
         t.putDouble("researchBank", researchBank);
         ListTag sl = new ListTag();
@@ -533,11 +561,26 @@ public final class Settlement {
         s.starving = t.getBoolean("starving");
         s.baseHousing = t.getInt("baseHousing");
         s.taxLevel = Math.max(0, Math.min(3, t.getInt("tax")));
+        if (t.hasUUID("charterOwner")) {
+            s.charterOwner = t.getUUID("charterOwner");
+            CompoundTag ch = t.getCompound("charterLeft");
+            for (String k : ch.getAllKeys()) {
+                ResourceLocation rl = ResourceLocation.tryParse(k);
+                Item it = rl == null ? null : net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl);
+                if (it != null && it != net.minecraft.world.item.Items.AIR && ch.getInt(k) > 0) s.charterLeft.put(it, ch.getInt(k));
+            }
+        }
         s.wealth = t.getDouble("wealth");
         CompoundTag acc = t.getCompound("accum");
         for (String k : acc.getAllKeys()) s.accum.put(k, acc.getDouble(k));
         t.getList("research", Tag.TAG_STRING).forEach(r -> s.research.add(r.getAsString()));
         s.activeResearch = t.getString("activeResearch");
+        CompoundTag paid = t.getCompound("researchPaid");
+        for (String k : paid.getAllKeys()) {
+            ResourceLocation rl = ResourceLocation.tryParse(k);
+            Item it = rl == null ? null : net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl);
+            if (it != null && it != net.minecraft.world.item.Items.AIR && paid.getInt(k) > 0) s.researchPaid.put(it, paid.getInt(k));
+        }
         s.researchProgress = t.getDouble("researchProgress");
         s.researchBank = t.getDouble("researchBank");
         for (Tag e : t.getList("soldiers", Tag.TAG_COMPOUND)) s.soldiers.add(Soldier.load((CompoundTag) e));

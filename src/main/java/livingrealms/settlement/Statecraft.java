@@ -170,9 +170,6 @@ public final class Statecraft {
         return t;
     }
 
-    /** One per world (its SettlementManager): the unrest cache starts empty, so another world's cities never carry over. */
-    public Statecraft() { Loyalty.UNREST_BY_CITY.clear(); }
-
     public void load(CompoundTag t) {
         for (Tag x : t.getList("wars", Tag.TAG_COMPOUND)) try { wars.add(War.load((CompoundTag) x)); } catch (RuntimeException e) { LivingRealms.LOG.warn("Dropped a bad war record", e); }
         CompoundTag tr = t.getCompound("truces");
@@ -288,7 +285,7 @@ public final class Statecraft {
         UUID a = source.kingdomId(), b = target.kingdomId();
         long now = server.overworld().getGameTime();
         long until = m.state.truceUntil(a, b);
-        if (until > now) return "Truce between " + name(m, a) + " and " + name(m, b) + ": " + Math.max(1, (until - now) / 1200) + " min left";
+        if (until > now) return "Truce between " + name(m, a) + " and " + name(m, b) + ": " + livingrealms.TimeText.span(until - now, dayLength()) + " left";
         Tribute t = m.state.tribute(a, b);
         if (t != null) return name(m, t.payer) + " pays tribute to " + name(m, t.payee) + "; the peace holds while it does";
         return null;

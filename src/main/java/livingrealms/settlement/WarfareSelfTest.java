@@ -205,8 +205,11 @@ public final class WarfareSelfTest {
             target.soldiers.add(unknown);
             int before = raid.elapsed;
             Raids.tickRaid(server,m,raid);
-            check(raid.elapsed == before + 20 && raid.paused == 0, "A defender already missing at the last garrison count is not waited for");
-            unknown.seen = true;
+            unknown.seenAt = raid.started - Raids.DEFENDER_GRACE - 200;
+            Raids.tickRaid(server,m,raid);
+            check(raid.elapsed == before + 40 && raid.paused == 0, "A defender gone long before the raid (never seen, or a far post) is not waited for");
+            unknown.seen = false; // the garrison count marks an unloaded soldier unseen within a second
+            unknown.seenAt = Math.max(1, level.getGameTime() - 40); // (0 means "never seen")
             before = raid.elapsed;
             Raids.tickRaid(server,m,raid);
             check(raid.elapsed == before && raid.paused == 20 && target.raidStatus.contains("unloaded") && target.raidStatus.contains("called off in"),
@@ -255,7 +258,7 @@ public final class WarfareSelfTest {
             check(m.raids.size() == 1 && m.raids.get(0).target.equals(enemy.id), "Once recovered it marches");
             // a raid that can never be fought (a defender stuck unloaded) is called off, not left hanging
             var stuck = m.raids.get(0);
-            var lost = new Settlement.Soldier(); lost.entity = UUID.randomUUID(); lost.type = UnitType.FOOTMAN; lost.name = "Lost guard"; lost.seen = true;
+            var lost = new Settlement.Soldier(); lost.entity = UUID.randomUUID(); lost.type = UnitType.FOOTMAN; lost.name = "Lost guard"; lost.seenAt = Math.max(1, level.getGameTime());
             enemy.soldiers.add(lost);
             stuck.paused = Raids.PAUSE_LIMIT - 20;
             Raids.tickRaid(server, m, stuck);

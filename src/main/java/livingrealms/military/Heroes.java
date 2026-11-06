@@ -332,6 +332,17 @@ public final class Heroes {
 
     // ------------------------------------------------------------------ perks
 
+    static boolean hasHealthBonus(net.minecraft.world.entity.ai.attributes.AttributeInstance hp) { return hp.getModifier(HEALTH) != null; }
+
+    /** Takes the Hero health and knockback perks off a recruit that is no longer a Hero. */
+    public static void clearPerks(LivingEntity e) {
+        for (var at : List.of(Attributes.MAX_HEALTH, Attributes.KNOCKBACK_RESISTANCE)) {
+            var instance = e.getAttribute(at);
+            if (instance != null) { instance.removeModifier(HEALTH); instance.removeModifier(RESIST); }
+        }
+        if (e.getHealth() > e.getMaxHealth()) e.setHealth(e.getMaxHealth());
+    }
+
     /** +20% max health (+1% more a Valor level), knockback immunity and the gold name. Called every second for loaded heroes. */
     public static void perks(LivingEntity e, HeroData.Hero h) {
         modifier(e, Attributes.MAX_HEALTH, HEALTH, HEALTH_BONUS + h.valor() * VALOR_HEALTH, AttributeModifier.Operation.MULTIPLY_TOTAL);
@@ -697,6 +708,19 @@ public final class Heroes {
         }
     }
 
+    private static java.lang.reflect.Method pickup;
+
+    /** What picking up this arrow or trident gives (its enchantments kept); empty if that can't be read. */
+    static ItemStack pickupItem(AbstractArrow arrow) {
+        try {
+            if (pickup == null) pickup = net.minecraftforge.fml.util.ObfuscationReflectionHelper.findMethod(AbstractArrow.class, "m_7941_");
+            Object st = pickup.invoke(arrow);
+            return st instanceof ItemStack i ? i.copy() : ItemStack.EMPTY;
+        } catch (ReflectiveOperationException | RuntimeException ex) {
+            return arrow instanceof net.minecraft.world.entity.projectile.ThrownTrident ? ItemStack.EMPTY : new ItemStack(net.minecraft.world.item.Items.ARROW);
+        }
+    }
+
     /** Runs the ultimates that last: Blade Storm's spins, Bulwark's dome and the Rain of Arrows. Called every tick. */
     public static void run(MinecraftServer server, long time) {
         for (Iterator<Active> it = ACTIVE.iterator(); it.hasNext(); ) {
@@ -727,11 +751,17 @@ public final class Heroes {
                         level.sendParticles(ParticleTypes.ENCHANTED_HIT, p.getX(), p.getY(), p.getZ(), 8, .1, .1, .1, .1);
                         level.playSound(null, p.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.NEUTRAL, .8f, 1.2f);
                         // a trident or an arrow someone can pick up is knocked down, not destroyed
-                        if (p instanceof net.minecraft.world.entity.projectile.ThrownTrident || p instanceof AbstractArrow arrow && arrow.pickup == AbstractArrow.Pickup.ALLOWED) {
-                            p.getPersistentData().putBoolean(BULWARKED, true);
-                            p.setDeltaMovement(0, -.2, 0);
-                            p.hurtMarked = true;
-                        } else p.discard();
+                        // (as an item on the ground, so it can't fall on anyone)
+                        if (p instanceof AbstractArrow arrow && (arrow instanceof net.minecraft.world.entity.projectile.ThrownTrident || arrow.pickup == AbstractArrow.Pickup.ALLOWED)) {
+                            ItemStack drop = pickupItem(arrow);
+                            if (!drop.isEmpty()) {
+                                net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(level, p.getX(), p.getY(), p.getZ(), drop);
+                                item.setDeltaMovement(0, -.1, 0);
+                                item.setDefaultPickUpDelay();
+                                level.addFreshEntity(item);
+                            }
+                        }
+                        p.discard();
                         blocked++;
                     }
                     if (time >= a.next) { a.next = time + 10; dome(level, a.center, 36); }

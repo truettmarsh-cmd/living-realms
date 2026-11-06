@@ -271,7 +271,9 @@ public final class HeroesSelfTest {
             friendly.setPos(shield.getX() - 2, shield.getY() + 1, shield.getZ());
             level.addFreshEntity(friendly);
             spawned.add(friendly);
-            net.minecraft.world.entity.projectile.ThrownTrident trident = new net.minecraft.world.entity.projectile.ThrownTrident(level, pack.get(2), new net.minecraft.world.item.ItemStack(Items.TRIDENT));
+            ItemStack loyal = new ItemStack(Items.TRIDENT);
+            loyal.enchant(net.minecraft.world.item.enchantment.Enchantments.LOYALTY, 2);
+            net.minecraft.world.entity.projectile.ThrownTrident trident = new net.minecraft.world.entity.projectile.ThrownTrident(level, pack.get(2), loyal);
             trident.setPos(shield.getX(), shield.getY() + 1, shield.getZ() + 2);
             trident.setDeltaMovement(0, 0, -1.5);
             level.addFreshEntity(trident);
@@ -279,7 +281,10 @@ public final class HeroesSelfTest {
             int blocked = Heroes.blocked;
             Heroes.run(server, t + 1);
             check(incoming.isRemoved() && !friendly.isRemoved() && Heroes.blocked == blocked + 2, "Enemy arrows entering the dome are stopped, ours are not");
-            check(!trident.isRemoved() && trident.getDeltaMovement().horizontalDistanceSqr() < .01, "A trident is knocked down, not destroyed");
+            var dropped = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(trident.blockPosition()).inflate(3),
+                    i -> i.getItem().is(Items.TRIDENT) && net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(net.minecraft.world.item.enchantment.Enchantments.LOYALTY, i.getItem()) == 2);
+            check(trident.isRemoved() && dropped.size() == 1, "A trident is knocked to the ground as an item, enchantments and all, not destroyed");
+            dropped.forEach(net.minecraft.world.entity.Entity::discard);
             check(Heroes.defend(inside, t + Heroes.BULWARK_TICKS + 1) == 0 || !Heroes.running(Ultimate.BULWARK, shield.getUUID()), "Dome lasts 8s");
             for (long k = 2; k <= Heroes.BULWARK_TICKS + 2; k++) Heroes.run(server, t + k);
             check(!Heroes.running(Ultimate.BULWARK, shield.getUUID()) && Heroes.defend(inside, t + Heroes.BULWARK_TICKS + 2) == 0, "Then it falls");

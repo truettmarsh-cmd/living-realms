@@ -553,7 +553,7 @@ public final class Bonds {
 
     static String minutes(long ticks) {
         long s = Math.max(0, ticks) / 20;
-        return s >= 60 ? (s + 59) / 60 + "m" : s + "s";
+        return s >= 60 ? livingrealms.TimeText.span(ticks, livingrealms.Config.DAY_LENGTH.get()) : s + " s";
     }
 
     /** For the self-test: pairs with a shared battle in progress. */

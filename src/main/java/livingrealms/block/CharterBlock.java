@@ -90,12 +90,16 @@ public class CharterBlock extends BaseEntityBlock {
         s.baseHousing = 6; // the founders' tents, until there are houses
         // the charter comes with what the first Town Hall needs, and food for the first days
         var hall = BuildingCatalog.blueprint(BuildingCatalog.get("livingrealms:town_hall").blueprintKey(1, s.style));
-        if (hall != null) hall.bill().forEach((it, n) -> s.stock.force(it, n));
+        if (hall != null) hall.bill().forEach((it, n) -> { s.stock.force(it, n); s.charterLeft.merge(it, n, Integer::sum); });
         s.stock.force(Items.BREAD, 48);
+        s.charterLeft.merge(Items.BREAD, 48, Integer::sum);
+        s.charterLeft.merge(Items.TORCH, 16, Integer::sum);
+        s.charterOwner = player.getUUID();
         // the founding purse comes with a player's first charter only, so charters can't be farmed for emeralds
         CompoundTag kept = player.getPersistentData().getCompound(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG);
         if (!kept.getBoolean("livingrealms:foundingPurse")) {
             s.stock.force(Items.EMERALD, 12);
+            s.charterLeft.merge(Items.EMERALD, 12, Integer::sum);
             kept.putBoolean("livingrealms:foundingPurse", true);
             player.getPersistentData().put(net.minecraft.world.entity.player.Player.PERSISTED_NBT_TAG, kept);
         }

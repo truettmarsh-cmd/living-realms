@@ -164,8 +164,8 @@ public final class Actions {
         if (why != null) return why;
         var n = ResearchTree.get(id);
         for (var e : n.items().entrySet()) if (s.stock.countIngredient(e.getKey()) < e.getValue()) return "Needs " + e.getValue() + " " + ingredientName(e.getKey());
-        n.items().forEach(s.stock::takeIngredient);
         if (!s.activeResearch.isEmpty()) { s.researchBank += s.researchProgress; refundResearch(s); }
+        n.items().forEach((ing, k) -> s.stock.takeIngredient(ing, k, s.researchPaid));
         s.activeResearch = id;
         s.researchAuto = false;
         s.researchProgress = 0;
@@ -191,8 +191,8 @@ public final class Actions {
 
     /** The study's points go to the bank; its paper, gold and the like go back to the stockpile, so starting it again costs the same. */
     static void refundResearch(Settlement s) {
-        var n = s.activeResearch.isEmpty() || s.isAi() ? null : ResearchTree.get(s.activeResearch);
-        if (n != null) n.items().forEach((k, v) -> refund(s, k, v));
+        s.researchPaid.forEach(s.stock::force); // exactly what was paid: nothing for research that cost nothing
+        s.researchPaid.clear();
     }
 
     public static String ingredientName(String ing) {
@@ -505,7 +505,7 @@ public final class Actions {
         if (so == null) return "No such recruit";
         Entity e = SoldierProgression.findEntity(player.server, so.entity);
         if (e == null || !e.isAlive()) return "The recruit must be loaded before dismissal";
-        if (e instanceof net.minecraft.world.entity.LivingEntity le) SoldierProgression.clearSkills(le);
+        if (e instanceof net.minecraft.world.entity.LivingEntity le) SoldierProgression.stripBonuses(le);
         if (so.royalGuard) RecruitsBridge.holdAt(e, e.blockPosition());
         s.soldiers.remove(so);
         return null;
@@ -516,9 +516,9 @@ public final class Actions {
     @Nullable
     static String withdraw(ServerPlayer player, Settlement s, CompoundTag d) {
         Item it = BuiltInRegistries.ITEM.get(new ResourceLocation(d.getString("item")));
-        if (!s.d.hasTownHall && !s.isAi() && charterGoods(s).contains(it))
-            return "The charter's goods are for the Town Hall: they can be taken out once it stands";
-        int n = s.stock.takeUpTo(it, Math.max(1, Math.min(it.getMaxStackSize() * 4, d.getInt("count"))));
+        int locked = s.charterLocked(it), free = s.stock.count(it) - locked;
+        if (locked > 0 && free <= 0) return "The charter's " + it.getDescription().getString() + " is for the Town Hall: it can be taken out once the hall stands";
+        int n = s.stock.takeUpTo(it, Math.min(Math.max(0, free), Math.max(1, Math.min(it.getMaxStackSize() * 4, d.getInt("count")))));
         while (n > 0) {
             int c = Math.min(n, it.getMaxStackSize());
             ItemStack st = new ItemStack(it, c);
@@ -526,15 +526,6 @@ public final class Actions {
             n -= c;
         }
         return null;
-    }
-
-    /** What a charter brings for the first Town Hall: locked in the stockpile until the hall is built. */
-    static java.util.Set<Item> charterGoods(Settlement s) {
-        java.util.Set<Item> out = new java.util.HashSet<>(java.util.List.of(net.minecraft.world.item.Items.BREAD, net.minecraft.world.item.Items.TORCH, net.minecraft.world.item.Items.EMERALD));
-        var type = livingrealms.building.BuildingCatalog.get("livingrealms:town_hall");
-        var hall = type == null ? null : livingrealms.building.BuildingCatalog.blueprint(type.blueprintKey(1, s.style));
-        if (hall != null) out.addAll(hall.bill().keySet());
-        return out;
     }
 
     @Nullable

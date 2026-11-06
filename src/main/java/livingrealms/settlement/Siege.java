@@ -88,6 +88,9 @@ public final class Siege {
         t.putIntArray("damaged", damaged.stream().mapToInt(Integer::intValue).toArray());
         t.putInt("blockade", blockade); t.putInt("starved", starved); t.putInt("volleys", volleys); t.putInt("drained", drained);
         t.putDouble("provisions", provisions);
+        ListTag up = new ListTag();
+        climbed.forEach(id -> up.add(NbtUtils.createUUID(id)));
+        t.put("climbed", up);
         return t;
     }
 
@@ -108,6 +111,7 @@ public final class Siege {
         for (int i : t.getIntArray("damaged")) s.damaged.add(i);
         s.blockade = t.getInt("blockade"); s.starved = t.getInt("starved"); s.volleys = t.getInt("volleys"); s.drained = t.getInt("drained");
         s.provisions = t.contains("provisions") ? t.getDouble("provisions") : -1;
+        for (Tag id : t.getList("climbed", Tag.TAG_INT_ARRAY)) s.climbed.add(NbtUtils.loadUUID(id));
         if (!s.walled) s.phase = s.phase == Phase.HOLD ? Phase.HOLD : Phase.ASSAULT;
         return s;
     }

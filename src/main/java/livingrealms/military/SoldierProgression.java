@@ -101,6 +101,7 @@ public final class SoldierProgression {
             SoldierPaths.pulse(s, so, le, server.overworld().getGameTime());
             if (!so.seen || so.health != le.getHealth() || so.maxHealth != le.getMaxHealth()) s.dirty = true;
             so.seen = true;
+            so.seenAt = server.overworld().getGameTime();
             so.health = le.getHealth(); so.maxHealth = le.getMaxHealth();
             so.level = RecruitsBridge.level(e); so.kills = RecruitsBridge.kills(e); so.morale = RecruitsBridge.morale(e);
             if (so.royalGuard && escort(s, so, e) && server.getTickCount() % SoldierRanks.ESCORT_TICKS == 0) {
@@ -164,6 +165,22 @@ public final class SoldierProgression {
         modifier(e, Attributes.MOVEMENT_SPEED, SPEED, so.skills.contains(SoldierSkills.MARCHING) ? .1 : 0, AttributeModifier.Operation.MULTIPLY_TOTAL);
         SoldierPaths.apply(e, so);
         if (e.getHealth() > e.getMaxHealth()) e.setHealth(e.getMaxHealth());
+    }
+
+    /**
+     * Takes every Living Realms bonus off a recruit that has left a town's roll (dismissed, surrendered, gone to another
+     * side): skills, path and, unless it is still a Hero, the Hero perks. The max-health ones are saved with the entity,
+     * so without this they would stay with it for good.
+     */
+    public static void stripBonuses(LivingEntity e) {
+        clearSkills(e);
+        if (!Heroes.isHero(e.getUUID())) Heroes.clearPerks(e);
+    }
+
+    /** Whether a recruit still carries one of the saved (max-health) bonuses. */
+    public static boolean hasSavedBonuses(LivingEntity e) {
+        var hp = e.getAttribute(Attributes.MAX_HEALTH);
+        return hp != null && (hp.getModifier(HEALTH) != null || SoldierPaths.hasHealthBonus(hp) || Heroes.hasHealthBonus(hp));
     }
 
     public static void clearSkills(LivingEntity e) {
