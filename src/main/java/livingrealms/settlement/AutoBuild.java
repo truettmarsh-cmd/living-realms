@@ -33,6 +33,12 @@ public final class AutoBuild {
 
     public static void think(ServerLevel level, Settlement s) {
         if (s.isAi() || !s.autoBuild || Autonomy.underAttack(level, s)) return;
+        boolean was = Planning.quiet;
+        Planning.quiet = true;
+        try { decide(level, s); } finally { Planning.quiet = was; }
+    }
+
+    static void decide(ServerLevel level, Settlement s) {
         boolean home = level.hasChunkAt(s.center);
         if (home) { survey(level, s); payDebts(level, s, true); }
         if (s.plots.stream().anyMatch(p -> pending(p) && mayWork(s, p) || pending(p) && !p.automatic)) return;
@@ -117,7 +123,7 @@ public final class AutoBuild {
         String err = Walls.queue(s, plan, true);
         if (err != null) { s.plan().wallBlocked = err; return false; }
         Plot p = s.plots.get(s.plots.size() - 1);
-        if (plan.blueprint() != null) s.log("Villagers began a " + plan.type().name.toLowerCase(Locale.ROOT) + " on the " + Walls.side(s, p.center()) + " side");
+        if (plan.blueprint() != null) s.log("Villagers began " + livingrealms.Text.a(plan.type().name.toLowerCase(Locale.ROOT)) + " on the " + Walls.side(s, p.center()) + " side");
         Walls.Line line = s.plan().wallLines().get(plan.piece().line());
         int[] street = Walls.gateStreet(s, line, plan.piece());
         if (street != null) pave(level, s, s.plan().connect(street[0], street[1], s.radius()), true);
@@ -137,6 +143,12 @@ public final class AutoBuild {
 
     /** Lays street lengths as road projects (automatic ones for player towns). Without a loaded world they are owed. */
     public static void pave(ServerLevel level, Settlement s, List<TownPlan.Paving> pavings, boolean automatic) {
+        boolean was = Planning.quiet;
+        Planning.quiet = was || automatic;
+        try { paveAll(level, s, pavings, automatic); } finally { Planning.quiet = was; }
+    }
+
+    static void paveAll(ServerLevel level, Settlement s, List<TownPlan.Paving> pavings, boolean automatic) {
         TownPlan plan = s.plan();
         for (TownPlan.Paving pv : pavings) {
             Street st = pv.street();

@@ -45,7 +45,7 @@ On an open route without a caravan under way, and at most once every two steps, 
 
 A caravan **loads** for 30 seconds, then goes **on the road**. It takes one or two guards: two from a town with 6 soldiers or more, one from a town with 2 or more (or an NPC town of Hamlet rank or above), none otherwise. Guards are hired for the trip; they are not taken from the garrison.
 
-When the caravan **arrives**, the goods go into the buyer's stockpile, the seller earns half the cargo's value in emeralds (an NPC seller adds its full value to its treasury), and both towns gain prosperity. If it is **lost**, the goods are gone, or, if it fell in the world, they lie where it fell.
+When the caravan **arrives**, the goods go into the buyer's stockpile, the seller earns half the cargo's value in emeralds (an NPC seller adds its full value to its treasury; a player's caravan between two towns of the same kingdom earns no coin, since the goods only move within the kingdom), and both towns gain prosperity. If it is **lost**, the goods are gone, or, if it fell in the world, they lie where it fell.
 
 ### On the road: walking or simulated
 

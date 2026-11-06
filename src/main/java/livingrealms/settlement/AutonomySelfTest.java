@@ -222,10 +222,10 @@ public final class AutonomySelfTest {
         s.away.note(s.away.researched, "Masonry"); s.away.trained(UnitType.FOOTMAN); s.away.trained(UnitType.FOOTMAN);
         s.away.note(s.away.ranks, "Village"); s.away.note(s.away.raids, "Oakvale is raiding Homestead!");
         List<String> lines = Autonomy.report(s, 10 * 60_000L, 100);
-        check(lines.get(0).equals("While you were away from Homestead (10 min):"), "Report heading: " + lines.get(0));
+        check(lines.get(0).equals("While you were away from Homestead (10 minutes):"), "Report heading: " + lines.get(0));
         check(lines.contains("Built: Cottage ×2, Farm Field") && lines.contains("Researched: Masonry") && lines.contains("Trained: Footman ×2")
                 && lines.contains("Rose to Village") && lines.contains("Raids: Oakvale is raiding Homestead!"), "Report contents: " + lines);
-        check(Autonomy.report(s, 0, 48_000).get(0).contains("2.0 days"), "Long absences counted in days");
+        check(Autonomy.report(s, 0, 48_000).get(0).contains("(2 days)") && Autonomy.report(s, 0, 36_000).get(0).contains("1.5 days"), "Long absences counted in days");
         Autonomy.back(owner, s);
         check(s.log.isEmpty() && s.away.empty(), "A short absence brings no report");
         s.away.built("Well");

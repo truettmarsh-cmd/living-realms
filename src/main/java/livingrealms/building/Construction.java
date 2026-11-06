@@ -183,6 +183,19 @@ public final class Construction {
         return start - Math.max(0, max);
     }
 
+    /** Returns to the stockpile the blocks paid for but never placed (bought while the site was out of loaded range). */
+    public static void refundUnplaced(Settlement s, Plot p) {
+        if (p.state == Plot.State.DEMOLISHING || s.isAi()) return;
+        for (int i = Math.max(0, p.placed); i < p.paid; i++) {
+            Step st = step(s, p, i);
+            if (st == null) break;
+            if (st.state.isAir()) continue;
+            Item it = Blueprint.costItem(st.state);
+            if (it != null) s.stock.force(it, 1);
+        }
+        p.paid = p.placed;
+    }
+
     /** Blocks cleared off a site go into the stockpile if they are worth keeping. */
     static void salvage(Settlement s, BlockState cur) {
         if (cur.isAir() || cur.getBlock() instanceof LiquidBlock || cur.is(BlockTags.LEAVES) || cur.getBlock() instanceof BushBlock

@@ -170,6 +170,9 @@ public final class Statecraft {
         return t;
     }
 
+    /** One per world (its SettlementManager): the unrest cache starts empty, so another world's cities never carry over. */
+    public Statecraft() { Loyalty.UNREST_BY_CITY.clear(); }
+
     public void load(CompoundTag t) {
         for (Tag x : t.getList("wars", Tag.TAG_COMPOUND)) try { wars.add(War.load((CompoundTag) x)); } catch (RuntimeException e) { LivingRealms.LOG.warn("Dropped a bad war record", e); }
         CompoundTag tr = t.getCompound("truces");
@@ -311,7 +314,7 @@ public final class Statecraft {
     static double mood(Settlement s, List<String> why) {
         Double u = Loyalty.UNREST_BY_CITY.get(s.id);
         if (u == null || u == 0 || s.isAi()) return 0;
-        why.add("-" + Math.round(u) + " unrest");
+        if (Math.round(u) != 0) why.add("-" + Math.round(u) + " unrest");
         return -u;
     }
 

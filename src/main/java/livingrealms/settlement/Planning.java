@@ -44,6 +44,9 @@ public final class Planning {
         ROAD_MATERIALS.put("sandstone", Blocks.SANDSTONE.defaultBlockState());
     }
 
+    /** Set while the villagers plan by themselves (AutoBuild): they write their own log lines, so these are left out. */
+    static boolean quiet;
+
     /** Plans a building with its bounding box corner at origin (before sinking). Returns an error or null. A null level
      * plans an unsited building on a surveyed site whose foundation is measured once it loads. */
     @Nullable
@@ -66,6 +69,7 @@ public final class Planning {
         p.rotation = rot;
         p.ai = ai;
         String err = checkSite(s, p, null);
+        if (err == null && level != null) err = neighbours(SettlementManager.get(level.getServer()), s, p);
         if (err != null) return err;
         p.id = s.nextId++;
         p.state = Plot.State.BUILDING;
@@ -78,7 +82,7 @@ public final class Planning {
         p.unsited = level == null;
         p.priority = t.category == Category.CIVIC ? 10 : 0;
         s.plots.add(p);
-        if (!ai) s.log("Planned a " + t.name);
+        if (!ai && !quiet) s.log("Planned " + livingrealms.Text.a(t.name));
         s.dirty = true;
         return null;
     }
@@ -102,6 +106,28 @@ public final class Planning {
                 BuildingType ot = BuildingCatalog.get(o.typeId);
                 return "Overlaps " + (o.typeId.equals("road") ? "a road" : ot == null ? "a building" : ot.name);
             }
+        }
+        return null;
+    }
+
+    /**
+     * Where two towns' lands overlap, a building may not stand on a neighbour's buildings, nor on land of another kingdom's
+     * town: builders clear whatever is in the footprint, and that must never be someone else's house.
+     */
+    @Nullable
+    static String neighbours(SettlementManager m, Settlement s, Plot p) {
+        BoundingBox box = p.box();
+        BlockPos[] corners = {new BlockPos(box.minX(), 0, box.minZ()), new BlockPos(box.maxX(), 0, box.minZ()),
+                new BlockPos(box.minX(), 0, box.maxZ()), new BlockPos(box.maxX(), 0, box.maxZ())};
+        for (Settlement o : m.all()) {
+            if (o == s || !o.dim.equals(s.dim)) continue;
+            long dx = o.center.getX() - s.center.getX(), dz = o.center.getZ() - s.center.getZ();
+            long reach = (long) o.radius() + s.radius() + 8;
+            if (dx * dx + dz * dz > reach * reach) continue;
+            for (Plot q : o.plots)
+                if (q.state != Plot.State.DEMOLISHING && q.box().intersects(box)) return "Overlaps a building of " + o.name;
+            if (!o.kingdomId().equals(s.kingdomId()))
+                for (BlockPos c : corners) if (o.contains(c)) return "That land belongs to " + o.name;
         }
         return null;
     }
@@ -194,7 +220,7 @@ public final class Planning {
         p.state = Plot.State.BUILDING;
         p.priority = -1;
         s.plots.add(p);
-        s.log("Laid out a road (" + (len + 1) + " blocks)");
+        if (!quiet) s.log("Laid out a road (" + (len + 1) + " blocks)");
         s.dirty = true;
         return null;
     }
@@ -324,12 +350,15 @@ public final class Planning {
     }
 
     public static void demolish(Settlement s, Plot p) {
+        // what was paid for out of sight but never placed goes back to the stockpile; a building with nothing in the world just goes
+        boolean fresh = p.state == Plot.State.BUILDING || p.deferred; // a new building, not yet (all) in the world
+        if (fresh) livingrealms.building.Construction.refundUnplaced(s, p);
         p.deferred = false;
-        if (p.state == Plot.State.BUILDING && p.placed == 0) {
+        if (fresh && p.placed == 0) {
             s.plots.remove(p);
         } else {
             p.automatic = false;
-        p.state = Plot.State.DEMOLISHING;
+            p.state = Plot.State.DEMOLISHING;
             p.placed = 0;
             p.paid = 0;
         }

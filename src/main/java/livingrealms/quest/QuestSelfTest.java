@@ -289,8 +289,10 @@ public final class QuestSelfTest {
         Quests.give(p, new ItemStack(short_, deliver.need));
         check(Bounties.deliver(data, m, home, p, deliver.id, now) == null, "Finish the delivery");
         check(count(p, short_) == half && home.stock.count(short_) == stocked + deliver.need - half, "Only what was owed is taken, into the stockpile");
-        check(count(p, Items.EMERALD) == emeralds + deliver.reward && !board.contains(deliver), "Delivery paid and removed from the board");
-        check(Bounties.deliver(data, m, home, p, deliver.id, now) != null && count(p, Items.EMERALD) == emeralds + deliver.reward, "A finished bounty pays once");
+        // a ruler filling their own town's delivery is not paid: the goods stay in their own stockpile
+        int purse = me.equals(home.owner) ? 0 : deliver.reward;
+        check(count(p, Items.EMERALD) == emeralds + purse && !board.contains(deliver), "Delivery paid (no purse in your own town) and removed from the board");
+        check(Bounties.deliver(data, m, home, p, deliver.id, now) != null && count(p, Items.EMERALD) == emeralds + purse, "A finished bounty pays once");
         check(data.of(me).stat(QuestData.BOUNTIES) == 1, "Bounty counted for the quest line");
 
         // slay
@@ -439,7 +441,7 @@ public final class QuestSelfTest {
             if (ci > cj) throw new IllegalStateException("Step " + order.get(j) + " completed after a later chapter's " + order.get(i));
         }
         checks++;
-        int bountyEmeralds = deliver.reward + slay.reward + patrol.reward + escortPaid;
+        int bountyEmeralds = (me.equals(home.owner) ? 0 : deliver.reward) + slay.reward + patrol.reward + escortPaid; // no purse for a delivery to your own town
         check(count(p, Items.EMERALD) == emeraldRewards(line) + bountyEmeralds, "Total emeralds = quest rewards + bounty rewards: "
                 + count(p, Items.EMERALD) + " vs " + (emeraldRewards(line) + bountyEmeralds));
         CompoundTag end = QuestData.load(data.save(new CompoundTag())).save(new CompoundTag());
