@@ -24,11 +24,15 @@ public final class Raids {
     public static final int HOLD_TICKS = 1200, MAX_TICKS = 12000;
     /** A raid stalled this long in a row (cities or armies unloaded) is called off, so no raid can hang forever. */
     public static final int PAUSE_LIMIT = 6000;
+    /** A defender seen this long before the raid began is still expected at the fight. */
+    public static final int DEFENDER_GRACE = 1200;
 
     public static final class Raid {
         public UUID source, target, attacker, defender;
         public final Set<UUID> soldiers = new LinkedHashSet<>();
         public int held, elapsed;
+        /** Game time the raid began; defenders seen within a minute before it are waited for if they unload. */
+        public long started;
         /** Ticks in a row the raid has been paused; reaching PAUSE_LIMIT calls it off. */
         public int paused;
         /** Defending soldiers of the target kingdom who died while the raid lasted (war exhaustion and score). */
@@ -44,7 +48,7 @@ public final class Raids {
             t.putUUID("source", source); t.putUUID("target", target);
             t.putUUID("attacker", attacker); t.putUUID("defender", defender);
             ListTag ids = new ListTag(); soldiers.forEach(id -> ids.add(StringTag.valueOf(id.toString())));
-            t.put("soldiers", ids); t.putInt("held", held); t.putInt("elapsed", elapsed); t.putInt("paused", paused); t.putInt("defendersLost", defendersLost);
+            t.put("soldiers", ids); t.putInt("held", held); t.putInt("elapsed", elapsed); t.putInt("paused", paused); t.putInt("defendersLost", defendersLost); t.putLong("started", started);
             t.put("siege", siege.save());
             return t;
         }
@@ -56,6 +60,7 @@ public final class Raids {
             r.elapsed = Math.max(0, t.getInt("elapsed"));
             r.paused = Math.max(0, t.getInt("paused"));
             r.defendersLost = Math.max(0, t.getInt("defendersLost"));
+            r.started = t.getLong("started");
             r.siege = Siege.load(t.getCompound("siege")); return r;
         }
     }
@@ -99,7 +104,7 @@ public final class Raids {
     public static String start(MinecraftServer server, SettlementManager m, Settlement source, Settlement target) {
         String error = canStart(server, m, source, target);
         if (error != null) return error;
-        Raid raid = new Raid(); raid.source = source.id; raid.target = target.id;
+        Raid raid = new Raid(); raid.source = source.id; raid.target = target.id; raid.started = server.overworld().getGameTime();
         raid.attacker = source.kingdomId(); raid.defender = target.kingdomId();
         var troops = available(server.getLevel(source.dim), source);
         int count = Math.min(12, Math.max(2, troops.size() / 2));
@@ -183,8 +188,9 @@ public final class Raids {
     static void tickRaid(MinecraftServer server, SettlementManager m, Raid raid) {
         Settlement source = m.get(raid.source), target = m.get(raid.target);
         if (source == null || target == null || !source.kingdomId().equals(raid.attacker) || !target.kingdomId().equals(raid.defender)) {
-            finish(server, m, raid, "Raid ended because control of a city changed"); return;
+            finish(server, m, raid, "Raid ended because control of a city changed", true); return;
         }
+        if (raid.started == 0) raid.started = server.overworld().getGameTime();
         ServerLevel level = server.getLevel(target.dim);
         // only the fight's city has to be loaded: the attacking city plays no part once its army has marched
         if (level == null || !level.hasChunkAt(target.center)) { pause(server, m, raid, source, target, "waiting for " + target.name + " to load"); return; }
@@ -198,9 +204,10 @@ public final class Raids {
             attackers.add(living);
         }
         for (Settlement town : Kingdoms.cities(m, target)) for (var so : town.soldiers) {
-            // a soldier missing at the last garrison count (far off, or gone without dying) is not waited for
+            // a defender that unloaded around the raid's start or during it is waited for; one long gone (a far post,
+            // or vanished without dying) is not
             Entity e = livingrealms.military.SoldierProgression.findEntity(server, so.entity);
-            if (e == null && so.seen && town == target) { pause(server, m, raid, source, target, "defending soldiers are unloaded"); return; }
+            if (e == null && town == target && so.seenAt > 0 && so.seenAt >= raid.started - DEFENDER_GRACE) { pause(server, m, raid, source, target, "defending soldiers are unloaded"); return; }
             if (e instanceof LivingEntity living && e.isAlive() && e.level() == level && target.contains(e.blockPosition())) {
                 defenders.add(living);
                 if ((raid.elapsed + 20) % SoldierRanks.RAID_DEFEND_TICKS == 0)
@@ -317,29 +324,40 @@ public final class Raids {
     /** The raid can't be fought this second; one stalled for PAUSE_LIMIT in a row is called off with no winner. */
     static void pause(MinecraftServer server, SettlementManager m, Raid raid, Settlement source, Settlement target, String why) {
         raid.paused += 20;
-        if (raid.paused >= PAUSE_LIMIT) { finish(server, m, raid, "Raid called off: the armies never met (" + why + ")"); return; }
-        status(source, target, "Raid paused: " + why + " · called off in " + Math.max(1, (PAUSE_LIMIT - raid.paused + 1199) / 1200) + " min");
+        if (raid.paused >= PAUSE_LIMIT) { finish(server, m, raid, "Raid called off: the armies never met (" + why + ")", true); return; }
+        status(source, target, "Raid paused: " + why + " · called off in " + livingrealms.TimeText.span(PAUSE_LIMIT - raid.paused, Statecraft.dayLength()));
     }
 
-    static void finish(MinecraftServer server, SettlementManager m, Raid raid, String message) {
+    static void finish(MinecraftServer server, SettlementManager m, Raid raid, String message) { finish(server, m, raid, message, false); }
+
+    /** Ends a raid. A raid called off (never fought out, or a city changed hands) has no winner: no score, honours or quest credit. */
+    static void finish(MinecraftServer server, SettlementManager m, Raid raid, String message, boolean calledOff) {
         m.raids.remove(raid);
         BattleAI.release(key(raid));
         Siege.end(server, raid, m.get(raid.target));
         livingrealms.dragon.Sorties.raidEnded(raid);
-        Strategy.raidEnded(m, raid, server.overworld().getGameTime());
-        Statecraft.raidEnded(server, m, raid, raid.held >= HOLD_TICKS);
-        livingrealms.quest.Quests.raidEnded(server, m, raid, raid.held >= HOLD_TICKS);
         Settlement source = m.get(raid.source), target = m.get(raid.target);
+        if (!calledOff) {
+            Strategy.raidEnded(m, raid, server.overworld().getGameTime());
+            Statecraft.raidEnded(server, m, raid, raid.held >= HOLD_TICKS);
+            livingrealms.quest.Quests.raidEnded(server, m, raid, raid.held >= HOLD_TICKS);
+            livingrealms.chronicle.Chronicle.raidEnded(source, target, raid.held >= HOLD_TICKS, message);
+        } else if (source != null && target != null) {
+            String line = "The raid by " + source.name + " on " + target.name + " was called off.";
+            livingrealms.chronicle.Chronicle.record(source, livingrealms.chronicle.Chronicle.Kind.NOTE, line);
+            livingrealms.chronicle.Chronicle.record(target, livingrealms.chronicle.Chronicle.Kind.NOTE, line);
+        }
         livingrealms.compat.Compat.raidEnded(server, raid, source);
-        livingrealms.chronicle.Chronicle.raidEnded(source, target, raid.held >= HOLD_TICKS, message);
         for (Settlement s : new Settlement[]{source, target}) if (s != null) {
             s.raidStatus = "";
             s.raidCooldown = server.overworld().getGameTime() + Config.RAID_COOLDOWN.get();
             announce(server, s, message);
             ServerLevel level = server.getLevel(s.dim);
             if (level != null) {
-                SoldierRanks.raidSurvived(level, s, raid.soldiers, s == target);
-                Merit.raidEnded(level, s, raid.soldiers, s == target, raid.held >= HOLD_TICKS, s == target ? source : target);
+                if (!calledOff) {
+                    SoldierRanks.raidSurvived(level, s, raid.soldiers, s == target);
+                    Merit.raidEnded(level, s, raid.soldiers, s == target, raid.held >= HOLD_TICKS, s == target ? source : target);
+                }
                 for (var so : s.soldiers) {
                     Entity e = level.getEntity(so.entity);
                     RecruitsBridge.clearRaidTarget(e);

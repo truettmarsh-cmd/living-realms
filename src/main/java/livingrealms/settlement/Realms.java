@@ -400,7 +400,10 @@ public final class Realms {
             if (on() && level != null && !s.mirror())
                 for (var so : s.soldiers) {
                     Entity e = SoldierProgression.findEntity(server, so.entity);
-                    if (e != null && e.isAlive()) VxBridge.surrender(level, e, winner.vxFaction, s.center);
+                    if (e != null && e.isAlive()) {
+                        if (e instanceof net.minecraft.world.entity.LivingEntity le) SoldierProgression.stripBonuses(le);
+                        VxBridge.surrender(level, e, winner.vxFaction, s.center);
+                    }
                 }
             s.vxFaction = winner.vxFaction;
             s.ownerName = winner.name;

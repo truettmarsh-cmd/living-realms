@@ -129,7 +129,7 @@ public final class ServerEvents {
         for (Settlement s : SettlementManager.get(level.getServer()).all()) {
             if (s.soldiers.removeIf(so -> so.entity.equals(id))) {
                 s.log(e.getEntity().getName().getString() + " fell in battle");
-                for (Raids.Raid r : SettlementManager.get(level.getServer()).raids) if (r.defender.equals(s.kingdomId())) r.defendersLost++;
+                for (Raids.Raid r : SettlementManager.get(level.getServer()).raids) if (r.target.equals(s.id)) r.defendersLost++; // only the raided city's own soldiers
                 return;
             }
         }
@@ -144,6 +144,8 @@ public final class ServerEvents {
         Realms.NEXT_WAR.clear();
         Realms.PEACE_OFFERS.clear();
         TownClaims.RAIDED.clear();
+        Trade.PROSPERITY.clear();
+        Loyalty.UNREST_BY_CITY.clear();
     }
 
     @SubscribeEvent
@@ -155,6 +157,10 @@ public final class ServerEvents {
     public static void onEntityLoad(net.minecraftforge.event.entity.EntityJoinLevelEvent e) {
         if (!(e.getLevel() instanceof ServerLevel level)) return;
         var record = livingrealms.military.SoldierProgression.record(level.getServer(), e.getEntity());
+        // a recruit on no town's roll keeps none of the saved bonuses (it left while unloaded, or was moved by another mod)
+        if (record == null && e.getEntity() instanceof net.minecraft.world.entity.LivingEntity le && livingrealms.military.RecruitsBridge.isRecruit(le)
+                && !livingrealms.military.Heroes.isHero(le.getUUID()) && livingrealms.military.SoldierProgression.hasSavedBonuses(le))
+            livingrealms.military.SoldierProgression.stripBonuses(le);
         if (record == null || record.settlement().mirror()) return;
         livingrealms.military.RecruitsBridge.allegiance(e.getEntity(), record.settlement().kingdomId());
         if (livingrealms.settlement.vx.Vx.active()) {

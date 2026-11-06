@@ -418,7 +418,7 @@ public final class Chronicle {
         s.dirty = true;
     }
 
-    static String plural(int n, String word) { return n + " " + word + (n == 1 ? "" : "s"); }
+    static String plural(int n, String word) { return livingrealms.Text.count(n, word); }
 
     static String cap(String s) { return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1); }
 

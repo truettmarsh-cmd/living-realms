@@ -17,7 +17,7 @@ public final class ClientNet {
             }
             case "view" -> {
                 ClientState.view = data;
-                Placement.answered(null);
+                if (data.getBoolean("answer")) Placement.answered(null);
                 if (data.getInt("dayTicks") > 0) ClientState.dayTicks = data.getInt("dayTicks");
                 Minecraft mc = Minecraft.getInstance();
                 if (data.getBoolean("open") && !data.getString("tab").equals("architect")) mc.setScreen(new CityScreen(data.getString("tab")));

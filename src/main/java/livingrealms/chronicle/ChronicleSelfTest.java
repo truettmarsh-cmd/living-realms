@@ -96,6 +96,8 @@ public final class ChronicleSelfTest {
         s.population = 6;
         m.add(s);
         Simulation.recompute(s);
+        var english = livingrealms.Text.selfCheck();
+        check(english.isEmpty(), "Plurals and articles read right: " + english);
         Chronicle.tick(server, m, s, 1);
         check(s.chronicle.entries.size() == 1 && s.chronicle.entries.get(0).kind() == Chronicle.Kind.FOUNDING
                 && s.chronicle.entries.get(0).text().contains("Testford") && s.chronicle.entries.get(0).text().contains("Aldric"), "Founding written on first look: " + s.chronicle.entries);

@@ -101,7 +101,7 @@ public final class Roosts {
         if (r.hasDragon()) { keep(level, data, s, p, r, perch, expect, now); return; }
         if (r.incubating()) {
             long left = Math.max(0, r.hatchAt - now);
-            r.state = "Egg in the embers: hatches in " + (left >= 24000 ? left / 24000 + " d" : left / 1200 + " min");
+            r.state = "Egg in the embers: hatches in " + livingrealms.TimeText.span(left, livingrealms.Config.DAY_LENGTH.get());
             if (left == 0 && level.hasChunkAt(perch)) hatch(level, s, p, r, perch, expect);
             return;
         }

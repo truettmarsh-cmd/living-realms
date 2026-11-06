@@ -74,6 +74,7 @@ public final class Simulation {
         // until the Town Hall stands, the founding crew works from the charter
         if (!d.hasTownHall) d.slots.merge(Job.BUILDER, 2, Integer::sum);
         if (s.isAi()) d.hasTownHall = true;
+        if (d.hasTownHall && !s.charterLeft.isEmpty()) { s.charterLeft.clear(); s.charterOwner = null; } // the charter's grant is spent
         if (s.has("granaries")) d.capacity = d.capacity * 3 / 2;
         if (s.has("command")) d.garrisonCap = d.garrisonCap * 3 / 2;
         d.garrisonCap = livingrealms.wonders.Wonders.garrison(s, d.garrisonCap);
@@ -383,6 +384,7 @@ public final class Simulation {
             s.researchBank += s.researchProgress - node.cost();
             s.researchProgress = 0;
             s.activeResearch = "";
+            s.researchPaid.clear();
             s.researchAuto = false;
             if (!s.isAi()) { s.log("Research complete: " + node.name()); s.away.note(s.away.researched, node.name()); }
         }

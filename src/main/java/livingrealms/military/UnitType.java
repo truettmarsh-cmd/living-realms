@@ -25,7 +25,7 @@ public enum UnitType {
     public final Piece[] needs;
 
     /** "Footmen", "Shieldbearers" */
-    public String plural() { return label.endsWith("man") ? label.substring(0, label.length() - 3) + "men" : label + "s"; }
+    public String plural() { return livingrealms.Text.plural(label); }
 
     UnitType(String label, String description, String research, int emeralds, float trainDays, Item icon, Piece... needs) {
         this.label = label;

@@ -51,6 +51,10 @@ public final class BondData extends SavedData {
             m.mourned = t.getString("mourned");
             m.vengeance = t.getString("vengeance");
             m.vengeanceLabel = t.getString("vengeanceLabel");
+            // saved before labels carried their article: "Zombie" reads "the Zombie" (named foes were saved as their name)
+            if (!m.vengeanceLabel.isEmpty() && !m.vengeanceLabel.startsWith("the ") && !m.vengeance.isEmpty()
+                    && m.vengeance.toLowerCase(java.util.Locale.ROOT).endsWith(m.vengeanceLabel.toLowerCase(java.util.Locale.ROOT).replace(' ', '_')))
+                m.vengeanceLabel = "the " + m.vengeanceLabel;
             m.vengeanceUntil = t.getLong("vengeanceUntil");
             m.avengeReady = t.getLong("avenge");
             m.avengeUntil = t.getLong("avengeUntil");

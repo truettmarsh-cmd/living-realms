@@ -85,7 +85,13 @@ public final class Net {
                 UUID id = m.data.getUUID("id");
                 Actions.handle(p, id, m.data.getString("action"), m.data.getCompound("data"));
                 Settlement s = mgr.get(id);
-                if (s != null && (id.equals(WATCHING.get(p.getUUID())) || canView(p, s))) sendView(p, s, false, "");
+                if (s != null && (id.equals(WATCHING.get(p.getUUID())) || canView(p, s))) {
+                    CompoundTag t = View.of(s, p);
+                    t.putBoolean("open", false);
+                    t.putString("tab", "");
+                    t.putBoolean("answer", true); // the reply to this action (Placement waits for it), not a routine refresh
+                    send(p, "view", t);
+                }
             }
             case "blueprint" -> {
                 Blueprint b = BuildingCatalog.blueprint(m.data.getString("key"));

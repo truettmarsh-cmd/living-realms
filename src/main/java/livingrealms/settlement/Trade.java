@@ -515,7 +515,7 @@ public final class Trade {
         List<Pick> picks = new ArrayList<>();
         for (Item it : tw.keySet()) {
             int short_ = need(to, tw, it) - inbound.getOrDefault(it, 0);
-            int spare = surplus(m, from, fw, it);
+            int spare = surplus(m, from, fw, it) - from.charterLocked(it); // a charter's grant stays for its Town Hall
             if (short_ <= 0 || spare <= 0) continue;
             double there = price(to, tw, it), here = price(from, fw, it);
             if (there < here * 1.2) continue;
@@ -757,6 +757,4 @@ public final class Trade {
     @Nullable
     static ServerLevel level(MinecraftServer server, Settlement s) { return server.getLevel(s.dim); }
 
-    /** One per world (its SettlementManager): the prosperity cache starts empty, so another world's towns never carry over. */
-    public Trade() { PROSPERITY.clear(); }
 }
