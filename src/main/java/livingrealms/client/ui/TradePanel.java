@@ -93,7 +93,7 @@ final class TradePanel {
             ui.text(ui.clip(label, sw), sx, y + 4, statusColor(state));
             if (state.equals("LOADING") || state.equals("ROAD")) {
                 ui.bar(sx, y + 16, sw, 6, (float) c.getDouble("progress"), statusColor(state), statusColor(state));
-            } else ui.text(ui.clip(c.getString("note").isEmpty() ? c.getInt("ago") + " min ago" : c.getString("note"), sw), sx, y + 15, FAINT);
+            } else ui.text(ui.clip(c.getString("note").isEmpty() ? spanMin(c.getInt("ago")) + " ago" : c.getString("note"), sw), sx, y + 15, FAINT);
             if (ui.over(sx, y, sw, ROUTE_H - 4)) ui.tip(label, "Carrying " + c.getString("cargo") + " (worth about " + c.getInt("value") + " emeralds)",
                     c.getInt("guards") == 0 ? "No guards" : c.getInt("guards") + (c.getInt("guards") == 1 ? " guard" : " guards") + "; your soldiers walking with it make an ambush less likely",
                     c.getString("note"));

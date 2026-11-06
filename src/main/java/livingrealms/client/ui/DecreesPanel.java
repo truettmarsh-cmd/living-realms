@@ -44,8 +44,8 @@ final class DecreesPanel {
             ui.text(ui.clip(d.getString("desc"), Math.max(40, w - 82 - ui.width(cost) - 10 - 28)), x + 28, ry + 13, locked ? FAINT : MUTED);
             String status; int col;
             switch (state) {
-                case "active" -> { status = "In force · " + d.getInt("activeMin") + " min"; col = GREEN; }
-                case "cooldown" -> { status = "Ready in " + time(d.getInt("readyMin")); col = ORANGE; }
+                case "active" -> { status = "In force · " + span(d.getLong("activeTicks")); col = GREEN; }
+                case "cooldown" -> { status = "Ready in " + span(d.getLong("readyTicks")); col = ORANGE; }
                 case "locked" -> { status = "Needs a " + d.getString("tier"); col = FAINT; }
                 default -> { status = why.isEmpty() ? "Ready" : "Not now"; col = why.isEmpty() ? GOLD : MUTED; }
             }
@@ -57,7 +57,7 @@ final class DecreesPanel {
                     () -> act.accept("scDecree", data));
             if (ui.over(x + 4, ry, w - 8, ROW - 2)) {
                 List<String> tip = new ArrayList<>(List.of(name + " (" + d.getString("tier") + " rank)", d.getString("desc"),
-                        "Cost: " + d.getString("cost") + ", from your capital's stockpile.", "Cooldown: " + d.getString("cooldown") + "."));
+                        "Cost: " + d.getString("cost") + ", from your capital's stockpile.", "Cooldown: " + d.getString("cooldown") + " (" + d.getString("cooldownReal") + " real time)."));
                 if (!why.isEmpty()) tip.add(why + ".");
                 else if (!ruler) tip.add("Only the ruler can issue decrees.");
                 ui.tip(tip);
@@ -65,8 +65,6 @@ final class DecreesPanel {
             ry += ROW;
         }
     }
-
-    static String time(int minutes) { return minutes >= 120 ? (minutes + 30) / 60 + " h" : minutes + " min"; }
 
     private DecreesPanel() {}
 }

@@ -405,5 +405,14 @@ public final class Imm {
         return String.valueOf((int) Math.round(v));
     }
 
+    /** A length of time the same way everywhere: game days for a day or more, real minutes below (TimeText). */
+    public static String span(long ticks) { return livingrealms.TimeText.span(ticks, livingrealms.client.ClientState.dayTicks); }
+
+    /** The same from a whole number of real minutes, as some views send. */
+    public static String spanMin(long minutes) { return span(minutes * 1200); }
+
+    /** "1 kill", "3 kills", "2 smithies" (livingrealms.Text). */
+    public static String plural(long n, String word) { return livingrealms.Text.count(n, word); }
+
     public static void blend() { RenderSystem.enableBlend(); }
 }

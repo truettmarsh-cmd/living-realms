@@ -35,9 +35,9 @@ final class HonoursPanel {
             String name = ui.clip(r.getString("name"), room / 2), want = weapon ? "favourite " + r.getString("family") : "better armour";
             ui.text(name, x + 30, ry + 4, TEXT);
             ui.text(ui.clip("wants " + want, room - ui.width(name) - 4), x + 34 + ui.width(name), ry + 4, GOLD);
-            String status = "Merit " + r.getInt("merit") + " · " + (stocked ? "in stock" : ordered ? "ordered" : "not in stock") + " · " + r.getInt("daysLeft") + "d left";
+            String status = "Merit " + r.getInt("merit") + " · " + (stocked ? "in stock" : ordered ? "ordered" : "not in stock") + " · " + plural(r.getInt("daysLeft"), "day") + " left";
             ui.text(ui.clip(status, room), x + 30, ry + 15, stocked ? GREEN : ordered ? BLUE : FAINT);
-            if (ui.over(x + 4, ry, room + 26, 27)) ui.tip(r.getString("name"), r.getString("text"), "Merit " + r.getInt("merit") + " · lapses in " + r.getInt("daysLeft") + " days if unanswered");
+            if (ui.over(x + 4, ry, room + 26, 27)) ui.tip(r.getString("name"), r.getString("text"), "Merit " + r.getInt("merit") + " · lapses in " + plural(r.getInt("daysLeft"), "day") + " if unanswered");
             CompoundTag who = new CompoundTag();
             who.putUUID("soldier", r.getUUID("soldier"));
             String id = r.getUUID("soldier").toString();

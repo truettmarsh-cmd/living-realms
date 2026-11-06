@@ -68,7 +68,7 @@ final class QuestPanel {
         ui.right("taken " + q.getInt("taken") + "/" + q.getInt("maxTaken") + " · completed " + q.getInt("completed"), x + w - 12, cy + 6, FAINT);
         int by = cy + 20;
         if (!q.getBoolean("offers")) ui.text(ui.clip("Village Expansion villages post no bounties.", w - 24), x + 10, by + 12, FAINT);
-        else if (board.isEmpty()) ui.text(ui.clip("No bounties posted. The next in about " + Math.max(1, q.getLong("nextPostIn")) + " min.", w - 24), x + 10, by + 12, FAINT);
+        else if (board.isEmpty()) ui.text(ui.clip("No bounties posted. The next in about " + spanMin(Math.max(1, q.getLong("nextPostIn"))) + ".", w - 24), x + 10, by + 12, FAINT);
         for (Tag t : board) { bounty(ui, x + 4, by, w - 12, (CompoundTag) t, act); by += BOUNTY_H; }
         cy += boardH + 6;
 
@@ -126,8 +126,7 @@ final class QuestPanel {
         int room = bx - (x + 26) - 8;
         String town = b.getString("town");
         ui.text(ui.clip(b.getString("title") + (town.isEmpty() ? "" : " · " + town), room), x + 26, y + 4, TEXT);
-        long left = b.getLong("left"), day = Math.max(1, b.getLong("day"));
-        String time = left >= day ? (left / day) + "d " + (left % day * 24 / day) + "h left" : (left * 24 / day) + "h left";
+        String time = livingrealms.TimeText.span(b.getLong("left"), Math.max(1, b.getLong("day"))) + " left";
         int reward = b.getInt("reward");
         String purse = reward > 0 ? reward + " emeralds" : "No purse: your own town";
         String status = purse + " · " + time;

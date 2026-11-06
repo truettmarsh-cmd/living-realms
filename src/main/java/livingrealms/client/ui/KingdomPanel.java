@@ -68,7 +68,7 @@ final class KingdomPanel {
             CompoundTag none = new CompoundTag();
             ui.button("pacify", x + w - 92, cy + 15, 80, 15, "Largesse", Style.PRIMARY, ruler && ready, () -> act.accept("scPacify", none));
             if (ui.over(x + w - 92, cy + 15, 80, 15)) ui.tip("Largesse", loyalty.getInt("pacifyCost") + " emeralds from this city's stockpile: +12 loyalty.",
-                    ready ? "Once a day." : "Again in " + loyalty.getInt("pacifyIn") + " min.");
+                    ready ? "Once a day." : "Again in " + spanMin(loyalty.getInt("pacifyIn")) + ".");
             if (loyalty.getBoolean("danger")) ui.pill("REBELLION NEAR", x + 8, cy + 31, alpha(RED, 0x60), RED);
             int ry = cy + 33 + (loyalty.getBoolean("danger") ? 12 : 0), col2 = (w - 24) / 2;
             for (int i = 0; i < why.size(); i++) {
@@ -122,7 +122,7 @@ final class KingdomPanel {
             ui.item(Items.EMERALD, x + 8, ly - 4);
             String s = paying ? "You pay " + r.getString("other") : r.getString("other") + " pays you";
             ui.text(ui.clip(s, w - 200), x + 28, ly, paying ? ORANGE : GREEN);
-            ui.right(r.getInt("perDay") + " a day · " + r.getInt("daysLeft") + " days left · next in " + r.getInt("dueIn") + " min", x + w - 12, ly, FAINT);
+            ui.right(r.getInt("perDay") + " a day · " + plural(r.getInt("daysLeft"), "day") + " left · next in " + spanMin(r.getInt("dueIn")), x + w - 12, ly, FAINT);
             if (ui.over(x + 4, ly - 3, w - 12, 13)) ui.tip("Tribute", "Paid each day from the payer's stockpiles (NPC towns from their treasury).",
                     "Raids between payer and payee are barred while it lasts.", "A missed payment ends it and breaks the truce." + (r.getInt("missed") > 0 ? " Short payments so far: " + r.getInt("missed") : ""));
             ly += 13;
@@ -130,7 +130,7 @@ final class KingdomPanel {
         for (Tag t : truces) {
             CompoundTag r = (CompoundTag) t;
             ui.text(ui.clip("Truce with " + r.getString("other"), w - 120), x + 28, ly, BLUE);
-            ui.right(r.getInt("minutes") + " min left", x + w - 12, ly, FAINT);
+            ui.right(spanMin(r.getInt("minutes")) + " left", x + w - 12, ly, FAINT);
             ly += 13;
         }
         cy += ledgerH + 6;
@@ -150,7 +150,7 @@ final class KingdomPanel {
         int score = war.getInt("score");
         ui.item(Items.RED_BANNER, x + 6, y + 5);
         ui.text(ui.clip(war.getString("name"), w - 200), x + 26, y + 4, TEXT);
-        String pill = war.getBoolean("fighting") ? "Raid under way" : "At war · " + war.getInt("days") + (war.getInt("days") == 1 ? " day" : " days");
+        String pill = war.getBoolean("fighting") ? "Raid under way" : "At war · " + plural(war.getInt("days"), "day");
         ui.pill(pill, x + 26, y + 15, alpha(RED, 0x50), RED);
         ui.right("War score " + (score > 0 ? "+" : "") + score, x + w - 8, y + 6, score > 0 ? GREEN : score < 0 ? RED : MUTED);
         // diverging score bar: left is theirs, right is yours

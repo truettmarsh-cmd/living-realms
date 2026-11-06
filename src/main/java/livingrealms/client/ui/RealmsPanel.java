@@ -64,9 +64,9 @@ final class RealmsPanel {
             ui.pill(status, x + 28, ry + 15, alpha(sc, 0x50), sc);
             int px = x + 32 + ui.pillWidth(status);
             if (f.contains("truce")) {
-                String truce = "Truce " + f.getInt("truce") + " min";
+                String truce = "Truce " + spanMin(f.getInt("truce"));
                 ui.pill(truce, px, ry + 15, alpha(BLUE, 0x40), BLUE);
-                if (ui.over(px, ry + 15, ui.pillWidth(truce), 12)) ui.tip("Truce", f.getString("name") + " will not declare war on your realm for " + f.getInt("truce") + " more minutes.");
+                if (ui.over(px, ry + 15, ui.pillWidth(truce), 12)) ui.tip("Truce", f.getString("name") + " will not declare war on your realm for " + spanMin(f.getInt("truce")) + " more.");
                 px += ui.pillWidth(truce) + 4;
             }
             String sub = f.getInt("villageCount") + " villages · " + f.getInt("recruits") + " recruits";

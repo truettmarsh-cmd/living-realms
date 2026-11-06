@@ -63,7 +63,7 @@ public final class PeoplePanel {
         ui.text("Mayor", x + 26, top + 5, GOLD);
         ui.text(ui.clip(mayor == null ? "None" : mayor.getString("n"), half - 100), x + 26 + ui.width("Mayor  "), top + 5, TEXT);
         String how = mayor == null ? "Elected when someone is fit" : t.getBoolean("mayorAppointed") ? "Appointed · " + t.getString("mayorBonus")
-                : "Elected · next vote in " + t.getInt("nextElection") + "d · " + t.getString("mayorBonus");
+                : "Elected · next vote in " + plural(t.getInt("nextElection"), "day") + " · " + t.getString("mayorBonus");
         ui.text(ui.clip(how, half - 32), x + 26, top + 17, MUTED);
         if (mayor != null && ui.over(x, top, half - 130, nh)) ui.tip(mayor.getString("n"), mayor.getString("j") + ", " + mayor.getInt("a"), "Bonus: " + t.getString("mayorBonus"),
                 t.getBoolean("mayorAppointed") ? "Appointed: no elections until they die or you call one" : "Re-elected every 12 days unless someone is clearly more respected");

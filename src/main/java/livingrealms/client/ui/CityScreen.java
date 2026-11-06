@@ -1668,8 +1668,7 @@ public class CityScreen extends Screen {
     }
 
     static String eta(double days) {
-        long mins = Math.round(days * 20);
-        return mins < 60 ? "~" + Math.max(1, mins) + " min" : String.format(Locale.ROOT, "~%.1f h", mins / 60.0);
+        return "~" + span(Math.round(days * livingrealms.client.ClientState.dayTicks));
     }
 
     // ------------------------------------------------------------------ military
