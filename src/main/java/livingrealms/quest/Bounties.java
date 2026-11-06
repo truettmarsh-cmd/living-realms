@@ -256,7 +256,7 @@ public final class Bounties {
         x.progress += given;
         s.dirty = true;
         if (x.done()) complete(data, m, s, x, p, now);
-        else p.displayClientMessage(net.minecraft.network.chat.Component.literal("Delivered " + given + " · " + x.progress + "/" + x.need), true);
+        else livingrealms.net.Net.notice(p, "Delivered " + given + " · " + x.progress + "/" + x.need);
         return null;
     }
 
