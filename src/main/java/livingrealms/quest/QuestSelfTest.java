@@ -289,8 +289,11 @@ public final class QuestSelfTest {
         Quests.give(p, new ItemStack(short_, deliver.need));
         check(Bounties.deliver(data, m, home, p, deliver.id, now) == null, "Finish the delivery");
         check(count(p, short_) == half && home.stock.count(short_) == stocked + deliver.need - half, "Only what was owed is taken, into the stockpile");
-        check(count(p, Items.EMERALD) == emeralds + deliver.reward && !board.contains(deliver), "Delivery paid and removed from the board");
-        check(Bounties.deliver(data, m, home, p, deliver.id, now) != null && count(p, Items.EMERALD) == emeralds + deliver.reward, "A finished bounty pays once");
+        check(count(p, Items.EMERALD) == emeralds && !board.contains(deliver), "A ruler's delivery to their own town pays no purse (the goods stay theirs) and leaves the board");
+        if (Quests.view(p, m, home).getList("board", 10).stream().map(t -> (net.minecraft.nbt.CompoundTag) t)
+                .anyMatch(t -> "DELIVER".equals(t.getString("kind")) && t.getInt("reward") != 0))
+            throw new IllegalStateException("The board shows a purse on deliveries to the ruler's own town");
+        check(Bounties.deliver(data, m, home, p, deliver.id, now) != null && count(p, Items.EMERALD) == emeralds, "A finished bounty cannot be delivered again");
         check(data.of(me).stat(QuestData.BOUNTIES) == 1, "Bounty counted for the quest line");
 
         // slay
@@ -439,7 +442,7 @@ public final class QuestSelfTest {
             if (ci > cj) throw new IllegalStateException("Step " + order.get(j) + " completed after a later chapter's " + order.get(i));
         }
         checks++;
-        int bountyEmeralds = deliver.reward + slay.reward + patrol.reward + escortPaid;
+        int bountyEmeralds = slay.reward + patrol.reward + escortPaid; // the delivery was to the ruler's own town: no purse
         check(count(p, Items.EMERALD) == emeraldRewards(line) + bountyEmeralds, "Total emeralds = quest rewards + bounty rewards: "
                 + count(p, Items.EMERALD) + " vs " + (emeraldRewards(line) + bountyEmeralds));
         CompoundTag end = QuestData.load(data.save(new CompoundTag())).save(new CompoundTag());
