@@ -70,8 +70,9 @@ final class HeroPanel {
             ui.text(ui.clip(n.getString("label") + " · " + n.getString("detail"), w - 30), x + 22, ry, met ? TEXT : MUTED);
             ry += 13;
         }
-        ui.text(ui.clip("Price: " + h.getString("cost") + " (town has " + plural(h.getInt("emeralds"), "emerald") + ")", w - 130), x + 8, ry + 6, FAINT);
-        if (ui.over(x, ry + 4, w - 120, 12)) ui.tip("Price, paid once", h.getString("cost"), "Emeralds from town stock; the rare item from your inventory, or else town stock");
+        ui.text(ui.clip("Price: " + h.getString("cost"), w - 130), x + 8, ry + 6, FAINT);
+        if (ui.over(x, ry + 4, w - 120, 12)) ui.tip("Price, paid once", h.getString("cost"), "The town has " + plural(h.getInt("emeralds"), "emerald") + " in stock",
+                "Emeralds from town stock; the rare item from your inventory, or else town stock");
         boolean confirming = System.currentTimeMillis() < confirmUntil;
         ui.button("heroAscend", x + w - 116, ry + 2, 110, 16, confirming ? "Confirm ascension?" : "Ascend", confirming ? Style.DANGER : Style.PRIMARY,
                 canCommand && can && so.getBoolean("seen"), () -> {

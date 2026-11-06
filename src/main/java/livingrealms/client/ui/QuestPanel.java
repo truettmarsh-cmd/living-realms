@@ -65,6 +65,8 @@ final class QuestPanel {
         // ---- this town's bounty board
         ui.card(x, cy, w - 4, boardH);
         ui.text("Bounty board", x + 8, cy + 6, GOLD);
+        maxTaken = q.getInt("maxTaken");
+        handsFull = maxTaken > 0 && q.getInt("taken") >= maxTaken;
         ui.right("taken " + q.getInt("taken") + "/" + q.getInt("maxTaken") + " · completed " + q.getInt("completed"), x + w - 12, cy + 6, FAINT);
         int by = cy + 20;
         if (!q.getBoolean("offers")) ui.text(ui.clip("Village Expansion villages post no bounties.", w - 24), x + 10, by + 12, FAINT);
@@ -109,6 +111,10 @@ final class QuestPanel {
         }
     }
 
+    /** Set while drawing the board: the player holds as many bounties as allowed, so Accept is greyed. */
+    static boolean handsFull;
+    static int maxTaken;
+
     static void bounty(Imm ui, int x, int y, int w, CompoundTag b, BiConsumer<String, CompoundTag> act) {
         boolean mine = b.getBoolean("mine"), taken = !b.getString("takerName").isEmpty();
         String kind = b.getString("kind");
@@ -118,7 +124,10 @@ final class QuestPanel {
         data.putUUID("bounty", b.getUUID("id"));
         // buttons on the right
         int bw = 58, bx = x + w - bw - 6;
-        if (!taken) ui.button("qa" + b.getUUID("id"), bx, y + 4, bw, 14, "Accept", Style.PRIMARY, true, () -> act.accept("questAccept", data));
+        if (!taken) {
+            ui.button("qa" + b.getUUID("id"), bx, y + 4, bw, 14, "Accept", Style.PRIMARY, !handsFull, () -> act.accept("questAccept", data));
+            if (handsFull && ui.over(bx, y + 4, bw, 14)) ui.tip("You already hold " + maxTaken + " bounties", "Finish or abandon one to take another");
+        }
         else if (mine) {
             if (kind.equals("DELIVER")) ui.button("qd" + b.getUUID("id"), bx, y + 4, bw, 14, "Deliver", Style.SUCCESS, b.getInt("carried") > 0 && b.getBoolean("near"), () -> act.accept("questDeliver", data));
             ui.button("qx" + b.getUUID("id"), bx, y + 20, bw, 14, "Abandon", Style.GHOST, true, () -> act.accept("questAbandon", data));

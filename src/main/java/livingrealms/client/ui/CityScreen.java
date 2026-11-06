@@ -468,7 +468,8 @@ public class CityScreen extends Screen {
         int tx = cx + rw + 6, txw = cw - rw - 6;
         ui.card(tx, y, txw, 40);
         ui.text("Taxes", tx + 8, y + 6, MUTED);
-        ui.segments("tax", tx + 6, y + 19, txw - 12, 15, livingrealms.settlement.Simulation.TAX_NAMES, v().getInt("tax"),
+        String[] taxNames = (txw - 12) / 4 - 4 >= ui.width("Normal") ? livingrealms.settlement.Simulation.TAX_NAMES : new String[]{"None", "Low", "Mid", "High"};
+        ui.segments("tax", tx + 6, y + 19, txw - 12, 15, taxNames, v().getInt("tax"),
                 mine(), i -> act("tax", tag("level", i)));
         if (ui.over(tx, y, txw, 40)) ui.tip("Taxes bring in emeralds per settler each day.", "None +6 mood · Low ±0 · Normal −8 · High −20 (needs Taxation)");
         // jobs
@@ -547,10 +548,14 @@ public class CityScreen extends Screen {
                 fixed ? "Set by you; click the number to follow half the capacity again." : "Follows half the garrison capacity.");
     }
 
+    /** Shorter tile titles for narrow windows; the full title is in the tooltip. */
+    static final Map<String, String> SHORT_LABELS = Map.of("Happiness", "Mood", "Food / day", "Food", "Treasury", "Coin", "People", "Folk");
+
     void tile(int x, int y, int w, String label, String value, float frac, int color, String sub, Item icon) {
         ui.card(x, y, w, 44);
         ui.item(icon, x + w - 21, y + 5);
-        ui.text(ui.clip(label, w - 30), x + 7, y + 6, MUTED);
+        String shown = ui.width(label) <= w - 30 ? label : SHORT_LABELS.getOrDefault(label, label);
+        ui.text(ui.clip(shown, w - 30), x + 7, y + 6, MUTED);
         if (ui.over(x, y, w, 44) && ui.width(label) > w - 30) ui.tip(label, sub);
         ui.big(ui.width(value) * 1.2f <= w - 12 ? value : ui.clip(value, (int) ((w - 12) / 1.2f)), x + 7, y + 17, TEXT, 1.2f);
         if (frac > 0) ui.bar(x + 7, y + 33, w - 14, 4, frac, color, color);
