@@ -17,6 +17,7 @@ public final class ClientNet {
             }
             case "view" -> {
                 ClientState.view = data;
+                Placement.answered(null);
                 if (data.getInt("dayTicks") > 0) ClientState.dayTicks = data.getInt("dayTicks");
                 Minecraft mc = Minecraft.getInstance();
                 if (data.getBoolean("open") && !data.getString("tab").equals("architect")) mc.setScreen(new CityScreen(data.getString("tab")));
@@ -25,7 +26,11 @@ public final class ClientNet {
             case "plots" -> ClientState.setTowns(data);
             case "blueprint" -> ClientState.putBlueprint(data);
             case "quest" -> QuestToast.show(data);
-            case "notice" -> { ClientState.notice = data.getString("text"); ClientState.noticeAt = System.currentTimeMillis(); }
+            case "notice" -> {
+                ClientState.notice = data.getString("text");
+                ClientState.noticeAt = System.currentTimeMillis();
+                Placement.answered(data.getString("text"));
+            }
             case "reports" -> livingrealms.client.ui.ReportsPanel.receive(data);
             default -> {}
         }
