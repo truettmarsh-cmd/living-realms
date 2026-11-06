@@ -65,6 +65,8 @@ public final class Siege {
     public final Map<Long, BlockState> closed = new LinkedHashMap<>();
     public final Set<Integer> shut = new LinkedHashSet<>(), damaged = new LinkedHashSet<>();
     public int blockade, starved, volleys, drained;
+    /** Bowmen lifted onto tower tops; they are brought down again once the fight is inside, where melee can reach them. */
+    final Set<UUID> climbed = new HashSet<>();
     /** NPC towns keep no food stock: a notional store of food, in nutrition, the blockade eats. -1 for player towns. */
     public double provisions = -1;
     /** Soldiers at the ram this second, and defenders on the walls (status only). */
@@ -525,12 +527,17 @@ public final class Siege {
                 BlockPos post = posts.stream().min(Comparator.comparingDouble(p -> horizontal(d, p))).orElseThrow();
                 posts.remove(post);
                 // up the tower ladder: the last few blocks of a climb Recruits' pathfinding does not plan
-                if (horizontal(d, post) <= 6 && d.getY() < post.getY() - 1.5) d.teleportTo(post.getX() + .5, post.getY(), post.getZ() + .5);
+                if (horizontal(d, post) <= 6 && d.getY() < post.getY() - 1.5) { d.teleportTo(post.getX() + .5, post.getY(), post.getZ() + .5); climbed.add(d.getUUID()); }
                 LivingEntity foe = nearest(attackers, Vec3.atCenterOf(post), BattleAI.RANGED_REACH + 4);
                 orders.put(d, new BattleAI.Order(foe, post, BattleAI.Stance.SKIRMISH));
                 posted++;
             }
             def = new BattleAI.Plan(orders, def.fallingBack(), def.regrouping());
+        } else if (!climbed.isEmpty()) {
+            // the enemy is through: bowmen left up the towers come down to fight, or no one could ever clear the town
+            BlockPos ground = RecruitsBridge.surface(level, in);
+            for (LivingEntity d : holding) if (climbed.remove(d.getUUID()) && d.getY() > ground.getY() + 3)
+                d.teleportTo(ground.getX() + .5, ground.getY(), ground.getZ() + .5);
         }
         return new BattleAI.Plan[]{atk, def};
     }
@@ -566,10 +573,12 @@ public final class Siege {
         // blockade: attackers camped round a closed town eat into its stores; starving, it may give up
         if (phase.before(Phase.ASSAULT) && surrounded(l, target, attackers)) {
             blockade += 20;
-            if (blockade % DRAIN_EVERY == 0) {
+            // a hungry town eats again the moment food reaches its stores, not at the next scheduled draw
+            if (blockade % DRAIN_EVERY == 0 || hungry) {
                 boolean was = hungry;
                 drain(target);
                 if (hungry && !was) Raids.announce(server, target, "The stores of " + target.name + " are empty: the besieged go hungry");
+                if (!hungry) starved = 0;
             }
             if (hungry) {
                 starved += 20;
@@ -581,7 +590,7 @@ public final class Siege {
                 }
                 if (starved >= SURRENDER_TICKS && !rulerHome) { surrendered = true; return true; }
             }
-        }
+        } else starved = 0; // the ring is broken: the count to surrender starts over
         return false;
     }
 

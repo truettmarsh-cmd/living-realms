@@ -52,7 +52,7 @@ Each wonder works for every city of the kingdom that holds it, as long as it sta
 - **Grand Forge**
   - Smiths work 1.5× faster in every city.
   - Forge orders cost 25% less of each material (rounded up, never below one). The Blacksmith page still shows the full price; the discount is taken when you place the order.
-  - **Masterwork.** Armour and melee weapons that a city's armoury hands to a recruit are Masterwork: +1 armour and +1 armour toughness on armour, +1.5 attack damage on weapons. They carry a gold "Masterwork · Grand Forge" line in the tooltip. The bonus is added on top of the item's own figures, so it works with modded gear too. Shields and bows get no bonus. The stockpile keeps plain items only, so an unworn masterwork piece goes back as a plain one when a kit changes. A worn one stays with its recruit, as any worn gear does. Resupply's spares are plain.
+  - **Masterwork.** Armour and melee weapons that a city's armoury hands to a recruit are Masterwork: +1 armour and +1 armour toughness on armour, +1.5 attack damage on weapons. They carry a gold "Masterwork · Grand Forge" line in the tooltip. The bonus is added on top of the item's own figures, so it works with modded gear too. Shields and bows get no bonus. The stockpile keeps plain items only, so an unworn masterwork piece goes back as a plain one when a kit changes. A worn one stays with its recruit, as any worn gear does. Resupply's spares are plain. Masterwork is for recruits only: a piece that ends up in a player's inventory, taken off a recruit or picked up from a fallen one, loses its mark within a second.
 - **Grand Exchange**
   - Caravans sell for 1.5× (the sender's emeralds, or an NPC town's treasury).
   - Every city's treasury gains 6 emeralds a day.

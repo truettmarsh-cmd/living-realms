@@ -43,7 +43,7 @@ Both sides hear it, and the piece is noted for repair.
 
 While the attackers are outside (before the breach, or while most of them are still outside), the defenders' Battle AI orders change:
 
-- **Bowmen and crossbowmen** take posts on the tops of towers and gatehouses and on the wall walk, nearest the breach first, within 36 blocks of it (at most 12 posts). Each shoots the nearest attacker in reach. Recruits' pathfinding does not climb ladders, so a bowman who reaches the foot of its post (within 6 blocks) is put on top, as if it climbed the tower ladder.
+- **Bowmen and crossbowmen** take posts on the tops of towers and gatehouses and on the wall walk, nearest the breach first, within 36 blocks of it (at most 12 posts). Each shoots the nearest attacker in reach. Recruits' pathfinding does not climb ladders, so a bowman who reaches the foot of its post (within 6 blocks) is put on top, as if it climbed the tower ladder. Once most of the attackers are inside, bowmen put up a tower are brought back down behind the breach, so the melee can reach them and the town can be cleared.
 - **Melee** hold a ring 5 blocks inside the breach. They fight only attackers inside the walls or at the breach.
 - Royal Guards keep escorting their ruler, as before.
 
@@ -59,7 +59,7 @@ With the **Scorpions** research, wall towers, gatehouses and watchtowers also lo
 
 While at least 3 attackers, two thirds of them, are camped outside the wall (within 48 blocks of it) before the breach, the town is blockaded. Every 20 seconds the blockade eats a sixth of a day's food (4 per townsperson and 5 per soldier, in nutrition) from the stockpile, the same way the simulation eats. NPC towns keep no food stock, so they get notional provisions of a day's food × (rank + 1).
 
-Once the stores are empty the town is starving. The defenders lose regeneration, are weakened and lose morale. After 60 seconds of starving the town **surrenders**, unless its ruler is in it. A surrender ends like a win (the town transfers, and the war score counts it as taken), but nothing is broken: the gates simply open.
+Once the stores are empty the town is starving. The defenders lose regeneration, are weakened and lose morale. After 60 seconds of starving in a row the town **surrenders**, unless its ruler is in it. Breaking the ring, or food reaching the stores (the hungry town eats again within a second), starts the count over. A surrender ends like a win (the town transfers, and the war score counts it as taken), but nothing is broken: the gates simply open.
 
 ## Siege engines (pack mods)
 

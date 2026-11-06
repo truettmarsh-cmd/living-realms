@@ -19,7 +19,8 @@ import java.util.UUID;
  * Masterwork gear (Grand Forge): armour and weapons a Grand Forge kingdom's armoury hands to its recruits carry one tag
  * and a small bonus: +1 armour and +1 toughness on armour, +1.5 attack damage on melee weapons. The bonus is added by
  * {@link ItemAttributeModifierEvent}, so the item keeps its own figures. The stockpile keeps plain items only: an unworn
- * masterwork piece goes back as a plain one ({@link #plain}); a worn one stays with its recruit like any worn gear.
+ * masterwork piece goes back as a plain one ({@link #plain}); a worn one stays with its recruit like any worn gear. In a
+ * player's inventory it is plain again ({@link #playerTick}).
  */
 @Mod.EventBusSubscriber(modid = LivingRealms.MODID)
 public final class Masterwork {
@@ -72,6 +73,20 @@ public final class Masterwork {
             e.addModifier(Attributes.ARMOR_TOUGHNESS, new AttributeModifier(TOUGH_IDS[i], "Masterwork", TOUGHNESS, AttributeModifier.Operation.ADDITION));
         } else if (slot == EquipmentSlot.MAINHAND && e.getOriginalModifiers().containsKey(Attributes.ATTACK_DAMAGE)) {
             e.addModifier(Attributes.ATTACK_DAMAGE, new AttributeModifier(DAMAGE_ID, "Masterwork", DAMAGE, AttributeModifier.Operation.ADDITION));
+        }
+    }
+
+    /**
+     * Masterwork is the kingdom's gift to its recruits, not loot: a piece that reaches a player's inventory (taken off a
+     * recruit, or picked up from a fallen one) loses its mark within a second and is plain gear again.
+     */
+    @SubscribeEvent
+    public static void playerTick(net.minecraftforge.event.TickEvent.PlayerTickEvent e) {
+        if (e.phase != net.minecraftforge.event.TickEvent.Phase.END || e.player.level().isClientSide || e.player.tickCount % 20 != 0) return;
+        var inv = e.player.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack st = inv.getItem(i);
+            if (is(st)) inv.setItem(i, plain(st));
         }
     }
 

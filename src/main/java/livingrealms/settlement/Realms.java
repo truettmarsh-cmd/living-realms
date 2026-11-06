@@ -31,7 +31,9 @@ import java.util.*;
  */
 @Mod.EventBusSubscriber(modid = LivingRealms.MODID)
 public final class Realms {
-    public static final int SYNC = 100, WAR_RANGE = 1000, WAR_NEAR = 600, WAR_DECISION = 12000, TRUCE = 24000;
+    public static final int SYNC = 100, WAR_RANGE = 1000, WAR_NEAR = 600, WAR_DECISION = 12000;
+    /** A truce after peace with a Village Expansion faction, and how long its peace offer stands: one day of the mod's clock. */
+    static int truce() { return Statecraft.dayLength(); }
     static final Map<String, Long> NEXT_WAR = new HashMap<>();
     /** Set while Living Realms itself moves villages, so its own siege-success echoes are ignored. */
     static boolean busy;
@@ -306,7 +308,7 @@ public final class Realms {
         UUID npc = kingdomFor(faction), them = kingdom.kingdomId();
         if (m.raids.stream().anyMatch(r -> r.attacker.equals(npc) && r.defender.equals(them) || r.attacker.equals(them) && r.defender.equals(npc))) return;
         if (VxBridge.peaceLocked(server.overworld(), faction, realm)) return;
-        PEACE_OFFERS.put(pair(faction, realm), now + TRUCE);
+        PEACE_OFFERS.put(pair(faction, realm), now + truce());
         String msg = VxBridge.name(faction) + " sues for peace after its losses. Make peace from Military > Realms within a day to accept.";
         for (Settlement c : Kingdoms.cities(m, kingdom)) Raids.announce(server, c, msg);
     }
@@ -349,13 +351,15 @@ public final class Realms {
         String mine = realm(player.server, m, s);
         if (mine == null || !VxBridge.atWar(mine, faction)) return "You are not at war with them";
         ServerLevel level = player.server.overworld();
-        if (m.raids.stream().anyMatch(r -> r.attacker.equals(kingdomFor(faction)) || r.defender.equals(kingdomFor(faction)))) return "Not while a raid is under way";
+        UUID npc = kingdomFor(faction), us = s.kingdomId();
+        if (m.raids.stream().anyMatch(r -> r.attacker.equals(npc) && r.defender.equals(us) || r.attacker.equals(us) && r.defender.equals(npc)))
+            return "Not while a raid between you is under way";
         if (VxBridge.peaceLocked(level, mine, faction)) return "Too soon after fighting; Village Expansion holds the war open a little longer";
         boolean offered = offersPeace(faction, mine, level.getGameTime());
         if (VxBridge.isNpc(faction) && !offered && !VxBridge.wouldAcceptPeace(level, faction, mine)) return VxBridge.name(faction) + " refuses peace for now";
-        VxBridge.makePeace(level, mine, faction, TRUCE);
+        VxBridge.makePeace(level, mine, faction, truce());
         PEACE_OFFERS.remove(pair(mine, faction));
-        m.truces.put(mine.compareTo(faction) < 0 ? mine + "|" + faction : faction + "|" + mine, level.getGameTime() + TRUCE);
+        m.truces.put(mine.compareTo(faction) < 0 ? mine + "|" + faction : faction + "|" + mine, level.getGameTime() + truce());
         for (Settlement c : Kingdoms.cities(m, s)) c.log("Peace with " + VxBridge.name(faction) + "; a truce of one day");
         livingrealms.chronicle.Chronicle.kingdom(m, s.kingdomId(), livingrealms.chronicle.Chronicle.Kind.PEACE, VxBridge.name(faction), "a truce");
         return null;

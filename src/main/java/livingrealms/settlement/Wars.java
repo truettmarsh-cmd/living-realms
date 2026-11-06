@@ -52,6 +52,9 @@ public final class Wars {
         int lost = Math.max(0, (sent == null ? raid.soldiers.size() : sent) - raid.soldiers.size());
         w.tire(raid.attacker, PER_SOLDIER * lost);
         w.addScore(raid.defender, PER_KILL * lost);
+        // the defenders' dead count the same way for their side
+        w.tire(raid.defender, PER_SOLDIER * raid.defendersLost);
+        w.addScore(raid.attacker, PER_KILL * raid.defendersLost);
         if (captured) w.addScore(raid.attacker, RAID_WON);
         else { w.addScore(raid.defender, RAID_REPELLED); w.tire(raid.attacker, PER_FAILED_RAID); }
     }
@@ -220,7 +223,11 @@ public final class Wars {
         }
         if (fighting(m, w)) { w.offer = o; return "Not while a raid is under way"; }
         if (veLocked(server, m, w)) { w.offer = o; return LOCKED; }
-        if (o.term == Term.CITY && cedable(m, me, enemy) == null) return "You have no city to cede but your capital";
+        if (o.term == Term.CITY && cedable(m, me, enemy) == null) {
+            // the offer can never be met: it is dropped, and its maker told why
+            Statecraft.tellKingdom(server, m, enemy, Statecraft.name(m, me) + " has no city to cede but its capital; your peace offer lapsed.");
+            return "You have no city to cede but your capital";
+        }
         conclude(server, m, w, enemy, o.term, o.days, null);
         return null;
     }
