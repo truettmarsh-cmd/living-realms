@@ -68,7 +68,7 @@ public final class SoldierSpecials {
         if (!sp.eligible(so)) return sp.label + " needs: " + sp.requirement();
         int slots = SpecialSkill.slots(so);
         if (slots == 0) return "Special slots open at skill rank " + SpecialSkill.SLOT_RANKS[0];
-        if (so.specials.size() >= slots) return "All " + slots + " special slots are in use; unequip one first";
+        if (so.specials.size() >= slots) return (slots == 1 ? "The special slot is" : "All " + slots + " special slots are") + " in use; unequip one first";
         so.specials.add(sp);
         return null;
     }

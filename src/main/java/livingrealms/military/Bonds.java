@@ -265,7 +265,7 @@ public final class Bonds {
         double factor = 1;
         if (source.getEntity() instanceof LivingEntity attacker && attacker != victim && active(attacker) && foe(attacker, victim)) {
             engage(attacker, time);
-            factor *= 1 + attack(data, attacker, victim, time);
+            if (!Heroes.ultimate(source)) factor *= 1 + attack(data, attacker, victim, time);
         }
         if (active(victim) && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             if (source.getEntity() instanceof LivingEntity attacker && foe(victim, attacker)) engage(victim, time);
@@ -330,7 +330,10 @@ public final class Bonds {
         BondData data = BondData.get(server);
         String name = dead.getName().getString();
         boolean vengeful = killer != null && killer != dead && foe(dead, killer);
-        String killerLabel = vengeful ? killer.getType().getDescription().getString() : "";
+        // "the Zombie" for a kind of mob, a player's or named foe's own name otherwise
+        boolean named = vengeful && (killer instanceof net.minecraft.world.entity.player.Player || killer.hasCustomName());
+        String killerLabel = !vengeful ? "" : named ? killer.getName().getString() : "the " + killer.getType().getDescription().getString();
+        String fellTo = vengeful ? livingrealms.Text.who(killer) : "";
         List<String> grieving = new ArrayList<>(), sworn = new ArrayList<>();
         Set<Level> levels = EnumSet.noneOf(Level.class);
         Level swornLevel = Level.NONE;
@@ -372,7 +375,7 @@ public final class Bonds {
             Settlement t = town != null ? town : townOf(server, swornPartner);
             if (t != null) {
                 String bound = sworn.size() > 1 ? "bound to them by oath" : swornLevel == Level.SWORN ? "their sworn kin" : "bound to them by a Blood Oath";
-                Chronicle.record(t, Chronicle.Kind.NOTE, name + " fell" + (avenged ? " to a " + killerLabel : "")
+                Chronicle.record(t, Chronicle.Kind.NOTE, name + " fell" + (avenged ? " to " + fellTo : "")
                         + ". " + names(sworn) + ", " + bound + ", " + (avenged ? "swore vengeance." : "mourned them."));
                 Chronicle.markFall(id);
             }
@@ -389,7 +392,7 @@ public final class Bonds {
             default -> ", their blood-oath partner";
         };
         return "✝ " + names(grieving) + (one ? " grieves" : " grieve") + " for " + dead + relation
-                + (vengeance.isEmpty() ? "." : ", and will seek vengeance on the " + vengeance + ".");
+                + (vengeance.isEmpty() ? "." : ", and will seek vengeance on " + vengeance + ".");
     }
 
     /** "A", "A and B", "A, B and C". */
@@ -402,13 +405,26 @@ public final class Bonds {
     public static void moved(MinecraftServer server, UUID from, UUID to) {
         BondData.get(server).move(from, to);
         CombatClock.move(from, to);
+        // a battle under way follows the recruit, so its points go to the new entity when it settles
+        Long scanned = SCANNED.remove(from);
+        if (scanned != null) SCANNED.put(to, scanned);
+        Map<String, Battle> moved = new HashMap<>();
+        for (Iterator<Map.Entry<String, Battle>> it = BATTLES.entrySet().iterator(); it.hasNext(); ) {
+            Battle b = it.next().getValue();
+            if (!from.equals(b.a) && !from.equals(b.b)) continue;
+            it.remove();
+            if (from.equals(b.a)) b.a = to; else b.b = to;
+            moved.merge(BondData.key(b.a, b.b), b, (x, y) -> x.score >= y.score ? x : y);
+        }
+        BATTLES.putAll(moved);
     }
 
     // ------------------------------------------------------------------ who is still around
 
     @SubscribeEvent
     public static void joined(EntityJoinLevelEvent e) {
-        if (e.getLevel().isClientSide() || !active(e.getEntity())) return;
+        // every non-worker recruit, owned or not yet: one hired after it spawned still gets its bonds refreshed
+        if (e.getLevel().isClientSide() || !RecruitsBridge.isRecruit(e.getEntity()) || RecruitsBridge.isWorker(e.getEntity())) return;
         LOADED.get(Math.floorMod(e.getEntity().getUUID().hashCode(), SEEN_BUCKETS)).put(e.getEntity().getUUID(), e.getEntity());
         // a recruit rebuilt with the same UUID (retraining) is back
         BondData.Member m = BondData.get(e.getLevel().getServer()).member(e.getEntity().getUUID());
@@ -494,10 +510,10 @@ public final class Bonds {
         if (m != null && time < m.griefUntil) {
             t.putString("status", "Grieving for " + m.mourned + " · " + minutes(m.griefUntil - time) + " left");
             t.putString("statusTip", "−" + (int) Math.round(GRIEF_PENALTY * 100) + "% damage while grieving"
-                    + (m.vengeance.isEmpty() ? "" : "; then vengeance on the " + m.vengeanceLabel));
+                    + (m.vengeance.isEmpty() ? "" : "; then vengeance on " + m.vengeanceLabel));
             t.putBoolean("grief", true);
         } else if (m != null && time < m.vengeanceUntil && !m.vengeance.isEmpty()) {
-            t.putString("status", "Vengeance on the " + m.vengeanceLabel + " · " + minutes(m.vengeanceUntil - time) + " left");
+            t.putString("status", "Vengeance on " + m.vengeanceLabel + " · " + minutes(m.vengeanceUntil - time) + " left");
             t.putString("statusTip", "+" + (int) Math.round(VENGEANCE * 100) + "% damage against them, for " + m.mourned);
         }
         return t;

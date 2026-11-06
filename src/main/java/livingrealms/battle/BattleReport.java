@@ -107,13 +107,20 @@ public final class BattleReport {
         return slain() + " slain" + (fallen > 0 ? " · " + fallen + " fallen" : "") + (wounded > 0 ? " · " + wounded + " wounded" : "");
     }
 
-    /** "3 Zombie, 2 Skeleton", most first. */
-    public String killList() {
+    /** "3 Zombies, 1 Skeleton", most first. */
+    public String killList() { return killList(false); }
+
+    /** prose: "3 zombies and a skeleton", for a chronicle sentence. */
+    public String killList(boolean prose) {
         List<Map.Entry<String, Integer>> list = new ArrayList<>(kills.entrySet());
         list.sort((a, b) -> b.getValue() - a.getValue());
-        StringJoiner j = new StringJoiner(", ");
-        for (var e : list) j.add(e.getValue() + " " + e.getKey());
-        return j.toString();
+        List<String> parts = new ArrayList<>();
+        for (var e : list) {
+            String name = prose ? e.getKey().toLowerCase(java.util.Locale.ROOT) : e.getKey();
+            parts.add(prose && e.getValue() == 1 ? livingrealms.Text.a(name) : livingrealms.Text.count(e.getValue(), name));
+        }
+        if (!prose || parts.size() < 2) return String.join(", ", parts);
+        return String.join(", ", parts.subList(0, parts.size() - 1)) + " and " + parts.get(parts.size() - 1);
     }
 
     public static String duration(int seconds) { return seconds >= 60 ? seconds / 60 + "m " + seconds % 60 + "s" : seconds + "s"; }

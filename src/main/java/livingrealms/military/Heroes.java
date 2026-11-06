@@ -94,7 +94,7 @@ public final class Heroes {
     public static final int BLADE_STORM_TICKS = 80, BULWARK_TICKS = 160, RAIN_TICKS = 100, CHARGE_TICKS = 120, PIN_TICKS = 60;
     public static final double BLADE_STORM_RADIUS = 3.5, BULWARK_RADIUS = 5, EARTHSHAKER_RADIUS = 6, IMPALE_RANGE = 12, RAIN_RADIUS = 4, MIRACLE_RADIUS = 10;
     public static final float BLADE_STORM_DAMAGE = 3, EARTHSHAKER_DAMAGE = 6, IMPALE_DAMAGE = 8, RAIN_DAMAGE = 3;
-    static final String HEIRLOOM = "LivingRealmsHeirloom", ULTIMATE_SHOT = "LivingRealmsUltimate";
+    static final String HEIRLOOM = "LivingRealmsHeirloom", ULTIMATE_SHOT = "LivingRealmsUltimate", BULWARKED = "LivingRealmsBulwarked";
     private static final UUID HEALTH = UUID.fromString("7c3e9a10-4b2d-4f7e-8a51-3d6c2b9e1f01");
     private static final UUID RESIST = UUID.fromString("7c3e9a10-4b2d-4f7e-8a51-3d6c2b9e1f03");
     private static final TextColor GOLD = TextColor.fromLegacyFormat(ChatFormatting.GOLD);
@@ -242,7 +242,11 @@ public final class Heroes {
         for (Need n : needs(server, s, so, now)) if (!n.met()) return "Needs " + n.label().toLowerCase(Locale.ROOT) + ": " + n.detail();
         if (s.owner == null) return "Only a player's recruits can become Heroes";
         int cap = cap(server, s.owner), have = count(server, s.owner);
-        if (have >= cap) return "You already have " + have + (have == 1 ? " Hero" : " Heroes") + " (one per city you hold, " + cap + " now)";
+        if (have >= cap) {
+            int bonus = capBonus(s.owner);
+            return "You already have " + have + (have == 1 ? " Hero" : " Heroes") + " (one per city you hold, at most " + MAX_CAP
+                    + (bonus > 0 ? ", +" + bonus + " from the Citadel of Heroes" : "") + ": " + cap + " now)";
+        }
         return null;
     }
 
@@ -354,7 +358,10 @@ public final class Heroes {
         var old = instance.getModifier(id);
         if (old != null && old.getAmount() == amount && old.getOperation() == op) return;
         if (old != null) instance.removeModifier(id);
-        if (amount != 0) instance.addTransientModifier(new AttributeModifier(id, "Living Realms hero", amount, op));
+        if (amount == 0) return;
+        // bonus health is saved with the entity, or a reload clamps its health to the unbuffed maximum
+        var mod = new AttributeModifier(id, "Living Realms hero", amount, op);
+        if (attribute == Attributes.MAX_HEALTH) instance.addPermanentModifier(mod); else instance.addTransientModifier(mod);
     }
 
     /** Once a second: perks, fear, the aura, the glow, and Miracle's battle ending. */
@@ -431,10 +438,25 @@ public final class Heroes {
         double factor = 1;
         if (source.getEntity() instanceof LivingEntity attacker && attacker != victim && RecruitsBridge.isRecruit(attacker) && CombatClock.foe(attacker, victim)) {
             HeroData data = HeroData.get(level.getServer());
-            factor *= 1 + attack(data, attacker, time);
+            if (ultimate(source)) {
+                HeroData.Hero h = data.hero(attacker.getUUID());
+                factor *= 1 + (h == null ? 0 : Math.min(HERO_CAP, h.valor() * VALOR_DAMAGE)); // an ultimate's own damage: raised by Valor alone
+            } else factor *= 1 + attack(data, attacker, time);
         }
         if (!ACTIVE.isEmpty() && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) factor *= 1 - defend(victim, time);
         if (factor != 1) event.setAmount((float) (event.getAmount() * factor));
+    }
+
+    /** Damage an ultimate deals itself (a Rain arrow, or a Blade Storm, Earthshaker or Impale blow): fixed, so skill, path, bond and decree bonuses leave it alone. */
+    public static boolean ultimate(DamageSource source) {
+        return busy || source.getDirectEntity() != null && source.getDirectEntity().getPersistentData().getBoolean(ULTIMATE_SHOT);
+    }
+
+    /** A Rain arrow hits for RAIN_DAMAGE, whatever its speed, crits or the hero's bow. */
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void rainDamage(LivingHurtEvent event) {
+        Entity direct = event.getSource().getDirectEntity();
+        if (direct != null && !event.getEntity().level().isClientSide && direct.getPersistentData().getBoolean(ULTIMATE_SHOT)) event.setAmount(RAIN_DAMAGE);
     }
 
     /** Rain of Arrows never hurts the hero's own side. */
@@ -446,10 +468,19 @@ public final class Heroes {
         if (owner != null && friendly(owner, event.getEntity())) event.setCanceled(true);
     }
 
+    /** The hero's side: its owner and their team-mates, the owner's recruits, pets and tamed mounts, any mount carrying one of those, and townsfolk. */
     static boolean friendly(@Nullable UUID owner, Entity x) {
         if (owner == null) return false;
-        if (x instanceof Player p) return p.getUUID().equals(owner);
-        return RecruitsBridge.isRecruit(x) && owner.equals(RecruitsBridge.owner(x));
+        if (x instanceof Player p) {
+            if (p.getUUID().equals(owner)) return true;
+            Player ruler = p.level().getPlayerByUUID(owner);
+            return ruler != null && p.isAlliedTo(ruler);
+        }
+        if (RecruitsBridge.isRecruit(x)) return owner.equals(RecruitsBridge.owner(x));
+        if (x instanceof net.minecraft.world.entity.OwnableEntity o && owner.equals(o.getOwnerUUID())) return true;
+        if (x instanceof net.minecraft.world.entity.npc.AbstractVillager || x instanceof livingrealms.entity.SettlerEntity) return true;
+        for (Entity rider : x.getPassengers()) if (friendly(owner, rider)) return true;
+        return false;
     }
 
     /** The owner's loaded recruits within r blocks, the hero left out. */
@@ -691,10 +722,16 @@ public final class Heroes {
                 case BULWARK -> {
                     for (Projectile p : level.getEntitiesOfClass(Projectile.class, new AABB(a.center, a.center).inflate(BULWARK_RADIUS + 1),
                             p -> p.isAlive() && p.position().distanceToSqr(a.center) <= BULWARK_RADIUS * BULWARK_RADIUS
+                                    && !p.getPersistentData().getBoolean(BULWARKED)
                                     && p.getOwner() != null && !friendly(a.owner, p.getOwner()) && p.getOwner() != hero)) {
                         level.sendParticles(ParticleTypes.ENCHANTED_HIT, p.getX(), p.getY(), p.getZ(), 8, .1, .1, .1, .1);
                         level.playSound(null, p.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.NEUTRAL, .8f, 1.2f);
-                        p.discard();
+                        // a trident or an arrow someone can pick up is knocked down, not destroyed
+                        if (p instanceof net.minecraft.world.entity.projectile.ThrownTrident || p instanceof AbstractArrow arrow && arrow.pickup == AbstractArrow.Pickup.ALLOWED) {
+                            p.getPersistentData().putBoolean(BULWARKED, true);
+                            p.setDeltaMovement(0, -.2, 0);
+                            p.hurtMarked = true;
+                        } else p.discard();
                         blocked++;
                     }
                     if (time >= a.next) { a.next = time + 10; dome(level, a.center, 36); }
@@ -740,6 +777,7 @@ public final class Heroes {
         long time = server.overworld().getGameTime();
         try {
             if (!ACTIVE.isEmpty() || !CHARGING.isEmpty()) run(server, time);
+            if (server.getTickCount() % 6000 == 0) HeroData.get(server).prune(server, time);
             if (LOADED.isEmpty() || server.getTickCount() % 10 != 0) return;
             HeroData data = HeroData.get(server);
             boolean second = server.getTickCount() % 20 == 0;
@@ -831,7 +869,7 @@ public final class Heroes {
         if (h == null) return;
         long time = server.overworld().getGameTime();
         String name = fullName(h);
-        String foe = killer == null || killer == dead ? "" : killer instanceof Player p ? p.getName().getString() : "a " + killer.getType().getDescription().getString();
+        String foe = killer == null || killer == dead ? "" : livingrealms.Text.who(killer);
         long days = Math.max(0, (time - h.ascended) / 24000);
         lastFall = "✝ The hero " + name + (town == null ? "" : " of " + town.name) + " has fallen" + (foe.isEmpty() ? "." : ", slain by " + foe + ".");
         server.getPlayerList().broadcastSystemMessage(Component.literal(lastFall).withStyle(ChatFormatting.GOLD), false);
@@ -901,11 +939,18 @@ public final class Heroes {
         if (rec == null) return 0;
         Settlement.Soldier so = rec.soldier();
         int xp = t.getInt("xp");
+        boolean hero = hero(server, so.entity) != null;
+        // a recruit at the top rank that isn't a Hero has nowhere to put the XP: the heirloom waits for one who can use it
+        if (!hero && so.skillXp >= SoldierRanks.MAX_XP) return 0;
         t.putBoolean("claimed", true);
         t.putString("claimedBy", so.name);
         lore(stack, "Heirloom of a fallen Hero", "Its strength passed to " + so.name);
         int got = SoldierRanks.grant(rec.settlement(), so, e, xp, false, server.overworld().getGameTime());
-        lastClaim = so.name + " took up " + stack.getHoverName().getString() + " (+" + xp + " skill XP)";
+        int valor = hero ? xp - got : 0;
+        List<String> gains = new ArrayList<>();
+        if (got > 0) gains.add("+" + got + " skill XP");
+        if (valor > 0) gains.add("+" + valor + " Valor XP");
+        lastClaim = so.name + " took up " + stack.getHoverName().getString() + (gains.isEmpty() ? "" : " (" + String.join(", ", gains) + ")");
         rec.settlement().log(lastClaim);
         ServerPlayer owner = rec.settlement().owner == null ? null : server.getPlayerList().getPlayer(rec.settlement().owner);
         if (owner != null) owner.sendSystemMessage(Component.literal("✦ " + lastClaim).withStyle(ChatFormatting.GOLD));

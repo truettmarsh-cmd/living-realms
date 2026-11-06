@@ -82,7 +82,7 @@ final class BattleContext {
             Settlement s = dim == null ? null : town(server, dim, r.pos);
             if (s == null || !owner.equals(s.owner)) return;
             String names = names(fallen.stream().map(f -> f.name).collect(Collectors.toList()));
-            String foe = r.kills.isEmpty() ? "" : " against " + r.killList().toLowerCase(java.util.Locale.ROOT);
+            String foe = r.kills.isEmpty() ? "" : " against " + r.killList(true);
             String what = r.kind == BattleReport.Kind.DRAGON ? "When a dragon came over " + s.name : "In a skirmish" + foe + " near " + s.name;
             Chronicle.record(s, Chronicle.Kind.NOTE, what + ", " + names + (fallen.size() == 1 ? " fell" : " fell together") + ".");
         } catch (RuntimeException e) {
