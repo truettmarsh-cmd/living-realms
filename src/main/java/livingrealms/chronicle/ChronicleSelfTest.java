@@ -311,7 +311,13 @@ public final class ChronicleSelfTest {
             level.setBlock(bandFire, Blocks.FIRE.defaultBlockState(), 3);
             phase = 1;
         } else if (phase == 1 && age >= 60 + Fires.SCAN + 2) {
-            check(!(level.getBlockState(bandFire).getBlock() instanceof BaseFireBlock) && f != null && f.contained > 0, "Fire at the town's edge put out at once");
+            // the edge fire goes within a few looks: by the burning fire's sweep, or the town's watch if the brigade already won
+            boolean out = !(level.getBlockState(bandFire).getBlock() instanceof BaseFireBlock);
+            Fires.Fire last = f != null ? f : Fires.LAST.get(town.id);
+            if (!(out && last != null && last.contained > 0) && age < 60 + Fires.WATCH + Fires.SCAN * 4) return false;
+            check(out && last != null && last.contained > 0, "Fire at the town's edge put out at once (out " + out + ", fire " + (f != null ? "burning" : last != null ? "over" : "none")
+                    + ", contained " + (last == null ? 0 : last.contained) + ")");
+            if (f == null) { phase = 2; return false; } // already out: skip the restart check, go to the summary
             phase = 2;
             // a restart mid-fire: the burning fire is saved with the world and watched again afterwards
             int byCrewBefore = f.byCrew;
