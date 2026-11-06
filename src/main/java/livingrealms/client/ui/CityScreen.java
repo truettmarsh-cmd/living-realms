@@ -368,11 +368,16 @@ public class CityScreen extends Screen {
                 v().getBoolean("canMoveCapital"), () -> act("capital"));
         else ui.button("raid", cx + cw - 108, warY - 2, 108, 16, "Raid this city", Style.PRIMARY,
                 v().getBoolean("canRaid"), () -> act("raid"));
-        if (!seat && ui.over(cx + cw - 108, warY - 2, 108, 16)) ui.tip(v().getBoolean("ruler")
-                ? "Move the seat of your kingdom here. Old capital returns to City rank if needed."
-                : "Dispatch half the nearest eligible city's soldiers (2–12); at least 3 must be at home.",
-                v().getBoolean("ruler") ? "Unavailable during raids or within a day of moving it."
-                : "Defeat local defenders, then hold the centre for 60 seconds. Both cities and armies must stay loaded.");
+        String demotes = v().getString("capitalDemotes");
+        if (!seat && ui.over(cx + cw - 108, warY - 2, 108, 16)) {
+            if (!v().getBoolean("ruler")) ui.tip("Dispatch half the nearest eligible city's soldiers (2–12); at least 3 must be at home.",
+                    "Defeat local defenders, then hold the centre for 60 seconds. The target city and both armies must stay loaded.");
+            else if (!demotes.isEmpty()) ui.tip("Move the seat of your kingdom here.",
+                    "Warning: " + demotes + " drops from Capital to City rank. Its land shrinks and the Capital",
+                    "rank fee is not returned; raising it again costs the full fee.",
+                    "Unavailable during raids or within a day of moving it.");
+            else ui.tip("Move the seat of your kingdom here.", "Unavailable during raids or within a day of moving it.");
+        }
         String raid = v().getString("raidStatus");
         CompoundTag vx = v().getCompound("vx");
         if (!v().getCompound("raid").isEmpty()) raid = ""; // the raid card below shows it with progress

@@ -155,7 +155,9 @@ public final class Merit {
     public static void update(Settlement s, Settlement.Soldier so, @Nullable Entity e, long now, int ticks) {
         Record r = so.merit;
         boolean alive = e instanceof LivingEntity le && le.isAlive();
-        add(r, alive ? (SURVIVE_DAY + (so.royalGuard ? GUARD_DAY : 0)) * ticks / (float) DAY : 0, now);
+        // a soldier on the roll whose chunk is unloaded is still on duty (the dead leave the roll), so it accrues like the rest
+        boolean onDuty = alive || e == null;
+        add(r, onDuty ? (SURVIVE_DAY + (so.royalGuard ? GUARD_DAY : 0)) * ticks / (float) DAY : 0, now);
         if (r.want != Want.NONE) {
             if (alive && satisfied(s, so, e, r.want)) {
                 close(s, so, now, 0, null);

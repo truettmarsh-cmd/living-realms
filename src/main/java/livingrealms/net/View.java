@@ -52,6 +52,9 @@ public final class View {
         t.putBoolean("canRaid", Raids.playerSource(p.server, manager, p.getUUID(), s) != null);
         t.putBoolean("canMoveCapital", p.getUUID().equals(s.owner) && !s.capital && !Raids.engaged(manager, s)
                 && Kingdoms.cities(manager, s).stream().noneMatch(c -> c.capitalMovedAt > p.server.overworld().getGameTime()));
+        // moving the seat away from a Capital-rank city drops that city to City rank (Kingdoms.normalize): the button warns of it
+        Kingdoms.cities(manager, s).stream().filter(c -> c.capital && c != s && c.tier == Tier.CAPITAL).findFirst()
+                .ifPresent(c -> t.putString("capitalDemotes", c.name));
         t.putString("owner", s.isAi() && !s.mirror() ? "" : s.ownerName);
         if (Realms.on()) t.put("vx", Realms.view(p, manager, s));
         t.put("statecraft", Statecraft.view(p, manager, s));

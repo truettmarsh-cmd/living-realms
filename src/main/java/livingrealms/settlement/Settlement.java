@@ -532,7 +532,7 @@ public final class Settlement {
         s.happiness = t.getDouble("happy");
         s.starving = t.getBoolean("starving");
         s.baseHousing = t.getInt("baseHousing");
-        s.taxLevel = t.getInt("tax");
+        s.taxLevel = Math.max(0, Math.min(3, t.getInt("tax")));
         s.wealth = t.getDouble("wealth");
         CompoundTag acc = t.getCompound("accum");
         for (String k : acc.getAllKeys()) s.accum.put(k, acc.getDouble(k));

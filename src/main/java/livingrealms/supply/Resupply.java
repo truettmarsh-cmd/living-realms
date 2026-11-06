@@ -174,6 +174,7 @@ public final class Resupply {
         MinecraftServer server = e.getServer();
         SoldierProgression.Record rec = SoldierProgression.record(server, e);
         if (rec != null && rec.settlement().isAi()) return false; // NPC towns supply their own guards
+        if (livingrealms.settlement.Decrees.isLevy(e)) return false; // levies disband within a day; their gear would vanish with them
         SupplyData data = SupplyData.get(server);
         SupplyData.Rec r = data.rec(e.getUUID());
         if (r.seen == 0 || now - r.seen > 1200 || now < r.seen) { r.seen = now; data.setDirty(); }

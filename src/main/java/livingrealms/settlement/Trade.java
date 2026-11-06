@@ -548,7 +548,7 @@ public final class Trade {
         for (var e : cargo.entrySet()) {
             if (shown++ == 3) { b.append(" and more"); break; }
             if (b.length() > 0) b.append(", ");
-            b.append(e.getValue()).append(' ').append(e.getKey().getDescription().getString().toLowerCase(Locale.ROOT));
+            b.append(livingrealms.Text.count(e.getValue(), e.getKey().getDescription().getString().toLowerCase(Locale.ROOT)));
         }
         return b.length() == 0 ? "nothing" : b.toString();
     }
@@ -561,13 +561,20 @@ public final class Trade {
         livingrealms.hardship.Hardships.caravanArrived(from, to, c.cargo, now, server == null ? net.minecraft.util.RandomSource.create() : server.overworld().random);
         if (from != null) {
             double exchange = livingrealms.wonders.Wonders.caravan(from);
-            int coin = (int) Math.round(c.value * 0.5 * exchange);
-            if (from.isAi() || from.mirror()) from.wealth += c.value * exchange;
+            // a player's caravan between two towns of their own kingdom only moves goods: no coin, or a town pair would mint emeralds
+            boolean npc = from.isAi() || from.mirror();
+            boolean home = to != null && to.kingdomId().equals(from.kingdomId());
+            int coin = npc || home ? 0 : (int) Math.round(c.value * 0.5 * exchange);
+            if (npc) from.wealth += c.value * exchange;
             else if (coin > 0) from.stock.force(Items.EMERALD, coin);
             Ledger l = m.trade.ledger(from.id);
-            l.earned += c.value;
+            l.earned += npc ? c.value * exchange : coin;
             prosper(m, from, 3 + c.value / 10);
-            from.log("Our caravan reached " + (to == null ? "its market" : to.name) + " and sold its goods for " + coin + " emeralds.");
+            String where = to == null ? "its market" : to.name;
+            from.log(npc ? "Our caravan reached " + where + " and sold its goods."
+                    : home ? "Our caravan reached " + where + "; the goods stay within the kingdom, so no coin changed hands."
+                    : coin == 0 ? "Our caravan reached " + where + ", but its goods fetched less than an emerald."
+                    : "Our caravan reached " + where + " and sold its goods for " + livingrealms.Text.count(coin, "emerald") + ".");
             from.dirty = true;
         }
         if (to != null) {
@@ -606,6 +613,7 @@ public final class Trade {
         Settlement from = m.get(c.from);
         if (from == null || attacker.equals(from.kingdomId())) return;
         UUID victim = from.kingdomId();
+        if (m.state.war(attacker, victim) != null) return; // already at war: an ambush is part of it, not a new grievance
         String key = Statecraft.pair(attacker, victim);
         Long until = m.trade.grievances.get(key);
         boolean hasCities = m.all().stream().anyMatch(s -> s.kingdomId().equals(attacker));
@@ -749,5 +757,6 @@ public final class Trade {
     @Nullable
     static ServerLevel level(MinecraftServer server, Settlement s) { return server.getLevel(s.dim); }
 
-    public Trade() {}
+    /** One per world (its SettlementManager): the prosperity cache starts empty, so another world's towns never carry over. */
+    public Trade() { PROSPERITY.clear(); }
 }

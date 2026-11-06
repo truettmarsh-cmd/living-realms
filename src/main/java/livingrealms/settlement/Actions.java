@@ -165,7 +165,7 @@ public final class Actions {
         var n = ResearchTree.get(id);
         for (var e : n.items().entrySet()) if (s.stock.countIngredient(e.getKey()) < e.getValue()) return "Needs " + e.getValue() + " " + ingredientName(e.getKey());
         n.items().forEach(s.stock::takeIngredient);
-        if (!s.activeResearch.isEmpty()) s.researchBank += s.researchProgress;
+        if (!s.activeResearch.isEmpty()) { s.researchBank += s.researchProgress; refundResearch(s); }
         s.activeResearch = id;
         s.researchAuto = false;
         s.researchProgress = 0;
@@ -182,10 +182,17 @@ public final class Actions {
             s.log("Auto research will skip " + (n == null ? s.activeResearch : n.name()));
         }
         s.researchBank += s.researchProgress;
+        refundResearch(s);
         s.researchProgress = 0;
         s.activeResearch = "";
         s.researchAuto = false;
         return null;
+    }
+
+    /** The study's points go to the bank; its paper, gold and the like go back to the stockpile, so starting it again costs the same. */
+    static void refundResearch(Settlement s) {
+        var n = s.activeResearch.isEmpty() || s.isAi() ? null : ResearchTree.get(s.activeResearch);
+        if (n != null) n.items().forEach((k, v) -> refund(s, k, v));
     }
 
     public static String ingredientName(String ing) {
@@ -244,6 +251,7 @@ public final class Actions {
             }
             r.cost().forEach((k, v) -> total.merge(k, v * qty, Integer::sum));
         }
+        boolean discounted = livingrealms.wonders.Wonders.has(s, livingrealms.wonders.Wonder.FORGE);
         livingrealms.wonders.Wonders.forgeCost(s, total);
         for (var e : total.entrySet())
             if (s.stock.countIngredient(e.getKey()) < e.getValue())
@@ -255,6 +263,7 @@ public final class Actions {
             o.pattern = pattern.id();
             o.piece = p;
             o.quantity = qty;
+            if (discounted) o.costShare = (float) livingrealms.wonders.Wonders.FORGE_COST;
             s.orders.add(o);
         }
         s.log("Ordered " + qty + "× " + pattern.name() + " " + (pieces.size() > 1 ? "armour sets" : pieces.get(0).label.toLowerCase(Locale.ROOT)));
@@ -269,7 +278,8 @@ public final class Actions {
             it.remove();
             var c = cost(o.pattern, o.piece);
             int left = o.quantity - o.done;
-            if (c != null) c.forEach((k, v) -> refund(s, k, v * left));
+            // pay back only what was charged: an order placed with the Grand Forge's discount refunds the discounted share
+            if (c != null) c.forEach((k, v) -> { int back = (int) Math.floor(v * left * o.costShare + 1e-6); if (back > 0) refund(s, k, back); });
             return null;
         }
         return null;
@@ -540,7 +550,7 @@ public final class Actions {
             moved += fit;
         }
         if (moved == 0) return s.stock.free() == 0 ? "The stockpile is full. Build a Storehouse." : "Nothing to deposit (hotbar and named or enchanted items are kept)";
-        tell(player, "Deposited " + moved + " items");
+        tell(player, "Deposited " + livingrealms.Text.count(moved, "item"));
         return null;
     }
 

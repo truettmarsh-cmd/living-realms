@@ -164,6 +164,8 @@ public final class Simulation {
     public static void step(MinecraftServer server, Settlement s) {
         ServerLevel level = server.getLevel(s.dim);
         if (level == null) return;
+        // an alarm left over when the town unloaded mid-fight lapses on its own
+        if (s.alarmUntil != 0 && !s.manualAlarm && s.alarmUntil < level.getGameTime() && !level.hasChunkAt(s.center)) s.alarmUntil = 0;
         recompute(s);
         Settlement.Derived d = s.d;
         double f = Config.SIM_INTERVAL.get() / (double) Config.DAY_LENGTH.get();
@@ -496,6 +498,7 @@ public final class Simulation {
 
     /** Hands a soldier its kit from the armoury, returning what it wore before. */
     public static void equip(Settlement s, Entity e, UnitType u) {
+        if (Decrees.isLevy(e)) return; // a levy keeps its own cap and tunic: it is gone in a day, and the armoury's gear with it
         Kit k = s.kit(u);
         var armor = Smithing.get(k.armor);
         if (armor != null) {
@@ -666,7 +669,8 @@ public final class Simulation {
                 applyStanceAll(level, s);
                 s.dirty = true;
             }
-        } else if (was && s.alarmUntil - now < 40) {
+        } else if (s.alarmUntil != 0 && s.alarmUntil - now < 40) {
+            // watch runs every 40 ticks, so the alarm is cleared on the last watch before it lapses (or any later one)
             s.alarmUntil = 0;
             s.log("The threat has passed");
             livingrealms.military.SoldierRanks.alarmEnded(level, s);

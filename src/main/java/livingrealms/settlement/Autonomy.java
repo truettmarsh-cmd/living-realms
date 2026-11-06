@@ -18,7 +18,7 @@ import java.util.*;
 
 /** Player towns keep going on their own: research, rank, garrison, re-equipping, and a report for the returning ruler. */
 public final class Autonomy {
-    public static final long AWAY_MS = 5 * 60 * 1000L, AWAY_TICKS = 24000;
+    public static final long AWAY_MS = 5 * 60 * 1000L, AWAY_TICKS = 24000; // the default day length; the report itself follows simulation.dayLength
     /** Auto training never spends the treasury below this many emeralds, nor below a quarter of the next rank's fee. */
     public static final int TRAIN_FLOOR = 8;
     /** Auto training leaves at least this many townsfolk. */
@@ -208,7 +208,7 @@ public final class Autonomy {
         if (!p.getUUID().equals(s.owner)) return;
         long ms = System.currentTimeMillis(), tick = p.server.overworld().getGameTime();
         Away a = s.away;
-        if (a.seenMs > 0 && (ms - a.seenMs > AWAY_MS || tick - a.seenTick > AWAY_TICKS) && !a.empty()) {
+        if (a.seenMs > 0 && (ms - a.seenMs > AWAY_MS || tick - a.seenTick > livingrealms.Config.DAY_LENGTH.get()) && !a.empty()) {
             List<String> lines = report(s, ms - a.seenMs, tick - a.seenTick);
             p.sendSystemMessage(Component.literal(String.join("\n", lines)).withStyle(ChatFormatting.GOLD));
             for (int i = lines.size() - 1; i >= 0; i--) s.log(lines.get(i));
@@ -221,7 +221,10 @@ public final class Autonomy {
     public static List<String> report(Settlement s, long ms, long ticks) {
         Away a = s.away;
         List<String> out = new ArrayList<>();
-        String days = ticks >= AWAY_TICKS ? String.format(Locale.ROOT, "%.1f days", ticks / 24000.0) : (ms / 60000) + " min";
+        long len = livingrealms.Config.DAY_LENGTH.get();
+        double dd = ticks / (double) len;
+        String days = ticks >= len ? (Math.abs(dd - Math.round(dd)) < .05 ? livingrealms.Text.count(Math.round(dd), "day") : String.format(Locale.ROOT, "%.1f days", dd))
+                : livingrealms.Text.count(ms / 60000, "minute");
         out.add("While you were away from " + s.name + " (" + days + "):");
         if (!a.built.isEmpty()) out.add("Built: " + counted(a.built, k -> k));
         if (!a.researched.isEmpty()) out.add("Researched: " + String.join(", ", a.researched));

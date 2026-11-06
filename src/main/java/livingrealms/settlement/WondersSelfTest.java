@@ -206,6 +206,28 @@ public final class WondersSelfTest {
         Map<String, Integer> bill = new LinkedHashMap<>(Map.of("minecraft:iron_ingot", 24, "minecraft:leather", 1));
         Wonders.forgeCost(city, bill);
         check(bill.get("minecraft:iron_ingot") == 18 && bill.get("minecraft:leather") == 1, "Forge: orders cost a quarter less, never nothing: " + bill);
+        // cancelling a discounted order pays back what was charged, not the full recipe (no iron from nothing)
+        livingrealms.smithing.ForgeOrder fo = new livingrealms.smithing.ForgeOrder();
+        fo.id = city.nextId++; fo.pattern = "iron"; fo.piece = livingrealms.smithing.Piece.CHESTPLATE; fo.quantity = 4; fo.done = 0;
+        fo.costShare = (float) Wonders.FORGE_COST;
+        city.orders.add(fo);
+        int iron0 = city.stock.count(Items.IRON_INGOT);
+        Actions.cancelOrder(city, fo.id);
+        int ironBack = city.stock.count(Items.IRON_INGOT) - iron0;
+        check(ironBack == 24 && !city.orders.contains(fo), "Forge: cancelling 4 discounted chestplates returns 24 iron (charged 24, recipe 32): " + ironBack);
+        check(livingrealms.smithing.ForgeOrder.load(fo.save()).costShare == fo.costShare, "The charged share is saved with the order");
+        // the town alarm clears once the threat has passed, even when the last watch saw it lapse exactly (watch runs every 40 ticks)
+        long tNow = level.getGameTime();
+        city.manualAlarm = false;
+        city.alarmUntil = tNow - 1; // lapsed since the last watch (old code only cleared while time was still left)
+        Simulation.watch(level, city);
+        check(city.alarmUntil == 0 && city.log.stream().anyMatch(l -> l.contains("The threat has passed")), "An alarm that lapsed on a watch tick is cleared: " + city.alarmUntil);
+        city.alarmUntil = tNow + 40;
+        Simulation.watch(level, city);
+        check(city.alarmUntil == tNow + 40, "An alarm with time to run stays up");
+        city.alarmUntil = 0;
+        Simulation.recompute(city);
+        check(city.d.happinessReasons.stream().noneMatch(r -> r.contains("under attack")), "No alarm, no 'under attack' mood");
         check(Math.abs(city.d.emeraldsPerDay - emeralds0 - Wonders.EXCHANGE_TRICKLE) < 1e-6, "Exchange: +6 emeralds a day: " + emeralds0 + " -> " + city.d.emeraldsPerDay);
         check(Wonders.caravan(city) == Wonders.EXCHANGE_CARAVAN, "Exchange: caravans ×1.5");
         int expect = Math.max(garrison0 + Wonders.CITADEL_GARRISON_MIN, (int) Math.round(garrison0 * Wonders.CITADEL_GARRISON));
