@@ -74,14 +74,14 @@ final class HonoursPanel {
             ui.item(icon, x + 26, ty + 4);
             String name = (s.getBoolean("royalGuard") ? "♛ " : "") + s.getString("name");
             ui.text(ui.clip(name, col - 50), x + 46, ty + 3, place <= 3 ? pc : TEXT);
-            ui.text(ui.clip(s.getString("title") + " · " + s.getInt("kills") + " kills", col - 50), x + 46, ty + 14, MUTED);
+            ui.text(ui.clip(s.getString("title") + " · " + plural(s.getInt("kills"), "kill"), col - 50), x + 46, ty + 14, MUTED);
             int mx = x + col;
             ui.text(String.valueOf(merit), mx, ty + 3, merit >= threshold ? GOLD : TEXT);
             ui.bar(mx + 24, ty + 5, 50, 5, top10 <= 0 ? 0 : merit / (float) Math.max(top10, threshold), merit >= threshold ? GOLD : BLUE, merit >= threshold ? GOLD_DK : 0xFF3F6FA8);
             ui.text(ui.clip("♥ " + (s.getString("fav").isEmpty() ? "no favourite yet" : s.getString("fav")), x + w - 12 - (mx + 82)), mx + 82, ty + 3, MUTED);
             ui.text(ui.clip(s.getString("reason"), x + w - 12 - mx), mx, ty + 14, s.getBoolean("wants") ? GOLD_DK : FAINT);
             if (ui.over(x + 4, ty, w - 12, 25)) ui.tip(s.getString("name"), s.getString("title") + " · merit " + merit + " (requests from " + threshold + ")",
-                    s.getInt("kills") + " kills in service · favourite: " + (s.getString("fav").isEmpty() ? "none yet" : s.getString("fav")), s.getString("reason"));
+                    plural(s.getInt("kills"), "kill") + " in service · favourite: " + (s.getString("fav").isEmpty() ? "none yet" : s.getString("fav")), s.getString("reason"));
             i++;
         }
         ui.endScroll();

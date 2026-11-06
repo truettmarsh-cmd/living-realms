@@ -235,7 +235,7 @@ public class RecruitScreen extends Screen {
         stat("Morale", (int) morale + "%", cx + 8, y + 42, w2 - 16, morale / 100f, morale >= 50 ? BLUE : ORANGE);
         int need = Math.max(1, d.getInt("xpNeeded"));
         stat("Recruits level " + d.getInt("lvl"), d.getInt("xp") + " / " + need + " XP", cx + 8, y + 64, w2 - 16, d.getInt("xp") / (float) need, GOLD);
-        ui.text(d.getInt("kills") + " kills", cx + 8, y + 85, FAINT);
+        ui.text(plural(d.getInt("kills"), "kill"), cx + 8, y + 85, FAINT);
         // Living Realms
         int rx = cx + w2 + 6;
         ui.card(rx, y, w2, 98);

@@ -16,6 +16,7 @@ final class KingdomPanel {
     static final String[] TERMS = {"White peace", "Tribute", "Cede city", "Pay tribute"};
     static final String[] TERM_IDS = {"WHITE", "TRIBUTE", "CITY", "PAY"};
     static final String[] DAYS = {"1 day", "3 days", "7 days"};
+    static final String[] TERMS_SHORT = {"White", "Tribute", "Cede", "Pay"}, DAYS_SHORT = {"1d", "3d", "7d"};
     static final int[] DAY_VALUES = {1, 3, 7};
     /** Chosen term and truce per enemy, kept while the screen is open. */
     private static final Map<String, int[]> CHOICE = new HashMap<>();
@@ -67,7 +68,7 @@ final class KingdomPanel {
             boolean ready = loyalty.getInt("pacifyIn") == 0;
             CompoundTag none = new CompoundTag();
             ui.button("pacify", x + w - 92, cy + 15, 80, 15, "Largesse", Style.PRIMARY, ruler && ready, () -> act.accept("scPacify", none));
-            if (ui.over(x + w - 92, cy + 15, 80, 15)) ui.tip("Largesse", loyalty.getInt("pacifyCost") + " emeralds from this city's stockpile: +12 loyalty.",
+            if (ui.over(x + w - 92, cy + 15, 80, 15)) ui.tip("Largesse", plural(loyalty.getInt("pacifyCost"), "emerald") + " from this city's stockpile: +12 loyalty.",
                     ready ? "Once a day." : "Again in " + spanMin(loyalty.getInt("pacifyIn")) + ".");
             if (loyalty.getBoolean("danger")) ui.pill("REBELLION NEAR", x + 8, cy + 31, alpha(RED, 0x60), RED);
             int ry = cy + 33 + (loyalty.getBoolean("danger") ? 12 : 0), col2 = (w - 24) / 2;
@@ -176,18 +177,21 @@ final class KingdomPanel {
         // terms
         int[] c = CHOICE.computeIfAbsent(id, k -> new int[]{0, 0});
         int ty = y + 66;
-        int segW = w - 16 - 150;
-        ui.segments("terms" + id, x + 8, ty, segW, 15, TERMS, c[0], i -> c[0] = i);
-        ui.segments("truce" + id, x + 12 + segW, ty, 138 - 4, 15, DAYS, c[1], i -> c[1] = i);
+        // narrow windows: short labels and a slimmer truce picker, so each term keeps a readable width
+        boolean narrow = w < 460;
+        int truceW = narrow ? 72 : 134, segW = w - 16 - truceW - 16;
+        ui.segments("terms" + id, x + 8, ty, segW, 15, narrow ? TERMS_SHORT : TERMS, c[0], i -> c[0] = i);
+        ui.segments("truce" + id, x + 12 + segW, ty, truceW, 15, narrow ? DAYS_SHORT : DAYS, c[1], i -> c[1] = i);
+        if (ui.over(x + 12 + segW, ty, truceW, 15)) ui.tip("Truce after peace: " + DAYS[c[1]]);
         int[] accept = war.getIntArray("accept");
         boolean player = war.getBoolean("player");
         boolean yes = accept.length > c[0] * 3 + c[1] && accept[c[0] * 3 + c[1]] == 1;
         boolean cedeOk = c[0] != 2 || !war.getString("cede").isEmpty();
         String verdict = player ? "Their ruler must accept" : !cedeOk ? "Only their capital is left" : yes ? "They would accept" : "They would refuse";
         String detail = switch (c[0]) {
-            case 1 -> "They pay " + war.getInt("tributeIn") + " emeralds a day for 5 days.";
+            case 1 -> "They pay " + plural(war.getInt("tributeIn"), "emerald") + " a day for 5 days.";
             case 2 -> war.getString("cede").isEmpty() ? "They hold no city but their capital." : "They cede " + war.getString("cede") + ", their city nearest your capital.";
-            case 3 -> "You pay " + war.getInt("tributeOut") + " emeralds a day for 5 days.";
+            case 3 -> "You pay " + plural(war.getInt("tributeOut"), "emerald") + " a day for 5 days.";
             default -> "Both sides keep what they hold.";
         };
         if (ui.over(x + 8, ty, segW, 15)) ui.tip(TERMS[c[0]], detail, "A truce of " + DAYS[c[1]] + " follows; no raids either way until it ends.");

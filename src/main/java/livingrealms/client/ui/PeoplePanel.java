@@ -43,7 +43,7 @@ public final class PeoplePanel {
         int mood = t.getInt("mood");
         ui.big("People", x, y, TEXT, 1.4f);
         String sub = t.getInt("population") + " townsfolk · " + t.getInt("children") + " children · mood " + mood + " (" + moodLabel(mood).toLowerCase(Locale.ROOT) + ")"
-                + " · " + t.getInt("births") + " born, " + t.getInt("deaths") + " died, " + t.getInt("weddings") + " weddings";
+                + " · " + t.getInt("births") + " born, " + t.getInt("deaths") + " died, " + plural(t.getInt("weddings"), "wedding");
         ui.text(ui.clip(sub, w - 130), x, y + 15, MUTED);
         search.setX(x + w - 118);
         search.setY(y + 4);
@@ -79,7 +79,7 @@ public final class PeoplePanel {
         ui.text("Captain", kx + 26, top + 5, GOLD);
         boolean hasCap = t.hasUUID("captain");
         ui.text(ui.clip(hasCap ? t.getString("captainName") : "None", half - 110), kx + 26 + ui.width("Captain  "), top + 5, TEXT);
-        String capHow = !hasCap ? "Needs soldiers" : t.getString("captainTitle") + " · " + t.getInt("captainKills") + " kills · "
+        String capHow = !hasCap ? "Needs soldiers" : t.getString("captainTitle") + " · " + plural(t.getInt("captainKills"), "kill") + " · "
                 + (t.getBoolean("captainAppointed") ? "appointed" : "the best soldier");
         ui.text(ui.clip(capHow, half - 32), kx + 26, top + 17, MUTED);
         ui.button("pplAppointCaptain", kx + half - 64, top + 28, 58, 13, mode.equals("captain") ? "Cancel" : "Appoint", mode.equals("captain") ? Style.SECONDARY : Style.PRIMARY,
@@ -166,7 +166,7 @@ public final class PeoplePanel {
             boolean cur = t.hasUUID("captain") && so.getUUID("e").equals(t.getUUID("captain"));
             ui.round(x + 4, ry + 1, w - 10, ROW_H - 2, 4, cur ? alpha(GOLD, 0x22) : CARD_HI);
             ui.text(ui.clip(so.getString("n"), w - 70), x + 9, ry + 3, cur ? GOLD : TEXT);
-            ui.text(ui.clip(so.getString("t") + " · " + so.getInt("k") + " kills · merit " + so.getInt("m"), w - 70), x + 9, ry + 13, MUTED);
+            ui.text(ui.clip(so.getString("t") + " · " + plural(so.getInt("k"), "kill") + " · merit " + so.getInt("m"), w - 70), x + 9, ry + 13, MUTED);
             CompoundTag d = new CompoundTag();
             d.putUUID("soldier", so.getUUID("e"));
             ui.button("pplCap" + so.getUUID("e"), x + w - 56, ry + 4, 44, 14, "Choose", Style.PRIMARY, !cur, () -> { act.accept("appointCaptain", d); mode = ""; });

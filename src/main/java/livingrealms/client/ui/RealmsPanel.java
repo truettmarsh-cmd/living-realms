@@ -69,7 +69,7 @@ final class RealmsPanel {
                 if (ui.over(px, ry + 15, ui.pillWidth(truce), 12)) ui.tip("Truce", f.getString("name") + " will not declare war on your realm for " + spanMin(f.getInt("truce")) + " more.");
                 px += ui.pillWidth(truce) + 4;
             }
-            String sub = f.getInt("villageCount") + " villages · " + f.getInt("recruits") + " recruits";
+            String sub = plural(f.getInt("villageCount"), "village") + " · " + plural(f.getInt("recruits"), "recruit");
             ui.text(ui.clip(sub, bx - px - 6), px, ry + 17, FAINT);
             if (ui.over(x, ry, bx - x - 4, 30)) ui.tip(f.getString("name") + ": " + status, sub,
                     f.getBoolean("npc") ? "Village Expansion decides its own wars; nearby factions may declare war on your realm." : "Another player's realm.",
@@ -90,7 +90,7 @@ final class RealmsPanel {
             for (Tag vt : villages) {
                 CompoundTag v = (CompoundTag) vt;
                 ui.round(x + 4, vy - 2, w - 12, 17, 3, CARD_HI);
-                String facts = v.getInt("dist") + " blocks · " + v.getInt("recruits") + " soldiers";
+                String facts = plural(v.getInt("dist"), "block") + " · " + plural(v.getInt("recruits"), "soldier");
                 int raidX = x + w - 72, factsX = raidX - 8 - ui.width(facts);
                 String name = (v.getBoolean("capital") ? "♛ " : "") + v.getString("name");
                 ui.text(ui.clip(name, factsX - (x + 10) - 6), x + 10, vy + 2, v.getBoolean("capital") ? GOLD : TEXT);
