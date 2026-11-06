@@ -52,6 +52,8 @@ public final class Flight {
     public boolean retreating, slain;
     @Nullable public Vec3 away;
     public String cause = "dragonfire";
+    /** "fire", "ice" or "lightning", kept from the start so the chronicle can name it after the dragon unloads. */
+    public String element = "";
     /** Sorties: the rider, the dragon's town, the raid's two towns. */
     @Nullable public UUID rider, home, raidSource, raidTarget;
     public final List<String> struck = new ArrayList<>();
@@ -72,6 +74,7 @@ public final class Flight {
     static Flight begin(ServerLevel level, Mob d, UUID town, Kind kind, BlockPos focus) {
         Flight f = new Flight(d.getUUID(), town, kind, level.dimension(), focus, level.getGameTime());
         f.angle = Math.atan2(d.getZ() - focus.getZ(), d.getX() - focus.getX());
+        f.element = DragonApi.element(d);
         ACTIVE.put(d.getUUID(), f);
         d.getPersistentData().putBoolean(FLAG, true);
         d.setNoAi(true);

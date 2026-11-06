@@ -51,7 +51,7 @@ public final class ChronicleEvents {
     /** Before ServerEvents forgets the soldier: remember the notable ones. */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onDeath(LivingDeathEvent e) {
-        if (!(e.getEntity().level() instanceof ServerLevel level)) return;
+        if (!(e.getEntity().level() instanceof ServerLevel level) || !livingrealms.military.RecruitsBridge.isRecruit(e.getEntity())) return;
         var id = e.getEntity().getUUID();
         for (Settlement s : SettlementManager.get(level.getServer()).all())
             for (Settlement.Soldier so : s.soldiers) if (so.entity.equals(id)) { Chronicle.fallen(s, so); return; }

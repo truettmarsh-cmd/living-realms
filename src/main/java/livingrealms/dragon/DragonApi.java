@@ -32,6 +32,11 @@ public final class DragonApi {
     /** Egg colours in Ice and Fire's order: four variants per element. */
     static final List<String> EGGS = List.of("red", "green", "bronze", "gray", "blue", "white", "sapphire", "silver",
             "electric", "amythest", "copper", "black");
+    /** An egg colour as players read it ("amythest" is Ice and Fire's registry spelling). */
+    static String eggColour(int element, int variant) {
+        String c = EGGS.get(element * 4 + variant);
+        return switch (c) { case "amythest" -> "amethyst"; case "electric" -> "electric blue"; default -> c; };
+    }
     static final List<String> ELEMENTS = List.of("fire", "ice", "lightning");
     /** Ice and Fire commands: wander, sit, escort. */
     public static final int WANDER = 0, SIT = 1, ESCORT = 2;
@@ -98,7 +103,7 @@ public final class DragonApi {
 
     /** "Ember", or "a fire dragon" when it has no name. */
     public static String name(Entity e) {
-        return e.hasCustomName() ? e.getCustomName().getString() : "a " + element(e) + " dragon";
+        return e.hasCustomName() ? e.getCustomName().getString() : livingrealms.Text.a(element(e) + " dragon");
     }
 
     // ------------------------------------------------------------------ eggs

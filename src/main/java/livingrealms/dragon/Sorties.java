@@ -130,13 +130,13 @@ public final class Sorties {
         Settlement home = f.home == null ? null : m.get(f.home), target = m.get(f.town);
         String name = e != null ? DragonApi.name(e) : "The dragon";
         if (f.slain) {
-            if (home != null) Chronicle.record(home, Chronicle.Kind.DRAGON, name + ", the dragon of " + home.name + ", was shot down over "
+            if (home != null) Chronicle.record(home, Chronicle.Kind.DRAGON, Roosts.cap(name) + ", the dragon of " + home.name + ", was shot down over "
                     + (target == null ? "the enemy" : target.name) + ".");
             if (target != null) Chronicle.record(target, Chronicle.Kind.DRAGON, "The defenders of " + target.name + " brought down " + name
                     + (home == null ? "" : ", the dragon of " + home.name) + (Scorpions.hitBy(f.dragon) ? ", with scorpion bolts" : "") + ".");
             return;
         }
-        if (target != null && f.strafes > 0) Chronicle.record(target, Chronicle.Kind.DRAGON, name + (home == null ? "" : ", the dragon of " + home.name)
+        if (target != null && f.strafes > 0) Chronicle.record(target, Chronicle.Kind.DRAGON, Roosts.cap(name) + (home == null ? "" : ", the dragon of " + home.name)
                 + ", flew over " + target.name + " during the raid" + (f.struck.isEmpty() ? " and scorched its defenders." : " and set " + DragonAttacks.list(f.struck) + " alight."));
         if (e != null && home != null && level != null) {
             var p = Roosts.roost(home);

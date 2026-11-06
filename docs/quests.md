@@ -13,7 +13,7 @@ Five chapters, 26 steps, in `data/livingrealms/livingrealms_quests/crown.json`:
 | Stone and Scholarship | a Library · 3 research in one town · Masonry · complete a bounty · Village |
 | Walls and Watchmen | Fortifications · 4 wall pieces · 8 soldiers · 20 hostile kills · hold off a raid (or take a city) · Town |
 | The Realm Widens | 2 cities · lead a raid · a truce or tribute · a Royal Guard · City |
-| The Crown | Royal Charter · Capital rank · the Capital Castle · 3 cities · take a rival capital, or rule 5 cities |
+| The Crown | Royal Charter · Capital rank · the Capital Castle · 3 cities · take a rival capital, raise a Wonder, or rule 5 cities |
 
 - **Checking.** Every 2 seconds each online player's current chapter is checked against their kingdom (every city they
   own): plots, rank, research, soldiers, Statecraft truces and tribute, Village Expansion treaties. A few things are
@@ -49,7 +49,7 @@ Check types (`count` defaults to 1): `cities`, `tier` (rank number, Camp 1 … C
 plots across the kingdom), `category` (`id` a building category such as `library`), `buildings` (finished buildings
 in one town, as ranks count them), `soldiers`, `research` (`id`), `research_count` (in one town), `walls` (wall
 sections, towers, gatehouses), `kills`, `battles` (raids held + cities taken), `raids_led`, `cities_taken`,
-`bounties`, `peace`, `royal_guard`, `castle`, `crown` (a rival capital taken, or `count` cities). An unknown type is
+`bounties`, `peace`, `royal_guard`, `castle`, `crown` (a rival capital taken, a Wonder raised, or `count` cities). An unknown type is
 logged and never completes.
 
 ## Town bounties

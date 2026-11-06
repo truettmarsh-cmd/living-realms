@@ -23,7 +23,7 @@ import java.util.*;
  * Quiet stretches between events are folded into one summary line instead of logging every cottage.
  */
 public final class Chronicle {
-    /** What happened. {0}, {1}, {2} are the record() arguments, {town} the town's name. */
+    /** What happened. {0}, {1}, {2} are the record() arguments, {town} the town's name; {0?text} shows text only when {0} is set, {0!text} only when it is empty. */
     public enum Kind {
         /** (founder or "") */
         FOUNDING("Founding", "{town} was founded{0? by }{0}, a handful of tents round a charter stone.",
@@ -36,8 +36,9 @@ public final class Chronicle {
         BUILDING("Building", "The {0} was finished, and the townsfolk came out to admire it.",
                 "Builders laid the last stone of the {0}.", "{town} gained its {0}; the masons drank to it that night."),
         /** () the wall circuit is complete; {0} is "" for the first wall, "second" for the next */
-        WALLS("Walls", "The walls of {town} were closed at last; the gates were hung and the watch set.",
-                "The last stretch of wall was finished, and {town} slept behind stone.", "Masons finished the walls of {town}; travellers now pass under its gatehouses."),
+        WALLS("Walls", "{0?A }{0}{0? ring of walls around }{0!The walls of }{town}{0? was closed}{0! were closed at last}; the gates were hung and the watch set.",
+                "The last stretch of {0?the }{0}{0? }wall was finished, and {town} slept behind stone.",
+                "Masons finished {0?a }{0}{0? ring of }{0!the }walls {0?around }{0!of }{town}; travellers now pass under its gatehouses."),
         /** () */
         CASTLE("Castle", "The Capital Castle was completed, its towers seen for miles.", "The great castle of {town} was finished, the seat of a kingdom."),
         /** (attacking town) the town held */
@@ -69,9 +70,9 @@ public final class Chronicle {
         /** (soldier name, mastery, epithet) a recruit attained a legendary mastery */
         LEGEND("Legend", "{0} mastered {1}, and the town took to calling them {0} {2}.", "Word spread of {0} {2}, who had mastered {1}.",
                 "{0} attained the legendary mastery {1}; songs now name them {2}."),
-        /** (soldier name, title, kills or "") */
-        FALLEN("Fallen", "{1} {0} fell in battle{2?, after }{2}{2? kills}. The town mourned.", "{town} lost {1} {0}{2?, slayer of }{2}{2? foes}.",
-                "{1} {0} died defending the realm{2?, with }{2}{2? kills to their name}."),
+        /** (soldier name, title, "12 kills" or "") */
+        FALLEN("Fallen", "{1} {0} fell in battle{2?, after }{2}. The town mourned.", "{town} lost {1} {0}{2?, who had }{2}{2? to their name}.",
+                "{1} {0} died defending the realm{2?, with }{2}{2? to their name}."),
         /** () became the seat of the kingdom */
         CAPITAL("Capital", "{town} was made the capital of the kingdom.", "The court moved to {town}, now the seat of the realm."),
         /** (new ruler) a ruler changed without conquest */
@@ -213,7 +214,9 @@ public final class Chronicle {
             int q = key.indexOf('?');
             int n = key.charAt(0) - '0';
             String arg = n >= 0 && n < args.length && args[n] != null ? args[n].trim() : "";
+            int bang = key.indexOf('!');
             if (q > 0) { if (!arg.isEmpty()) out.append(key.substring(q + 1)); }
+            else if (bang > 0) { if (arg.isEmpty()) out.append(key.substring(bang + 1)); }
             else out.append(arg);
         }
         String text = out.toString().replace("  ", " ").trim();
@@ -285,7 +288,7 @@ public final class Chronicle {
         if (!notable(so) || livingrealms.military.Heroes.isHero(so.entity)) return;
         markFall(so.entity);
         String title = so.royalGuard ? "Royal Guard" : livingrealms.military.SoldierRanks.title(livingrealms.military.SoldierRanks.rank(so));
-        record(s, Kind.FALLEN, so.name, title, so.kills > 0 ? String.valueOf(so.kills) : "");
+        record(s, Kind.FALLEN, so.name, title, so.kills > 0 ? livingrealms.Text.count(so.kills, "kill") : "");
     }
 
     // ------------------------------------------------------------------ watching the town

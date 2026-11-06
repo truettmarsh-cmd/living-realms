@@ -2,6 +2,7 @@ package livingrealms.dragon;
 
 import livingrealms.building.RoostBlueprint;
 import livingrealms.chronicle.Chronicle;
+import livingrealms.Text;
 import livingrealms.military.DragonRiders;
 import livingrealms.settlement.Plot;
 import livingrealms.settlement.Settlement;
@@ -109,7 +110,7 @@ public final class Roosts {
             int[] egg = DragonApi.egg(it);
             if (egg == null || !s.stock.take(it, 1)) continue;
             setEgg(r, egg[0], egg[1], now + DragonConfig.i(DragonConfig.HATCH_TICKS));
-            s.log("The keepers laid a " + DragonApi.EGGS.get(egg[0] * 4 + egg[1]) + " dragon egg in the embers of the roost");
+            s.log("The keepers laid " + livingrealms.Text.a(DragonApi.eggColour(egg[0], egg[1]) + " dragon egg") + " in the embers of the roost");
             s.dirty = true;
             return;
         }
@@ -122,8 +123,9 @@ public final class Roosts {
             r.fedDay = now / 24000;
             see(r, d);
             DragonApi.bondHome(d, level, nest(p));
-            Chronicle.record(s, Chronicle.Kind.DRAGON, r.name + ", a " + r.element + " dragon of " + (s.ownerName.isEmpty() ? "the ruler" : s.ownerName) + "'s, came to live in the roost of " + s.name + ".");
-            tell(level, s, r.name + " has moved into the roost of " + s.name, ChatFormatting.GOLD);
+            Chronicle.record(s, Chronicle.Kind.DRAGON, (unnamed(r) ? Text.a(r.element + " dragon") : r.name + ", " + Text.a(r.element + " dragon")).transform(Roosts::cap) + " of " + (s.ownerName.isEmpty() ? "the ruler" : s.ownerName) + "'s"
+                    + (unnamed(r) ? "" : ",") + " came to live in the roost of " + s.name + ".");
+            tell(level, s, title(r) + " has moved into the roost of " + s.name, ChatFormatting.GOLD);
             return;
         }
         if (s.isAi() && DragonConfig.on(DragonConfig.NPC_DRAGONS)) {
@@ -153,9 +155,9 @@ public final class Roosts {
             if (!dead.getUUID().equals(r.dragon)) continue;
             Settlement s = m.get(e.getKey());
             if (s != null) {
-                Chronicle.record(s, Chronicle.Kind.DRAGON, r.name + ", the dragon of " + s.name + "'s roost, died.");
+                Chronicle.record(s, Chronicle.Kind.DRAGON, (unnamed(r) ? "The " + r.element + " dragon of " + s.name + "'s roost died." : r.name + ", the dragon of " + s.name + "'s roost, died."));
                 ServerLevel level = server.getLevel(s.dim);
-                if (level != null) tell(level, s, r.name + ", the dragon of " + s.name + ", has died", ChatFormatting.RED);
+                if (level != null) tell(level, s, (unnamed(r) ? "The " + r.element + " dragon of " + s.name + " has died" : r.name + ", the dragon of " + s.name + ", has died"), ChatFormatting.RED);
             }
             r.clearDragon();
             r.state = "Empty";
@@ -163,6 +165,14 @@ public final class Roosts {
             return;
         }
     }
+
+    /** A roost dragon with no name of its own is called "a fire dragon". */
+    static boolean unnamed(DragonData.Roost r) { return r.name.startsWith("a ") || r.name.startsWith("an "); }
+
+    /** The roost dragon at the start of a sentence: "Ember", or "The fire dragon". */
+    static String title(DragonData.Roost r) { return unnamed(r) ? "The " + r.element + " dragon" : r.name; }
+
+    static String cap(String x) { return x.isEmpty() ? x : Character.toUpperCase(x.charAt(0)) + x.substring(1); }
 
     static boolean housed(DragonData data, UUID dragon) {
         for (DragonData.Roost o : data.roosts.values()) if (dragon.equals(o.dragon)) return true;
@@ -179,8 +189,8 @@ public final class Roosts {
         r.fedDay = level.getGameTime() / 24000;
         see(r, d);
         DragonApi.bondHome(d, level, nest(p));
-        Chronicle.record(s, Chronicle.Kind.DRAGON, "A " + r.element + " dragon hatched in the roost of " + s.name + "; the keepers named it " + r.name + ".");
-        tell(level, s, "A " + r.element + " dragon has hatched in the roost of " + s.name + ": " + r.name, ChatFormatting.GOLD);
+        Chronicle.record(s, Chronicle.Kind.DRAGON, cap(Text.a(r.element + " dragon")) + " hatched in the roost of " + s.name + "; the keepers named it " + r.name + ".");
+        tell(level, s, cap(Text.a(r.element + " dragon")) + " has hatched in the roost of " + s.name + ": " + r.name, ChatFormatting.GOLD);
         s.dirty = true;
     }
 
@@ -200,8 +210,8 @@ public final class Roosts {
             return;
         }
         if (DragonApi.dead(e) || !(e instanceof TamableAnimal d)) {
-            Chronicle.record(s, Chronicle.Kind.DRAGON, r.name + ", the dragon of " + s.name + "'s roost, died.");
-            tell(level, s, r.name + ", the dragon of " + s.name + ", has died", ChatFormatting.RED);
+            Chronicle.record(s, Chronicle.Kind.DRAGON, (unnamed(r) ? "The " + r.element + " dragon of " + s.name + "'s roost died." : r.name + ", the dragon of " + s.name + "'s roost, died."));
+            tell(level, s, (unnamed(r) ? "The " + r.element + " dragon of " + s.name + " has died" : r.name + ", the dragon of " + s.name + ", has died"), ChatFormatting.RED);
             r.clearDragon();
             r.state = "Empty";
             return;
@@ -210,9 +220,9 @@ public final class Roosts {
             if (r.hatched) {
                 // the roost's own dragon passes with the town
                 d.setOwnerUUID(expect);
-                s.log(r.name + " now answers to the new ruler of " + s.name);
+                s.log(title(r) + " now answers to the new ruler of " + s.name);
             } else {
-                s.log(r.name + " left the roost with its owner");
+                s.log(title(r) + " left the roost with its owner");
                 r.clearDragon();
                 return;
             }
@@ -285,7 +295,7 @@ public final class Roosts {
                 t.putBoolean("rider", r.stage >= RIDER_STAGE);
                 TamableAnimal d = dragon(server, s);
                 if (d != null && DragonApi.bond()) t.putInt("bond", DragonApi.bondLevel(d));
-            } else if (r.incubating()) t.putString("egg", DragonApi.EGGS.get(r.eggElement * 4 + r.eggVariant));
+            } else if (r.incubating()) t.putString("egg", DragonApi.eggColour(r.eggElement, r.eggVariant));
         }
         String attack = DragonAttacks.status(s);
         if (attack != null) t.putString("attack", attack);

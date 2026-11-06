@@ -149,8 +149,8 @@ public final class DragonAttacks {
     static void ended(MinecraftServer server, Flight f, @Nullable Entity e) {
         Settlement s = SettlementManager.get(server).get(f.town);
         if (s == null) return;
-        String element = e != null ? DragonApi.element(e) : "wild";
-        String what = "A wild " + element + " dragon fell upon " + s.name;
+        String element = e != null ? DragonApi.element(e) : f.element;
+        String what = "A wild " + (element.isEmpty() ? "" : element + " ") + "dragon fell upon " + s.name;
         if (!f.struck.isEmpty()) what += " and set " + list(f.struck) + " alight";
         if (f.slain) {
             SLAIN.merge(s.id, 1, Integer::sum);
@@ -168,7 +168,7 @@ public final class DragonAttacks {
         for (String x : names) n.merge(x, 1, Integer::sum);
         List<String> parts = new ArrayList<>();
         String[] words = {"", "", "two", "three", "four", "five"};
-        n.forEach((name, k) -> parts.add(k == 1 ? "the " + name : (k < words.length ? words[k] : String.valueOf(k)) + " " + name + (name.endsWith("s") ? "" : "s")));
+        n.forEach((name, k) -> parts.add(k == 1 ? "the " + name : (k < words.length ? words[k] : String.valueOf(k)) + " " + livingrealms.Text.plural(name)));
         if (parts.size() == 1) return parts.get(0);
         return String.join(", ", parts.subList(0, parts.size() - 1)) + " and " + parts.get(parts.size() - 1);
     }
@@ -178,7 +178,7 @@ public final class DragonAttacks {
     public static String status(Settlement s) {
         for (Flight f : Flight.over(s)) {
             String who = f.kind == Flight.Kind.WILD ? "A wild dragon" : "An enemy dragon";
-            return who + (f.retreating ? " is flying off" : " is attacking") + " · " + f.strafes + " breaths, " + f.fires + " fires"
+            return who + (f.retreating ? " is flying off" : " is attacking") + " · " + livingrealms.Text.count(f.strafes, "breath") + ", " + livingrealms.Text.count(f.fires, "fire")
                     + (Scorpions.armed(s) ? " · scorpions loosing" : "");
         }
         return null;

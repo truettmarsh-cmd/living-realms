@@ -324,13 +324,19 @@ public final class Fires {
                 int z0 = Math.max(b.minZ(), cz << 4), z1 = Math.min(b.maxZ(), (cz << 4) + 15);
                 int y0 = Math.max(b.minY(), sy << 4), y1 = Math.min(b.maxY(), (sy << 4) + 15);
                 for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++)
-                    if (sec.getBlockState(x & 15, y & 15, z & 15).getBlock() instanceof BaseFireBlock) {
+                    if (sec.getBlockState(x & 15, y & 15, z & 15).getBlock() instanceof BaseFireBlock && !hearth(level, new BlockPos(x, y, z))) {
                         out.add(new BlockPos(x, y, z));
                         if (out.size() >= limit) return out;
                     }
             }
         }
         return out;
+    }
+
+    /** A fire kept on purpose: it burns on netherrack, soul sand and the like (a fireplace), so the town leaves it be. */
+    static boolean hearth(ServerLevel level, BlockPos fire) {
+        BlockPos under = fire.below();
+        return level.getBlockState(under).isFireSource(level, under, net.minecraft.core.Direction.UP);
     }
 
     static void douse(ServerLevel level, BlockPos pos) {
@@ -502,10 +508,11 @@ public final class Fires {
                 case 1 -> "In the Great Fire of year " + year + " " + what + " burned; " + f.cause + " was blamed.";
                 default -> "Fire swept through " + s.name + " in year " + year + " (" + f.cause + "), taking " + what + ".";
             };
+        boolean several = f.damaged.size() > 1;
         return switch (pick) {
             case 0 -> "A fire started by " + f.cause + " damaged " + what + "; the bucket brigade saved the rest.";
-            case 1 -> "Fire broke out in " + what + " (" + f.cause + "). The townsfolk put it out with buckets from the well.";
-            default -> what.substring(0, 1).toUpperCase(Locale.ROOT) + what.substring(1) + " caught fire from " + f.cause + ", and was saved by a line of buckets.";
+            case 1 -> "Fire broke out in " + what + " (" + f.cause + "). The townsfolk put it out with buckets" + (hasWell(s) ? " from the well." : " passed hand to hand.");
+            default -> what.substring(0, 1).toUpperCase(Locale.ROOT) + what.substring(1) + " caught fire from " + f.cause + (several ? ", and were saved by a line of buckets." : ", and was saved by a line of buckets.");
         };
     }
 
@@ -515,7 +522,7 @@ public final class Fires {
         for (String s : names) n.merge(s, 1, Integer::sum);
         List<String> parts = new ArrayList<>();
         String[] words = {"", "", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
-        n.forEach((name, k) -> parts.add(k == 1 ? "the " + name : (k < words.length ? words[k] : String.valueOf(k)) + " " + name + (name.endsWith("s") ? "" : "s")));
+        n.forEach((name, k) -> parts.add(k == 1 ? "the " + name : (k < words.length ? words[k] : String.valueOf(k)) + " " + livingrealms.Text.plural(name)));
         if (parts.size() == 1) return parts.get(0);
         return String.join(", ", parts.subList(0, parts.size() - 1)) + " and " + parts.get(parts.size() - 1);
     }

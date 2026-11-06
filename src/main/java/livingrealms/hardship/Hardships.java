@@ -390,7 +390,7 @@ public final class Hardships {
     /** Starts an outbreak (cause "" for the town's own bad air). Returns false when it cannot start. */
     public static boolean outbreak(Settlement s, long now, String cause, RandomSource rand) {
         State st = s.hardship;
-        if (!sickness() || st.sick > 0 || s.population < 2) return false;
+        if (!sickness() || st.sick > 0 || s.population < 4) return false; // hamlets never fall sick, even from a caravan
         st.sick = Math.max(1, Math.round(s.population * .08));
         st.total = st.sick;
         st.dead = 0;
@@ -400,7 +400,7 @@ public final class Hardships {
         st.sickCause = cause;
         st.sickName = NAMES[rand.nextInt(NAMES.length)];
         if (Procedural.styleFamily(s.style).equals("snowy") && rand.nextBoolean()) st.sickName = "a winter ague";
-        alarm(s, "Sickness in " + s.name + ": " + st.sickName + (cause.isEmpty() ? "" : ", brought by " + cause) + ". " + (int) st.sick + " are ill.");
+        alarm(s, "Sickness in " + s.name + ": " + st.sickName + (cause.isEmpty() ? "" : ", brought by " + cause) + ". " + (int) st.sick + " " + livingrealms.Text.isAre((int) st.sick) + " ill.");
         fire(s, Event.OUTBREAK, cause);
         return true;
     }
@@ -661,7 +661,7 @@ public final class Hardships {
         if (st.sick > 0) troubles.add(trouble("Sickness", Character.toUpperCase(st.sickName.charAt(0)) + st.sickName.substring(1) + ": " + (int) Math.ceil(st.sick) + " of " + s.population + " ill"
                 + (st.dead > 0 ? ", " + st.dead + " dead" : ""), "Workers −" + pct(.6 * sickShare(s)) + " · mood −" + Math.max(2, Math.round(25 * sickShare(s))), "red"));
         if (st.harvest != Harvest.NONE) troubles.add(trouble("Bad harvest", Character.toUpperCase(st.harvest.label.charAt(0)) + st.harvest.label.substring(1) + ", "
-                + Math.max(1, Math.round((st.harvestUntil - now) / (double) day())) + " days left", "Farms yield " + pct(harvestLeft(s)) + " · caravans bring food", "orange"));
+                + livingrealms.Text.count(Math.max(1, Math.round((st.harvestUntil - now) / (double) day())), "day") + " left", "Farms yield " + pct(harvestLeft(s)) + " · caravans bring food", "orange"));
         if (st.hungry) troubles.add(trouble("Hunger", "The stores are empty", "No growth · builders −40% · mood falls" + (st.imported > 0 ? " · " + st.imported + " food imported" : ""), "red"));
         if (st.vermin(now)) troubles.add(trouble("Rats", "Rats in the stores, " + st.eaten + " food eaten", "Grain and bread eaten each day", "orange"));
         if (st.quarantine) troubles.add(trouble("Quarantine", st.autoQuarantine ? "The town closed its roads" : "Roads closed by order", "No caravans to or from the town", "blue"));
