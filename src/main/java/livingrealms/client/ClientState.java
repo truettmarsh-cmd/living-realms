@@ -12,6 +12,11 @@ import java.util.*;
 /** What the client knows: the open settlement's view, nearby towns and plots, and fetched blueprints. */
 public final class ClientState {
     @Nullable public static CompoundTag view;
+    /** The server's last answer to something the player did (a refusal or a short report), shown inside open screens. */
+    public static String notice = "";
+    public static long noticeAt;
+    /** The server's settlement day in ticks (simulation.dayLength), for {@link livingrealms.TimeText}. */
+    public static long dayTicks = 24000;
     public static List<CompoundTag> towns = new ArrayList<>();
     /** Raids your towns are fighting, refreshed with the nearby plots; shown on the HUD. */
     public static List<CompoundTag> raids = new ArrayList<>();

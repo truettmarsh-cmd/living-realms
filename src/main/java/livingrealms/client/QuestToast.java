@@ -36,12 +36,18 @@ public final class QuestToast implements Toast {
                 : SimpleSoundInstance.forUI(SoundEvents.PLAYER_LEVELUP, 1.2f, 0.5f));
     }
 
+    /** Cut to fit with an ellipsis, so a long bounty or chapter name doesn't stop mid-word without warning. */
+    static String clip(Font font, String s, int w) {
+        if (font.width(s) <= w) return s;
+        return font.plainSubstrByWidth(s, w - font.width("…")).stripTrailing() + "…";
+    }
+
     @Override
     public Visibility render(GuiGraphics g, ToastComponent toasts, long time) {
         g.blit(TEXTURE, 0, 0, 0, 0, width(), height());
         Font font = toasts.getMinecraft().font;
-        g.drawString(font, font.plainSubstrByWidth(title, 125), 30, 7, big ? 0xFFFF88FF : 0xFFFFFF00, false);
-        g.drawString(font, font.plainSubstrByWidth(text, 125), 30, 18, 0xFFFFFFFF, false);
+        g.drawString(font, clip(font, title, 125), 30, 7, big ? 0xFFFF88FF : 0xFFFFFF00, false);
+        g.drawString(font, clip(font, text, 125), 30, 18, 0xFFFFFFFF, false);
         g.renderFakeItem(icon, 8, 8);
         return time >= (big ? 8000 : 5000) ? Visibility.HIDE : Visibility.SHOW;
     }

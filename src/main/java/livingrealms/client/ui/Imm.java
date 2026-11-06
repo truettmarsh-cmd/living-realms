@@ -21,7 +21,7 @@ import java.util.*;
 public final class Imm {
     // palette: deep slate with warm gold
     public static final int BG = 0xF0121519, PANEL = 0xFF171B21, CARD = 0xFF1E232B, CARD_HI = 0xFF262C36, BORDER = 0xFF2C333E,
-            LINE = 0xFF353D4A, TEXT = 0xFFE8E6E1, MUTED = 0xFF98A0AB, FAINT = 0xFF646C78, GOLD = 0xFFE8C15A, GOLD_DK = 0xFFB98E2E,
+            LINE = 0xFF353D4A, TEXT = 0xFFE8E6E1, MUTED = 0xFF98A0AB, FAINT = 0xFF7E8692, GOLD = 0xFFE8C15A, GOLD_DK = 0xFFB98E2E,
             GREEN = 0xFF6FCF7F, RED = 0xFFE56B6B, BLUE = 0xFF6AA8F0, ORANGE = 0xFFF0A050, PURPLE = 0xFFB48CF0;
 
     public enum Style { PRIMARY, SECONDARY, GHOST, DANGER, SUCCESS }
@@ -63,8 +63,32 @@ public final class Imm {
         hits = building;
         scrolls.clear();
         scrolls.addAll(scrollsBuilding);
-        if (!tooltipStack.isEmpty()) g.renderTooltip(font, tooltipStack, mx, my);
-        else if (tooltip != null) g.renderTooltip(font, tooltip, mx, my);
+        if (tooltipStack.isEmpty() && tooltip == null) return;
+        // tooltips go back to the GUI's own scale: vanilla keeps them on screen using the unscaled screen size, so drawing
+        // them inside a finer-scaled layout would clamp them against the wrong edges
+        g.pose().pushPose();
+        g.pose().scale(1 / scale, 1 / scale, 1);
+        int tx = Math.round(mx * scale), ty = Math.round(my * scale);
+        if (!tooltipStack.isEmpty()) g.renderTooltip(font, tooltipStack, tx, ty);
+        else g.renderTooltip(font, tooltip, tx, ty);
+        g.pose().popPose();
+    }
+
+    /** The server's last answer to the player's action, for a few seconds, centred at the bottom of a screen's panel. */
+    public void notice(int cx, int bottom, int maxW) {
+        String msg = livingrealms.client.ClientState.notice;
+        long age = System.currentTimeMillis() - livingrealms.client.ClientState.noticeAt;
+        if (msg.isEmpty() || age > 4500) return;
+        int a = age > 4000 ? (int) (255 * (4500 - age) / 500f) : 255;
+        if (a < 8) return;
+        msg = clip(msg, maxW - 16);
+        int w = width(msg) + 16, x = cx - w / 2, y = bottom - 22;
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 300);
+        round(x, y, w, 16, 4, alpha(0x2A313B, a * 240 / 255));
+        round(x + 1, y + 1, w - 2, 14, 3, alpha(0x13161B, a * 240 / 255));
+        text(msg, x + 8, y + 4, alpha(GOLD, a));
+        g.pose().popPose();
     }
 
     public boolean click(double x, double y) {
@@ -277,17 +301,22 @@ public final class Imm {
 
     /** Segmented control; returns the index clicked via action. */
     public void segments(String id, int x, int y, int w, int h, String[] labels, int selected, java.util.function.IntConsumer action) {
+        segments(id, x, y, w, h, labels, selected, true, action);
+    }
+
+    /** Segments that only show the choice when not enabled: no hover glow, no click. */
+    public void segments(String id, int x, int y, int w, int h, String[] labels, int selected, boolean enabled, java.util.function.IntConsumer action) {
         round(x, y, w, h, 5, 0xFF0F1216);
         int sw = w / labels.length;
         for (int i = 0; i < labels.length; i++) {
             int sx = x + i * sw;
-            boolean on = over(sx, y, sw, h);
+            boolean on = enabled && over(sx, y, sw, h);
             float hv = hover(id + i, on);
             if (i == selected) round(sx + 1, y + 1, sw - 2, h - 2, 4, 0xFF3A4250, 0xFF313845);
             else if (hv > 0) round(sx + 1, y + 1, sw - 2, h - 2, 4, (int) (hv * 0x20) << 24 | 0xFFFFFF);
             center(clip(labels[i], sw - 4), sx + sw / 2, y + (h - 8) / 2, i == selected ? GOLD : MUTED);
             final int idx = i;
-            area(sx, y, sw, h, () -> action.accept(idx));
+            if (enabled) area(sx, y, sw, h, () -> action.accept(idx));
         }
     }
 
@@ -380,6 +409,15 @@ public final class Imm {
         if (Math.abs(v) < 10 && v != Math.floor(v)) return String.format(Locale.ROOT, "%.1f", v);
         return String.valueOf((int) Math.round(v));
     }
+
+    /** A length of time the same way everywhere: game days for a day or more, real minutes below (TimeText). */
+    public static String span(long ticks) { return livingrealms.TimeText.span(ticks, livingrealms.client.ClientState.dayTicks); }
+
+    /** The same from a whole number of real minutes, as some views send. */
+    public static String spanMin(long minutes) { return span(minutes * 1200); }
+
+    /** "1 kill", "3 kills", "2 smithies" (livingrealms.Text). */
+    public static String plural(long n, String word) { return livingrealms.Text.count(n, word); }
 
     public static void blend() { RenderSystem.enableBlend(); }
 }

@@ -30,6 +30,8 @@ public final class PeoplePanel {
     /** Selected citizen id; list mode: "" people, "mayor" choosing a mayor, "captain" choosing a captain. */
     static int selected;
     static String mode = "";
+    /** The town those belong to: another town starts with nothing selected and the plain list. */
+    private static java.util.UUID town;
 
     /** For the screenshot tour: select a citizen, or switch the list ("", "mayor", "captain"). */
     public static void select(int id) { selected = id; mode = ""; }
@@ -37,13 +39,17 @@ public final class PeoplePanel {
     public static void choose(String listMode) { mode = listMode; }
 
     static void draw(Imm ui, int x, int y, int w, int h, CompoundTag t, boolean mine, EditBox search, BiConsumer<String, CompoundTag> act) {
+        CompoundTag view = livingrealms.client.ClientState.view;
+        java.util.UUID here = view != null && view.hasUUID("id") ? view.getUUID("id") : null;
+        if (here != null && !here.equals(town)) { town = here; selected = 0; mode = ""; }
+        if (!mine) mode = ""; // only the ruler picks a mayor or captain
         ListTag people = t.getList("people", Tag.TAG_COMPOUND);
         Map<Integer, CompoundTag> byId = new HashMap<>();
         for (Tag e : people) byId.put(((CompoundTag) e).getInt("id"), (CompoundTag) e);
         int mood = t.getInt("mood");
         ui.big("People", x, y, TEXT, 1.4f);
         String sub = t.getInt("population") + " townsfolk · " + t.getInt("children") + " children · mood " + mood + " (" + moodLabel(mood).toLowerCase(Locale.ROOT) + ")"
-                + " · " + t.getInt("births") + " born, " + t.getInt("deaths") + " died, " + t.getInt("weddings") + " weddings";
+                + " · " + t.getInt("births") + " born, " + t.getInt("deaths") + " died, " + plural(t.getInt("weddings"), "wedding");
         ui.text(ui.clip(sub, w - 130), x, y + 15, MUTED);
         search.setX(x + w - 118);
         search.setY(y + 4);
@@ -63,7 +69,7 @@ public final class PeoplePanel {
         ui.text("Mayor", x + 26, top + 5, GOLD);
         ui.text(ui.clip(mayor == null ? "None" : mayor.getString("n"), half - 100), x + 26 + ui.width("Mayor  "), top + 5, TEXT);
         String how = mayor == null ? "Elected when someone is fit" : t.getBoolean("mayorAppointed") ? "Appointed · " + t.getString("mayorBonus")
-                : "Elected · next vote in " + t.getInt("nextElection") + "d · " + t.getString("mayorBonus");
+                : "Elected · next vote in " + plural(t.getInt("nextElection"), "day") + " · " + t.getString("mayorBonus");
         ui.text(ui.clip(how, half - 32), x + 26, top + 17, MUTED);
         if (mayor != null && ui.over(x, top, half - 130, nh)) ui.tip(mayor.getString("n"), mayor.getString("j") + ", " + mayor.getInt("a"), "Bonus: " + t.getString("mayorBonus"),
                 t.getBoolean("mayorAppointed") ? "Appointed: no elections until they die or you call one" : "Re-elected every 12 days unless someone is clearly more respected");
@@ -79,7 +85,7 @@ public final class PeoplePanel {
         ui.text("Captain", kx + 26, top + 5, GOLD);
         boolean hasCap = t.hasUUID("captain");
         ui.text(ui.clip(hasCap ? t.getString("captainName") : "None", half - 110), kx + 26 + ui.width("Captain  "), top + 5, TEXT);
-        String capHow = !hasCap ? "Needs soldiers" : t.getString("captainTitle") + " · " + t.getInt("captainKills") + " kills · "
+        String capHow = !hasCap ? "Needs soldiers" : t.getString("captainTitle") + " · " + plural(t.getInt("captainKills"), "kill") + " · "
                 + (t.getBoolean("captainAppointed") ? "appointed" : "the best soldier");
         ui.text(ui.clip(capHow, half - 32), kx + 26, top + 17, MUTED);
         ui.button("pplAppointCaptain", kx + half - 64, top + 28, 58, 13, mode.equals("captain") ? "Cancel" : "Appoint", mode.equals("captain") ? Style.SECONDARY : Style.PRIMARY,
@@ -166,7 +172,7 @@ public final class PeoplePanel {
             boolean cur = t.hasUUID("captain") && so.getUUID("e").equals(t.getUUID("captain"));
             ui.round(x + 4, ry + 1, w - 10, ROW_H - 2, 4, cur ? alpha(GOLD, 0x22) : CARD_HI);
             ui.text(ui.clip(so.getString("n"), w - 70), x + 9, ry + 3, cur ? GOLD : TEXT);
-            ui.text(ui.clip(so.getString("t") + " · " + so.getInt("k") + " kills · merit " + so.getInt("m"), w - 70), x + 9, ry + 13, MUTED);
+            ui.text(ui.clip(so.getString("t") + " · " + plural(so.getInt("k"), "kill") + " · merit " + so.getInt("m"), w - 70), x + 9, ry + 13, MUTED);
             CompoundTag d = new CompoundTag();
             d.putUUID("soldier", so.getUUID("e"));
             ui.button("pplCap" + so.getUUID("e"), x + w - 56, ry + 4, 44, 14, "Choose", Style.PRIMARY, !cur, () -> { act.accept("appointCaptain", d); mode = ""; });
@@ -177,7 +183,7 @@ public final class PeoplePanel {
 
     static void card(Imm ui, int x, int y, int w, int h, CompoundTag c, Map<Integer, CompoundTag> byId, int mayor) {
         ui.card(x, y, w, h);
-        int off = ui.beginScroll("pplCard", x + 2, y + 2, w - 4, h - 4, cardHeight(ui, c, w));
+        int off = ui.beginScroll("pplCard", x + 2, y + 2, w - 4, h - 4, cardHeight(ui, c, w, byId));
         int cy = y + 6 - off, tx = x + 8, tw = w - 16;
         ui.text(ui.clip(c.getString("n"), tw), tx, cy, c.getInt("id") == mayor ? GOLD : TEXT);
         cy += 11;
@@ -220,10 +226,17 @@ public final class PeoplePanel {
         ui.endScroll();
     }
 
-    static int cardHeight(Imm ui, CompoundTag c, int w) {
-        int n = 70 + c.getString("why").split("\n").length * 9 + 16 + 30;
+    /** Exactly what {@link #card} draws, line by line, so the card scrolls to its last line and no further. */
+    static int cardHeight(Imm ui, CompoundTag c, int w, Map<Integer, CompoundTag> byId) {
+        int n = 6 + 11 + 10 + 10 + 14 + 10 + 8;
+        for (String why : c.getString("why").split("\n")) if (!why.isEmpty()) n += 9;
+        n += 5 + 11;
         for (Tag tr : c.getList("tr", Tag.TAG_STRING)) n += 10 + ui.wrapHeight(TRAIT_EFFECT.getOrDefault(tr.getAsString(), ""), w - 28);
-        return n + 10 * (3 + c.getIntArray("k").length);
+        n += 5 + 11;
+        int kin = 0;
+        for (int id : new int[]{c.getInt("sp"), c.getInt("mo"), c.getInt("fa")}) if (id > 0 && byId.containsKey(id)) kin++;
+        for (int k : c.getIntArray("k")) if (k > 0 && byId.containsKey(k)) kin++;
+        return n + 10 * Math.max(1, kin) + 4;
     }
 
     /** A clickable family line; returns the next y. Kin who died or left are not listed. */

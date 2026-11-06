@@ -23,8 +23,8 @@ final class TradePanel {
         int prosperity = (int) Math.round(tr.getDouble("prosperity"));
         ui.big("Trade", x, y, TEXT, 1.4f);
         String family = tr.getString("family");
-        ui.text(ui.clip(cap(family) + " goods · " + tr.getInt("sent") + " caravans sent, " + tr.getInt("received") + " received, "
-                + tr.getInt("lost") + " lost · " + tr.getInt("earned") + " emeralds earned", w - 140), x, y + 15, MUTED);
+        ui.text(ui.clip(cap(family) + " goods · " + plural(tr.getInt("sent"), "caravan") + " sent, " + tr.getInt("received") + " received, "
+                + tr.getInt("lost") + " lost · " + plural(tr.getInt("earned"), "emerald") + " earned", w - 140), x, y + 15, MUTED);
         String pill = "Prosperity " + prosperity;
         int pw = ui.pillWidth(pill);
         ui.pill(pill, x + w - 8 - pw, y + 2, alpha(prosperity > 0 ? GREEN : FAINT, 0x50), prosperity > 0 ? GREEN : MUTED);
@@ -54,8 +54,15 @@ final class TradePanel {
         // ---- goods
         ui.card(x, cy, w - 4, goodsH);
         ui.text("Goods", x + 8, cy + 6, GOLD);
-        ui.right("stock · short of · price · made a day", x + w - 12, cy + 6, FAINT);
         int gy = cy + 21, colW = (w - 16) / cols;
+        // a header over each column of goods, at the same places good() puts its numbers
+        for (int c = 0; c < Math.min(cols, Math.max(1, goods.size())); c++) {
+            int rx = x + 6 + c * colW + (colW - 6) - 40;
+            ui.right("stock", rx - 110, cy + 6, FAINT);
+            ui.right("short", rx - 76, cy + 6, FAINT);
+            ui.right("price", rx - 34, cy + 6, FAINT);
+            ui.right("a day", rx, cy + 6, FAINT);
+        }
         for (int i = 0; i < goods.size(); i++) {
             good(ui, x + 6 + (i % cols) * colW, gy + (i / cols) * GOOD_H, colW - 6, goods.getCompound(i), mine, act);
         }
@@ -83,7 +90,7 @@ final class TradePanel {
         ui.round(x, y, w, ROUTE_H - 4, 4, CARD_HI);
         ui.item(active ? Items.LEAD : Items.BARRIER, x + 4, y + 7);
         ui.text(ui.clip(r.getString("name"), w / 2 - 30), x + 24, y + 4, TEXT);
-        ui.text(ui.clip(r.getString("standing") + " · " + r.getInt("distance") + " blocks · " + r.getInt("trips") + " trips"
+        ui.text(ui.clip(r.getString("standing") + " · " + plural(r.getInt("distance"), "block") + " · " + plural(r.getInt("trips"), "trip")
                 + (r.getInt("lost") > 0 ? ", " + r.getInt("lost") + " lost" : ""), w / 2 - 30), x + 24, y + 16, FAINT);
         int sx = x + w / 2, sw = w / 2 - 40;
         if (r.contains("caravan")) {
@@ -93,8 +100,8 @@ final class TradePanel {
             ui.text(ui.clip(label, sw), sx, y + 4, statusColor(state));
             if (state.equals("LOADING") || state.equals("ROAD")) {
                 ui.bar(sx, y + 16, sw, 6, (float) c.getDouble("progress"), statusColor(state), statusColor(state));
-            } else ui.text(ui.clip(c.getString("note").isEmpty() ? c.getInt("ago") + " min ago" : c.getString("note"), sw), sx, y + 15, FAINT);
-            if (ui.over(sx, y, sw, ROUTE_H - 4)) ui.tip(label, "Carrying " + c.getString("cargo") + " (worth about " + c.getInt("value") + " emeralds)",
+            } else ui.text(ui.clip(c.getString("note").isEmpty() ? spanMin(c.getInt("ago")) + " ago" : c.getString("note"), sw), sx, y + 15, FAINT);
+            if (ui.over(sx, y, sw, ROUTE_H - 4)) ui.tip(label, "Carrying " + c.getString("cargo") + " (worth about " + plural(c.getInt("value"), "emerald") + ")",
                     c.getInt("guards") == 0 ? "No guards" : c.getInt("guards") + (c.getInt("guards") == 1 ? " guard" : " guards") + "; your soldiers walking with it make an ambush less likely",
                     c.getString("note"));
         } else {
@@ -129,8 +136,8 @@ final class TradePanel {
         CompoundTag d = new CompoundTag();
         d.putString("item", g.getString("id"));
         d.putBoolean("ban", !ban);
-        if (mine) ui.button("ban" + g.getString("id"), x + w - 34, y + 1, 32, 13, ban ? "Ban" : "Free", ban ? Style.DANGER : Style.SECONDARY, true, () -> act.accept("tradeBan", d));
-        if (ui.over(x + w - 34, y + 1, 32, 13)) ui.tip(ban ? "Export banned" : "Exports allowed", ban ? "Caravans never carry this out of town. Click to allow." : "Click to ban its export.");
+        if (mine) ui.button("ban" + g.getString("id"), x + w - 34, y + 1, 32, 13, ban ? "Allow" : "Ban", ban ? Style.DANGER : Style.SECONDARY, true, () -> act.accept("tradeBan", d));
+        if (ui.over(x + w - 34, y + 1, 32, 13)) ui.tip(ban ? "Export banned" : "Exports allowed", ban ? "Caravans never carry this out of town. Click to allow its export again." : "Caravans may sell this. Click to ban its export.");
     }
 
     static int statusColor(String state) {

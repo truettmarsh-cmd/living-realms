@@ -20,11 +20,14 @@ final class ChroniclePanel {
         ListTag entries = c.getList("entries", Tag.TAG_COMPOUND);
         ui.big("Chronicle", x, y, TEXT, 1.4f);
         long today = c.getLong("today");
+        // narrow windows get shorter controls, so the title and its line keep their room
+        boolean narrow = w < 400;
+        int segW = narrow ? 100 : 140, bookW = narrow ? 56 : 100, controls = segW + 4 + bookW;
         ui.text(ui.clip(view.getString("name") + " · " + entries.size() + (entries.size() == 1 ? " entry" : " entries")
-                + " · Day " + today + ", Year " + c.getInt("year"), w - 250), x, y + 15, MUTED);
-        ui.segments("chronOrder", x + w - 244, y + 2, 140, 16, new String[]{"Newest first", "By year"}, byYear ? 1 : 0, i -> byYear = i == 1);
-        ui.button("chronBook", x + w - 100, y + 2, 100, 16, "Written copy", Style.PRIMARY, mine, () -> act.accept("chronicleBook", new CompoundTag()));
-        if (ui.over(x + w - 100, y + 2, 100, 16)) ui.tip("The scribe writes the chronicle into a book for you (1 emerald from the stockpile).",
+                + " · Day " + today + ", Year " + c.getInt("year"), w - controls - 10), x, y + 15, MUTED);
+        ui.segments("chronOrder", x + w - controls, y + 2, segW, 16, narrow ? new String[]{"Newest", "By year"} : new String[]{"Newest first", "By year"}, byYear ? 1 : 0, i -> byYear = i == 1);
+        ui.button("chronBook", x + w - bookW, y + 2, bookW, 16, narrow ? "Copy" : "Written copy", Style.PRIMARY, mine, () -> act.accept("chronicleBook", new CompoundTag()));
+        if (ui.over(x + w - bookW, y + 2, bookW, 16)) ui.tip("The scribe writes the chronicle into a book for you (1 emerald from the stockpile).",
                 "Anyone can also use a blank book on the Town Hall.");
 
         // ---- fire risk
@@ -38,13 +41,13 @@ final class ChroniclePanel {
         ui.text(label, x + 30 + ui.width("Fire risk"), fy + 6, col);
         if (on) {
             double daily = fire.getDouble("daily");
-            String every = daily <= 0 ? "no outbreaks expected" : "about one fire in " + Math.max(1, Math.round(1 / daily)) + " days";
+            String every = daily <= 0 ? "no outbreaks expected" : Math.round(1 / daily) <= 1 ? "about one fire a day" : "about one fire in " + Math.round(1 / daily) + " days";
             ui.right(every, x + w - 12, fy + 6, FAINT);
-            String line = fire.getInt("wooden") + " of " + fire.getInt("buildings") + " buildings wooden · Well "
+            String line = fire.getInt("wooden") + " of " + plural(fire.getInt("buildings"), "building") + " wooden · Well "
                     + (fire.getBoolean("well") ? "✔" : "✖") + " · Fire Watch " + (fire.getBoolean("watch") ? "✔" : "✖")
                     + (fire.getString("riskiest").isEmpty() ? "" : " · most at risk: " + fire.getString("riskiest"));
             if (fire.contains("burning")) {
-                line = "FIRE! " + fire.getInt("burning") + " blocks burning (" + fire.getString("cause") + "), " + fire.getInt("crew") + " townsfolk with buckets";
+                line = "FIRE! " + plural(fire.getInt("burning"), "block") + " burning (" + fire.getString("cause") + "), " + fire.getInt("crew") + " townsfolk with buckets";
                 ui.text(ui.clip(line, w - 40), x + 26, fy + 20, RED);
             } else ui.text(ui.clip(line, w - 40), x + 26, fy + 20, MUTED);
             if (fire.contains("last")) ui.text(ui.clip("Last fire: " + fire.getString("last"), w - 40), x + 26, fy + 31, FAINT);

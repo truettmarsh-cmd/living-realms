@@ -30,7 +30,10 @@ public final class Placement {
     @Nullable public static BlockPos roadStart;
     public static int roadWidth = 3;
     public static String roadMaterial = "path";
+    /** Why the server refused the last placement; the HUD shows it until the next try. */
     public static String status = "";
+    /** A plan was sent and the server's answer hasn't come yet: a refusal keeps placement going, anything else ends it. */
+    static boolean pending;
 
     public static void startBuilding(UUID townId, String townStyle, String type) {
         mode = Mode.BUILDING;
@@ -38,6 +41,8 @@ public final class Placement {
         style = townStyle;
         typeId = type;
         yOff = 0;
+        status = "";
+        pending = false;
         Minecraft.getInstance().setScreen(null);
         hint("Right-click with the Architect's Plans to place. Scroll to rotate, Shift+scroll to raise or lower.");
     }
@@ -55,6 +60,16 @@ public final class Placement {
     public static void cancel() {
         mode = Mode.NONE;
         roadStart = null;
+        status = "";
+        pending = false;
+    }
+
+    /** The server answered an action (ClientNet): a notice while a plan is pending is a refusal. */
+    static void answered(@Nullable String refusal) {
+        if (!pending) return;
+        pending = false;
+        if (refusal != null) status = refusal;
+        else if (mode == Mode.BUILDING) cancel();
     }
 
     static void hint(String s) {
@@ -91,8 +106,9 @@ public final class Placement {
             d.putString("type", typeId);
             d.putLong("pos", o.asLong());
             d.putInt("rot", rot);
+            status = "";
+            pending = true;
             action("plan", d);
-            cancel();
         } else {
             if (roadStart == null) { roadStart = hit; return; }
             CompoundTag d = new CompoundTag();

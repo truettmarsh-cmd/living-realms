@@ -243,9 +243,9 @@ final class SoldierPanels {
         ui.popClip();
         if (known) ui.text("Mastered", x + 6, y + 71, PURPLE);
         else ui.button("pathMastery" + sk.getString("id"), x + 4, y + 67, w - 8, 15,
-                ui.clip(open ? "Master · " + sk.getInt("cost") + " points" : sk.getString("req"), w - 16), Style.PRIMARY,
+                ui.clip(open ? "Master · " + plural(sk.getInt("cost"), "point") : sk.getString("req"), w - 16), Style.PRIMARY,
                 host.canCommand() && open && seen, () -> { CompoundTag d = soldierData(so); d.putString("skill", sk.getString("id")); host.act("learnPathSkill", d); });
-        if (ui.over(x, y, w, 86)) ui.tip(sk.getString("label"), sk.getString("desc"), "Legendary mastery · skill rank " + sk.getInt("rank") + " · " + sk.getInt("cost") + " points",
+        if (ui.over(x, y, w, 86)) ui.tip(sk.getString("label"), sk.getString("desc"), "Legendary mastery · skill rank " + sk.getInt("rank") + " · " + plural(sk.getInt("cost"), "point"),
                 "Only one mastery per recruit; respec to change it", known ? "Mastered" : sk.getString("req"));
     }
 

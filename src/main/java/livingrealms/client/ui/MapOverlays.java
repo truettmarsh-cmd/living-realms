@@ -62,8 +62,8 @@ final class MapOverlays {
                 int x = (int) Math.max(mx + 3, Math.min(mx + mw - w - 3, lx - w / 2f)), y = (int) Math.max(my + 24, Math.min(my + mh - 30, ly - 5));
                 ui.round(x, y, w, 11, 3, 0xD0101317);
                 ui.text(name, x + 3, y + 2, col);
-                if (ui.over(x, y, w, 11)) tip = List.of("Trade route to " + r.getString("name"), r.getString("standing") + " · " + r.getInt("distance") + " blocks"
-                        + " · " + r.getInt("trips") + " trips", open ? "Caravans take the high street out of town" : "Shut: " + r.getString("blocked"));
+                if (ui.over(x, y, w, 11)) tip = List.of("Trade route to " + r.getString("name"), r.getString("standing") + " · " + plural(r.getInt("distance"), "block")
+                        + " · " + plural(r.getInt("trips"), "trip"), open ? "Caravans take the high street out of town" : "Shut: " + r.getString("blocked"));
             }
             CompoundTag c = r.getCompound("caravan");
             if (c.contains("x") && !c.getString("state").equals("ARRIVED") && !c.getString("state").equals("LOST")) {

@@ -237,7 +237,7 @@ public final class RecruitCommand {
         return n;
     }
 
-    static void tell(ServerPlayer p, String msg) { p.displayClientMessage(Component.literal(msg).withStyle(ChatFormatting.GOLD), true); }
+    static void tell(ServerPlayer p, String msg) { livingrealms.net.Net.notice(p, msg); }
 
     private RecruitCommand() {}
 }

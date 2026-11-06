@@ -65,6 +65,7 @@ public final class Net {
         switch (m.kind) {
             case "open" -> {
                 Settlement s = m.data.hasUUID("id") ? mgr.get(m.data.getUUID("id")) : null;
+                if (s != null && !canView(p, s)) s = null; // a town picked by id: yours, or one you stand in
                 if (s == null) s = mgr.at(p.level().dimension(), p.blockPosition());
                 if (s == null) {
                     List<Settlement> own = mgr.ownedBy(p.getUUID());
@@ -84,7 +85,7 @@ public final class Net {
                 UUID id = m.data.getUUID("id");
                 Actions.handle(p, id, m.data.getString("action"), m.data.getCompound("data"));
                 Settlement s = mgr.get(id);
-                if (s != null) sendView(p, s, false, "");
+                if (s != null && (id.equals(WATCHING.get(p.getUUID())) || canView(p, s))) sendView(p, s, false, "");
             }
             case "blueprint" -> {
                 Blueprint b = BuildingCatalog.blueprint(m.data.getString("key"));
@@ -98,8 +99,28 @@ public final class Net {
         }
     }
 
+    /** Whether a player may see a town's full City Manager view: their own (or any, for an op), or one they stand in. */
+    public static boolean canView(ServerPlayer p, Settlement s) {
+        return p.getUUID().equals(s.owner) || p.hasPermissions(2) || near(p, s, 16);
+    }
+
+    /** Within the town's land, plus a margin, in the same dimension. */
+    public static boolean near(ServerPlayer p, Settlement s, int margin) {
+        if (!p.level().dimension().equals(s.dim)) return false;
+        double r = s.radius() + margin, dx = p.getX() - (s.center.getX() + .5), dz = p.getZ() - (s.center.getZ() + .5);
+        return dx * dx + dz * dz <= r * r;
+    }
+
     public static void send(ServerPlayer p, String kind, CompoundTag data) {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> p), new Msg(kind, data));
+    }
+
+    /** Answers something the player did from a screen: shown on the action bar and inside the open screen, which hides the action bar. */
+    public static void notice(ServerPlayer p, String msg) {
+        p.displayClientMessage(net.minecraft.network.chat.Component.literal(msg).withStyle(net.minecraft.ChatFormatting.GOLD), true);
+        CompoundTag t = new CompoundTag();
+        t.putString("text", msg);
+        send(p, "notice", t);
     }
 
     public static void toServer(String kind, CompoundTag data) {

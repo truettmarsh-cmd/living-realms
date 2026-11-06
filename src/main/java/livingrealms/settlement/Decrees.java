@@ -196,10 +196,7 @@ public final class Decrees {
         return null;
     }
 
-    static String minutes(long ticks) {
-        long min = Math.max(1, (ticks + 1199) / 1200);
-        return min >= 120 ? (min + 30) / 60 + " h" : min + " min";
-    }
+    static String minutes(long ticks) { return livingrealms.TimeText.span(ticks, Decree.day()); }
 
     // ------------------------------------------------------------------ issuing
 
@@ -552,8 +549,9 @@ public final class Decrees {
             long until = until(server, k, d), ready = readyAt(server, k, d);
             boolean locked = rank(m, k).ordinal() < d.tier.ordinal();
             c.putString("state", until > now ? "active" : locked ? "locked" : ready > now ? "cooldown" : "ready");
-            c.putInt("activeMin", (int) Math.max(0, (until - now + 1199) / 1200));
-            c.putInt("readyMin", (int) Math.max(0, (ready - now + 1199) / 1200));
+            c.putLong("activeTicks", Math.max(0, until - now));
+            c.putLong("readyTicks", Math.max(0, ready - now));
+            c.putString("cooldownReal", livingrealms.TimeText.real(d.cooldown()));
             String why = s.mirror() ? "Village Expansion runs this village" : blocker(server, m, s, d);
             c.putString("why", why == null ? "" : why);
             list.add(c);

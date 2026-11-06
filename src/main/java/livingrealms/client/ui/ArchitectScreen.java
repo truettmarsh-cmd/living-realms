@@ -213,10 +213,29 @@ public class ArchitectScreen extends Screen {
         ui.text(ui.clip(stateLabel(p), cw), cx, y + 11, MUTED);
         int total = p.getInt("total");
         ui.bar(cx, y + 24, cw, 5, total == 0 ? 0 : p.getInt("placed") / (float) total, GOLD, GOLD_DK);
-        ui.text("Priority " + p.getInt("prio"), cx, y + 34, FAINT);
-        if (!p.getString("status").isEmpty()) ui.wrap(ui.clip(p.getString("status"), cw * 2), cx, y + 46, cw, ORANGE);
-        if (p.getString("state").equals("DEMOLISHING")) return;
-        int by = bottom - 44;
+        boolean demolishing = p.getString("state").equals("DEMOLISHING");
+        // short windows: one row of buttons, and the status shares the priority line
+        boolean compact = bottom - 44 < y + 46 + 10;
+        int by = compact ? bottom - 18 : bottom - 44;
+        String status = p.getString("status");
+        if (compact && !status.isEmpty()) {
+            String pr = "Priority " + p.getInt("prio") + " · ";
+            ui.text(pr, cx, y + 34, FAINT);
+            ui.text(ui.clip(status, cw - ui.width(pr)), cx + ui.width(pr), y + 34, ORANGE);
+            if (ui.over(cx, y + 33, cw, 10)) ui.tip(status);
+        } else {
+            ui.text("Priority " + p.getInt("prio"), cx, y + 34, FAINT);
+            if (!status.isEmpty()) ui.wrap(ui.clip(status, cw * 2), cx, y + 46, cw, ORANGE);
+        }
+        if (demolishing) return;
+        if (compact) {
+            int bw = (cw - 4) / 3;
+            ui.button("arch_up", cx, by, bw, 16, "▲", Style.SECONDARY, true, () -> priority(id, 1));
+            ui.button("arch_down", cx + bw + 2, by, bw, 16, "▼", Style.SECONDARY, true, () -> priority(id, -1));
+            ui.button("arch_cancel", cx + 2 * (bw + 2), by, cw - 2 * (bw + 2), 16, "Cancel", Style.DANGER, true, () -> cancel(id));
+            if (ui.over(cx, by, bw * 2 + 2, 16)) ui.tip("▲ builds it sooner, ▼ later");
+            return;
+        }
         ui.button("arch_up", cx, by, cw / 2 - 2, 16, "▲ Sooner", Style.SECONDARY, true, () -> priority(id, 1));
         ui.button("arch_down", cx + cw / 2 + 2, by, cw / 2 - 2, 16, "▼ Later", Style.SECONDARY, true, () -> priority(id, -1));
         ui.button("arch_cancel", cx, by + 19, cw, 16, "Cancel project", Style.DANGER, true, () -> cancel(id));
@@ -238,8 +257,12 @@ public class ArchitectScreen extends Screen {
 
     void banner() {
         var p = Minecraft.getInstance().player;
-        String s = "⚠ Your body is unguarded" + (p == null ? "" : " · ♥ " + (int) Math.ceil(p.getHealth()) + "/" + (int) p.getMaxHealth()) + " · any damage ends this view";
-        int w = ui.width(s) + 16, x = PW + 12 + (width - PW - 12 - w) / 2;
+        String hp = p == null ? "" : " · ♥ " + (int) Math.ceil(p.getHealth()) + "/" + (int) p.getMaxHealth();
+        int room = width - PW - 12 - 6;
+        String s = "⚠ Your body is unguarded" + hp + " · any damage ends this view";
+        if (ui.width(s) + 16 > room) s = "⚠ Body unguarded" + hp;
+        s = ui.clip(s, room - 16);
+        int w = ui.width(s) + 16, x = PW + 12 + Math.max(0, (room - w) / 2);
         ui.round(x, 6, w, 14, 5, 0xC0301818);
         ui.text(s, x + 8, 9, 0xFFF0A0A0);
     }

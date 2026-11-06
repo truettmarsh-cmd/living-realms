@@ -73,7 +73,7 @@ public class CityScreen extends Screen {
     private UUID selectedSoldier;
     private String soldierTab = "Skills";
     private final SoldierPanels panels = new SoldierPanels(ui, new SoldierPanels.Host() {
-        public boolean canCommand() { return mine(); }
+        public boolean canCommand() { return mine() && v().getBoolean("ruler"); }
         public void act(String action, CompoundTag data) { CityScreen.this.act(action, data); }
         public boolean hasResearch(String id) { return strings("research").contains(id); }
         public int emeralds() { return stock().getOrDefault(Items.EMERALD, 0); }
@@ -126,6 +126,9 @@ public class CityScreen extends Screen {
     static CompoundTag v() { return ClientState.view == null ? new CompoundTag() : ClientState.view; }
 
     static boolean mine() { return v().getBoolean("mine"); }
+
+    /** The player stands in this town (or is an op): the stockpile can be used by hand. */
+    static boolean here() { return v().getBoolean("here"); }
 
     static ListTag list(String k) { return v().getList(k, Tag.TAG_COMPOUND); }
 
@@ -259,6 +262,7 @@ public class CityScreen extends Screen {
         } catch (Exception e) {
             ui.text("Something went wrong drawing this page: " + e, cx, cy + 20, RED);
         }
+        ui.notice(px + pw / 2, py + ph, pw - 40);
         g.pose().popPose();
         super.render(g, mx, my, partial);
         ui.end();
@@ -351,7 +355,7 @@ public class CityScreen extends Screen {
     void overview() {
         String style = BuildingCatalog.pretty(new ResourceLocation(v().getString("style").isEmpty() ? "minecraft:plains" : v().getString("style")).getPath());
         header(v().getString("name"), Tier.of(v().getInt("tier")).label + " · " + style + (v().getBoolean("ai") && v().getString("owner").isEmpty() ? " · independent" : " · held by " + v().getString("owner"))
-                + " · land " + v().getInt("radius") + " blocks");
+                + " · land " + plural(v().getInt("radius"), "block"));
         int warY = cy + 30;
         int cities = v().getInt("kingdomCities");
         ui.text(ui.clip((v().getBoolean("capital") ? "KINGDOM CAPITAL" : "Kingdom city") + " · " + cities + (cities == 1 ? " city" : " cities"), cw - 116), cx, warY, GOLD);
@@ -368,7 +372,7 @@ public class CityScreen extends Screen {
                 ? "Move the seat of your kingdom here. Old capital returns to City rank if needed."
                 : "Dispatch half the nearest eligible city's soldiers (2–12); at least 3 must be at home.",
                 v().getBoolean("ruler") ? "Unavailable during raids or within a day of moving it."
-                : "Defeat local defenders, then hold the center for 60 seconds. Both cities and armies must stay loaded.");
+                : "Defeat local defenders, then hold the centre for 60 seconds. Both cities and armies must stay loaded.");
         String raid = v().getString("raidStatus");
         CompoundTag vx = v().getCompound("vx");
         if (!v().getCompound("raid").isEmpty()) raid = ""; // the raid card below shows it with progress
@@ -460,7 +464,7 @@ public class CityScreen extends Screen {
         ui.card(tx, y, txw, 40);
         ui.text("Taxes", tx + 8, y + 6, MUTED);
         ui.segments("tax", tx + 6, y + 19, txw - 12, 15, livingrealms.settlement.Simulation.TAX_NAMES, v().getInt("tax"),
-                i -> { if (mine()) act("tax", tag("level", i)); });
+                mine(), i -> act("tax", tag("level", i)));
         if (ui.over(tx, y, txw, 40)) ui.tip("Taxes bring in emeralds per settler each day.", "None +6 mood · Low ±0 · Normal −8 · High −20 (needs Taxation)");
         // jobs
         int jy = y + 44, jh = rh - 44;
@@ -514,7 +518,7 @@ public class CityScreen extends Screen {
                 {"Auto research. " + now, "Rank research once the town is half way there, then economy and construction,",
                         "then smithing and military. Your choice always wins; cancelling an auto pick skips it.",
                         skips > 0 ? "Click to allow the " + skips + " skipped projects again." : "No projects skipped."},
-                {"Auto rank: claims the next rank once every requirement is met", "and " + v().getInt("tierFunds") + " emeralds are in the treasury, so a 25% reserve stays."},
+                {"Auto rank: claims the next rank once every requirement is met", "and " + plural(v().getInt("tierFunds"), "emerald") + " are in the treasury, so a 25% reserve stays."},
                 {"Auto training: one recruit at a time up to the garrison goal, a third of them ranged.",
                         "Best researched units the armoury can arm; keeps 6 townsfolk and an emerald reserve.",
                         "With auto-equip on, soldiers at home with empty slots are re-equipped."}};
@@ -567,7 +571,7 @@ public class CityScreen extends Screen {
                 {"Queue", String.valueOf(queued), queued == 0 ? "Nothing being built" : queued + " projects under way or waiting (Projects page)"},
                 {"Garrison", v().getInt("garrisonNow") + " / " + v().getInt("garrisonCap"), "Soldiers and recruits / places in barracks and towers"},
                 {"Research", known >= all ? "all " + all : known + " / " + all, known >= all ? "Every project is known" : (all - known) + " projects still to study"},
-                {"Land", v().getInt("radius") + " blocks", "Radius of the town's land from its centre"}};
+                {"Land", plural(v().getInt("radius"), "block"), "Radius of the town's land from its centre"}};
         int cwid = w / 3;
         for (int i = 0; i < cells.length; i++) {
             int gx = x + (i % 3) * cwid, gy = y + (i / 3) * 25;
@@ -799,7 +803,7 @@ public class CityScreen extends Screen {
             tip.add((isWall(hover) ? wallLine(hover) : cat.label) + " · " + stateLabel(hover));
             BuildingType ht = BuildingCatalog.get(hover.type);
             int workers = v().getCompound("plotWorkers").getInt(String.valueOf(hover.id));
-            if (ht != null && ht.category.job != null && hover.state.equals("BUILT")) tip.add(workers + " " + ht.category.job.label.toLowerCase(Locale.ROOT) + (workers == 1 ? "" : "s") + " at work");
+            if (ht != null && ht.category.job != null && hover.state.equals("BUILT")) tip.add(plural(workers, ht.category.job.label.toLowerCase(Locale.ROOT)) + " at work");
             if (ht != null && ht.beds > 0) tip.add(ht.beds + (ht.beds == 1 ? " bed" : " beds"));
             if (!hover.status.isEmpty()) tip.add(hover.status);
             if (mapPlan == null) tip.add(hover.id == selPlot ? "Selected" : "Click for details");
@@ -962,7 +966,7 @@ public class CityScreen extends Screen {
         yy += ui.wrap((p.x1 - p.x0 + 1) + "×" + (p.z1 - p.z0 + 1) + " · " + quarter(p), x + 8, yy, w - 16, FAINT) + 1;
         int workers = v().getCompound("plotWorkers").getInt(String.valueOf(p.id));
         if (t != null && t.category.job != null && built) {
-            ui.text(workers + " " + t.category.job.label.toLowerCase(Locale.ROOT) + (workers == 1 ? "" : "s") + " at work", x + 8, yy, TEXT);
+            ui.text(plural(workers, t.category.job.label.toLowerCase(Locale.ROOT)) + " at work", x + 8, yy, TEXT);
             yy += 11;
         }
         if (t != null && t.beds > 0) { ui.text(t.beds + (t.beds == 1 ? " bed" : " beds"), x + 8, yy, MUTED); yy += 11; }
@@ -1104,9 +1108,9 @@ public class CityScreen extends Screen {
         if (catFilter.equals("ROAD")) {
             int mx = cx + lw + 6;
             ui.card(mx, top, cw - lw - 6, ch - 30);
-            ui.text("Roads connect your buildings. Builders lay them block by block,", mx + 10, top + 10, TEXT);
-            ui.text("following the ground, and bridge water with planks.", mx + 10, top + 21, TEXT);
-            if (mine()) roadPicker(mx + 10, top + 40, 140);
+            int ry = top + 10 + ui.wrap("Roads connect your buildings. Builders lay them block by block, following the ground, and bridge water with planks.",
+                    mx + 10, top + 10, cw - lw - 26, TEXT);
+            if (mine()) roadPicker(mx + 10, Math.max(top + 40, ry + 8), 140);
             return;
         }
         // style filter
@@ -1157,7 +1161,7 @@ public class CityScreen extends Screen {
         }
         if (types.isEmpty()) ui.text("Nothing matches.", mx + 10, lt + 10, FAINT);
         ui.endScroll();
-        ui.text(types.size() + " buildings", mx + 4, lt + lh + 3, FAINT);
+        ui.text(plural(types.size(), "building"), mx + 4, lt + lh + 3, FAINT);
         // right: detail
         int dx = mx + mw + 6, dw = cx + cw - dx;
         ui.card(dx, top, dw, ch - 30);
@@ -1195,7 +1199,7 @@ public class CityScreen extends Screen {
             yy2 += 12;
         }
         int bh = top + ch - 30 - yy2 - 26;
-        if (bp != null && bh < 18) ui.text(ui.clip(bp.bill().size() + " materials", dw - 16), dx + 8, yy2 + 2, FAINT);
+        if (bp != null && bh < 18) ui.text(ui.clip(plural(bp.bill().size(), "material"), dw - 16), dx + 8, yy2 + 2, FAINT);
         else if (bp != null) {
             Map<Item, Integer> stock = stock();
             List<Map.Entry<Item, Integer>> bill = new ArrayList<>(bp.bill().entrySet());
@@ -1379,7 +1383,7 @@ public class CityScreen extends Screen {
             ui.text(String.valueOf(r.count), cx + 36 + ui.width(ui.clip(cat.label, w - 80)), y + 5, FAINT);
             int workers = 0;
             for (PlotView m : r.members) workers += v().getCompound("plotWorkers").getInt(String.valueOf(m.id));
-            if (cat.job != null) ui.right(workers + " " + cat.job.label.toLowerCase(Locale.ROOT) + (workers == 1 ? "" : "s") + " at work", right, y + 5, MUTED);
+            if (cat.job != null) ui.right(plural(workers, cat.job.label.toLowerCase(Locale.ROOT)) + " at work", right, y + 5, MUTED);
             if (on) ui.tip(cat.label + ": " + r.count + (r.count == 1 ? " building" : " buildings"), open ? "Click to fold" : "Click to list them");
         }
         ui.area(cx + 3, y, w - 6, 18, () -> toggleProjGroup(r.key, r.byDefault));
@@ -1415,7 +1419,7 @@ public class CityScreen extends Screen {
                 side = tagText + "  " + pct;
             }
         } else if (t != null && t.category.job != null) {
-            side = workers + " " + t.category.job.label.toLowerCase(Locale.ROOT) + (workers == 1 ? "" : "s");
+            side = plural(workers, t.category.job.label.toLowerCase(Locale.ROOT));
             ui.right(side, right, y + 8, MUTED);
         }
         int room = Math.max(40, (built ? right - ui.width(side) - 8 : right - barW - 14 - ui.width(side)) - (x + 27));
@@ -1517,9 +1521,9 @@ public class CityScreen extends Screen {
             ui.g.pose().translate(0, 0, 200);
             ui.textShadow(n, x + cell - 3 - ui.width(n), y + cell - 11, TEXT);
             ui.g.pose().popPose();
-            if (on) ui.tip(st.getHoverName().getString(), e.getValue() + " in store", mine() ? "Click: take a stack · Shift-click: take 4 stacks" : "");
+            if (on) ui.tip(st.getHoverName().getString(), e.getValue() + " in store", !mine() ? "" : here() ? "Click: take a stack · Shift-click: take 4 stacks" : "Come to " + v().getString("name") + " to take goods out");
             final Item it = e.getKey();
-            if (mine()) ui.area(x, y, cell - 2, cell - 2, () -> act("withdraw", tag("item", BuiltInRegistries.ITEM.getKey(it).toString(),
+            if (mine() && here()) ui.area(x, y, cell - 2, cell - 2, () -> act("withdraw", tag("item", BuiltInRegistries.ITEM.getKey(it).toString(),
                     "count", it.getMaxStackSize() * (Screen.hasShiftDown() ? 4 : 1))));
         }
         if (items.isEmpty()) ui.text(stock.isEmpty() ? "The stockpile is empty." : "Nothing matches.", cx + 10, top + 10, FAINT);
@@ -1530,8 +1534,9 @@ public class CityScreen extends Screen {
         ui.text("Bring goods in", sx + 8, y, MUTED);
         y += 14;
         if (mine()) {
-            ui.button("dep", sx + 6, y, sw - 12, 16, "Deposit my pack", Style.PRIMARY, true, () -> act("deposit", tag("item", "")));
-            if (ui.over(sx + 6, y, sw - 12, 16)) ui.tip("Moves everything in your inventory except the hotbar, armour, and named or enchanted items.");
+            ui.button("dep", sx + 6, y, sw - 12, 16, "Deposit my pack", Style.PRIMARY, here(), () -> act("deposit", tag("item", "")));
+            if (ui.over(sx + 6, y, sw - 12, 16)) ui.tip(here() ? "Moves everything in your inventory except the hotbar, armour, and named or enchanted items."
+                    : "You must be in " + v().getString("name") + " to deposit goods.");
             y += 22;
         }
         y += ui.wrap("A Delivery Barrel anywhere in town carries whatever is put in it into the stockpile: by hand, by hopper, or by Villager Workers.", sx + 8, y, sw - 16, FAINT);
@@ -1663,8 +1668,7 @@ public class CityScreen extends Screen {
     }
 
     static String eta(double days) {
-        long mins = Math.round(days * 20);
-        return mins < 60 ? "~" + Math.max(1, mins) + " min" : String.format(Locale.ROOT, "~%.1f h", mins / 60.0);
+        return "~" + span(Math.round(days * livingrealms.client.ClientState.dayTicks));
     }
 
     // ------------------------------------------------------------------ military
@@ -1672,7 +1676,7 @@ public class CityScreen extends Screen {
     static boolean realms() { return v().getCompound("vx").contains("factions"); }
 
     static String[] milLabels() {
-        return realms() ? new String[]{"Garrison", "Recruit", "Smithy", "Kits", "Honours", "Realms"} : new String[]{"Garrison", "Recruit", "Blacksmith", "Kits", "Honours"};
+        return realms() ? new String[]{"Garrison", "Recruit", "Blacksmith", "Kits", "Honours", "Realms"} : new String[]{"Garrison", "Recruit", "Blacksmith", "Kits", "Honours"};
     }
 
     void milTabs() { milTabs(cx + cw - milTabsWidth(), cy + 2, milTabsWidth()); }
@@ -1786,13 +1790,13 @@ public class CityScreen extends Screen {
                 ui.bar(bx + 16, y + 3, 50, 5, hp, hp > 0.5 ? GREEN : hp > 0.25 ? GOLD : RED, hp > 0.5 ? 0xFF4FA860 : hp > 0.25 ? GOLD_DK : 0xFFB84A4A);
                 ui.text("Morale " + (int) s.getFloat("morale"), bx, y + 12, FAINT);
             }
-            ui.button("command" + id, rx, y + 4, 50, 14, "Command", Style.SECONDARY, seen, () -> recruitOp(id, "open"));
+            ui.button("command" + id, rx, y + 4, 50, 14, "Command", Style.SECONDARY, seen && v().getBoolean("ruler"), () -> recruitOp(id, "open"));
             rx -= 56;
             ui.button("inventory" + id, rx, y + 4, 54, 14, "Inventory", Style.GHOST, seen && mine(), () -> recruitOp(id, "inventory"));
             if (rx - 42 >= bx + 68) ui.button("skills" + id, rx - 42, y + 4, 40, 14, "Skills", Style.GHOST, true, () -> selectedSoldier = id);
             if (row && !ui.over(rx - 42, y + 4, cx + cw - rx + 34, 14))
                 ui.tip(s.getString("name") + (s.getString("pathLabel").isEmpty() ? "" : " · " + s.getString("pathLabel")), seen ? s.getString("gear") : "Away from town", "HP " + Math.round(hp * 100) + "% · morale " + (int) s.getFloat("morale"),
-                        s.getInt("kills") + " kills · Recruits level " + lvl, "Click for skills, weapons and legendary perks");
+                        plural(s.getInt("kills"), "kill") + " · Recruits level " + lvl, "Click for skills, weapons and legendary perks");
             y += 24;
         }
         if (all.isEmpty()) ui.text(ui.clip("No soldiers yet. Build a Barracks and train some on the Recruit page.", cw - 20), cx + 10, listTop + 6, FAINT);
@@ -1858,7 +1862,7 @@ public class CityScreen extends Screen {
         ui.button("backRoster", cx, top, 76, 16, "← Garrison", Style.GHOST, true, () -> selectedSoldier = null);
         ui.text(ui.clip(soldier.getString("name"), cw - 230), cx + 86, top + 4, soldier.getBoolean("royalGuard") ? GOLD : TEXT);
         ui.button("detailInv", cx + cw - 128, top, 60, 16, "Inventory", Style.SECONDARY, soldier.getBoolean("seen") && mine(), () -> recruitOp(id, "inventory"));
-        ui.button("detailCmd", cx + cw - 64, top, 60, 16, "Command", Style.PRIMARY, soldier.getBoolean("seen"), () -> recruitOp(id, "open"));
+        ui.button("detailCmd", cx + cw - 64, top, 60, 16, "Command", Style.PRIMARY, soldier.getBoolean("seen") && v().getBoolean("ruler"), () -> recruitOp(id, "open"));
         String[] tabs = SoldierPanels.tabs(soldier);
         int sel = Math.max(0, Arrays.asList(tabs).indexOf(soldierTab));
         ui.segments("soldierTabs", cx, top + 22, cw - 4, 16, tabs, sel, i -> soldierTab = tabs[i]);
@@ -1871,6 +1875,16 @@ public class CityScreen extends Screen {
         t.putUUID("e", entity);
         t.putString("op", op);
         Net.toServer("recruit", t);
+    }
+
+    /** Why this unit can't be trained here yet, or null. */
+    @javax.annotation.Nullable
+    static String trainLock(UnitType u, Set<String> done) {
+        if (u == UnitType.DRAGON_RIDER && !livingrealms.military.DragonRiders.installed()) return "Install Ice and Fire";
+        if (u.research != null && !done.contains(u.research)) return "Research " + researchName(u.research);
+        if (v().getInt("barracks") == 0) return "Build a Barracks";
+        if ((u == UnitType.HORSEMAN || u == UnitType.DRAGON_RIDER) && !v().getBoolean("stables")) return "Build Stables";
+        return null;
     }
 
     void recruit() {
@@ -1886,11 +1900,7 @@ public class CityScreen extends Screen {
             boolean sel = u == selUnit, on = ui.over(cx, y, lw, cardH);
             ui.card(cx, y, lw, cardH, sel ? 0xFF2E3542 : on ? CARD_HI : CARD, sel ? GOLD : BORDER);
             ui.item(u.icon, cx + 8, y + (cardH - 16) / 2);
-            String lock = null;
-            if (u.research != null && !done.contains(u.research)) lock = "Research " + researchName(u.research);
-            else if (v().getInt("barracks") == 0) lock = "Build a Barracks";
-            else if ((u == UnitType.HORSEMAN || u == UnitType.DRAGON_RIDER) && !v().getBoolean("stables")) lock = "Build Stables";
-            if (u == UnitType.DRAGON_RIDER && !livingrealms.military.DragonRiders.installed()) lock = "Install Ice and Fire";
+            String lock = trainLock(u, done);
             String costLine = u.emeralds + " emeralds · " + Arrays.stream(u.needs).map(p -> p == Piece.SWORD ? "a weapon" : "a " + p.label.toLowerCase(Locale.ROOT)).reduce((a, b) -> a + ", " + b).orElse("");
             // name and training time on top; what stops it, or what it costs, beneath
             String time = eta(u.trainDays) + " to train";
@@ -1905,19 +1915,23 @@ public class CityScreen extends Screen {
         // order panel
         int sx = cx + lw + 6, sw = cw - lw - 6;
         ui.card(sx, top, sw, 70);
-        ui.text(ui.clip("Train " + plural(selUnit.label), sw - 16), sx + 8, top + 7, TEXT);
+        ui.text(ui.clip("Train " + livingrealms.Text.plural(selUnit.label), sw - 16), sx + 8, top + 7, TEXT);
         ui.button("tq-", sx + 8, top + 22, 18, 16, "−", Style.SECONDARY, trainQty > 1, () -> trainQty--);
         ui.center(String.valueOf(trainQty), sx + 38, top + 26, TEXT);
         ui.button("tq+", sx + 50, top + 22, 18, 16, "+", Style.SECONDARY, trainQty < 10, () -> trainQty++);
-        ui.text(selUnit.emeralds * trainQty + " ◆", sx + 76, top + 26, stock.getOrDefault(Items.EMERALD, 0) >= selUnit.emeralds * trainQty ? GREEN : ORANGE);
-        if (mine()) ui.button("train", sx + 6, top + 46, sw - 12, 17, "Begin training", Style.PRIMARY, true,
+        ui.text(ui.clip(plural(selUnit.emeralds * trainQty, "emerald"), sw - 84), sx + 76, top + 26, stock.getOrDefault(Items.EMERALD, 0) >= selUnit.emeralds * trainQty ? GREEN : ORANGE);
+        String selLock = trainLock(selUnit, done);
+        if (mine()) ui.button("train", sx + 6, top + 46, sw - 12, 17, "Begin training", Style.PRIMARY, selLock == null,
                 () -> act("train", tag("unit", selUnit.name(), "qty", trainQty)));
+        if (mine() && selLock != null && ui.over(sx + 6, top + 46, sw - 12, 17)) ui.tip("Locked: " + selLock);
         // queue
         ListTag training = list("training");
         int qy = top + 76;
         ui.card(sx, qy, sw, ch - 76 - 30);
         ui.text("Training yard", sx + 8, qy + 7, MUTED);
-        int y = qy + 20;
+        int listH = ch - 76 - 30 - 22;
+        int off = ui.beginScroll("yard", sx + 2, qy + 18, sw - 4, listH, training.size() * 20 + 2);
+        int y = qy + 20 - off;
         for (int i = 0; i < training.size(); i++) {
             CompoundTag t = training.getCompound(i);
             UnitType u = UnitType.valueOf(t.getString("type"));
@@ -1928,12 +1942,11 @@ public class CityScreen extends Screen {
             final int idx = i;
             if (mine()) ui.button("ct" + i, sx + sw - 24, y + 2, 16, 13, "×", Style.GHOST, true, () -> act("cancelTraining", tag("index", idx)));
             y += 20;
-            if (y > qy + ch - 76 - 30 - 18) break;
         }
+        ui.endScroll();
         if (training.isEmpty()) ui.wrap("Recruits are drawn from your townsfolk and need their weapon in the armoury.", sx + 8, y, sw - 16, FAINT);
     }
 
-    static String plural(String label) { return label.endsWith("man") ? label.substring(0, label.length() - 3) + "men" : label + "s"; }
 
     void kits() {
         int top = cy + 30;
@@ -1966,7 +1979,7 @@ public class CityScreen extends Screen {
             // armour
             var ap = Smithing.get(k.getString("armor"));
             if (labels) ui.text("Armour", x, y + 4, FAINT);
-            if (ui.over(x, y + cyY, cyc, 15)) ui.tip("Armour for " + plural(u.label).toLowerCase(Locale.ROOT) + ": " + (ap == null ? "none" : ap.name()), mine() ? "Click for the next pattern, shift-click for the previous" : "");
+            if (ui.over(x, y + cyY, cyc, 15)) ui.tip("Armour for " + livingrealms.Text.plural(u.label).toLowerCase(Locale.ROOT) + ": " + (ap == null ? "none" : ap.name()), mine() ? "Click for the next pattern, shift-click for the previous" : "");
             cycler("ka" + u, x, y + cyY, cyc, ap == null ? "None" : ap.name(), ap == null ? null : ap.pieces().getOrDefault(Piece.CHESTPLATE, ap.pieces().values().iterator().next()).item(),
                     () -> act("kit", tag("unit", u.name(), "armor", next(armors, k.getString("armor"), true))));
             // weapon
@@ -1977,7 +1990,7 @@ public class CityScreen extends Screen {
             x += cyc + 6;
             if (labels) ui.text("Weapon", x, y + 4, FAINT);
             var wr = wp == null ? null : wp.pieces().get(piece);
-            if (ui.over(x, y + cyY, cyc, 15)) ui.tip("Weapon for " + plural(u.label).toLowerCase(Locale.ROOT) + ": " + (wp == null ? "none" : wr == null ? wp.name() + " (n/a)" : wr.item().getDescription().getString()),
+            if (ui.over(x, y + cyY, cyc, 15)) ui.tip("Weapon for " + livingrealms.Text.plural(u.label).toLowerCase(Locale.ROOT) + ": " + (wp == null ? "none" : wr == null ? wp.name() + " (n/a)" : wr.item().getDescription().getString()),
                     mine() ? "Click for the next pattern, shift-click for the previous" : "");
             cycler("kw" + u, x, y + cyY, cyc, wp == null ? "None" : wr == null ? wp.name() + " (n/a)" : wr.item().getDescription().getString(), wr == null ? null : wr.item(),
                     () -> act("kit", tag("unit", u.name(), "weapon", next(weapons, k.getString("weapon"), false))));
