@@ -30,6 +30,8 @@ public final class PeoplePanel {
     /** Selected citizen id; list mode: "" people, "mayor" choosing a mayor, "captain" choosing a captain. */
     static int selected;
     static String mode = "";
+    /** The town those belong to: another town starts with nothing selected and the plain list. */
+    private static java.util.UUID town;
 
     /** For the screenshot tour: select a citizen, or switch the list ("", "mayor", "captain"). */
     public static void select(int id) { selected = id; mode = ""; }
@@ -37,6 +39,10 @@ public final class PeoplePanel {
     public static void choose(String listMode) { mode = listMode; }
 
     static void draw(Imm ui, int x, int y, int w, int h, CompoundTag t, boolean mine, EditBox search, BiConsumer<String, CompoundTag> act) {
+        CompoundTag view = livingrealms.client.ClientState.view;
+        java.util.UUID here = view != null && view.hasUUID("id") ? view.getUUID("id") : null;
+        if (here != null && !here.equals(town)) { town = here; selected = 0; mode = ""; }
+        if (!mine) mode = ""; // only the ruler picks a mayor or captain
         ListTag people = t.getList("people", Tag.TAG_COMPOUND);
         Map<Integer, CompoundTag> byId = new HashMap<>();
         for (Tag e : people) byId.put(((CompoundTag) e).getInt("id"), (CompoundTag) e);
@@ -177,7 +183,7 @@ public final class PeoplePanel {
 
     static void card(Imm ui, int x, int y, int w, int h, CompoundTag c, Map<Integer, CompoundTag> byId, int mayor) {
         ui.card(x, y, w, h);
-        int off = ui.beginScroll("pplCard", x + 2, y + 2, w - 4, h - 4, cardHeight(ui, c, w));
+        int off = ui.beginScroll("pplCard", x + 2, y + 2, w - 4, h - 4, cardHeight(ui, c, w, byId));
         int cy = y + 6 - off, tx = x + 8, tw = w - 16;
         ui.text(ui.clip(c.getString("n"), tw), tx, cy, c.getInt("id") == mayor ? GOLD : TEXT);
         cy += 11;
@@ -220,10 +226,17 @@ public final class PeoplePanel {
         ui.endScroll();
     }
 
-    static int cardHeight(Imm ui, CompoundTag c, int w) {
-        int n = 70 + c.getString("why").split("\n").length * 9 + 16 + 30;
+    /** Exactly what {@link #card} draws, line by line, so the card scrolls to its last line and no further. */
+    static int cardHeight(Imm ui, CompoundTag c, int w, Map<Integer, CompoundTag> byId) {
+        int n = 6 + 11 + 10 + 10 + 14 + 10 + 8;
+        for (String why : c.getString("why").split("\n")) if (!why.isEmpty()) n += 9;
+        n += 5 + 11;
         for (Tag tr : c.getList("tr", Tag.TAG_STRING)) n += 10 + ui.wrapHeight(TRAIT_EFFECT.getOrDefault(tr.getAsString(), ""), w - 28);
-        return n + 10 * (3 + c.getIntArray("k").length);
+        n += 5 + 11;
+        int kin = 0;
+        for (int id : new int[]{c.getInt("sp"), c.getInt("mo"), c.getInt("fa")}) if (id > 0 && byId.containsKey(id)) kin++;
+        for (int k : c.getIntArray("k")) if (k > 0 && byId.containsKey(k)) kin++;
+        return n + 10 * Math.max(1, kin) + 4;
     }
 
     /** A clickable family line; returns the next y. Kin who died or left are not listed. */

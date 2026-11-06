@@ -54,8 +54,15 @@ final class TradePanel {
         // ---- goods
         ui.card(x, cy, w - 4, goodsH);
         ui.text("Goods", x + 8, cy + 6, GOLD);
-        ui.right("stock · short of · price · made a day", x + w - 12, cy + 6, FAINT);
         int gy = cy + 21, colW = (w - 16) / cols;
+        // a header over each column of goods, at the same places good() puts its numbers
+        for (int c = 0; c < Math.min(cols, Math.max(1, goods.size())); c++) {
+            int rx = x + 6 + c * colW + (colW - 6) - 40;
+            ui.right("stock", rx - 110, cy + 6, FAINT);
+            ui.right("short", rx - 76, cy + 6, FAINT);
+            ui.right("price", rx - 34, cy + 6, FAINT);
+            ui.right("a day", rx, cy + 6, FAINT);
+        }
         for (int i = 0; i < goods.size(); i++) {
             good(ui, x + 6 + (i % cols) * colW, gy + (i / cols) * GOOD_H, colW - 6, goods.getCompound(i), mine, act);
         }
@@ -129,8 +136,8 @@ final class TradePanel {
         CompoundTag d = new CompoundTag();
         d.putString("item", g.getString("id"));
         d.putBoolean("ban", !ban);
-        if (mine) ui.button("ban" + g.getString("id"), x + w - 34, y + 1, 32, 13, ban ? "Ban" : "Free", ban ? Style.DANGER : Style.SECONDARY, true, () -> act.accept("tradeBan", d));
-        if (ui.over(x + w - 34, y + 1, 32, 13)) ui.tip(ban ? "Export banned" : "Exports allowed", ban ? "Caravans never carry this out of town. Click to allow." : "Click to ban its export.");
+        if (mine) ui.button("ban" + g.getString("id"), x + w - 34, y + 1, 32, 13, ban ? "Allow" : "Ban", ban ? Style.DANGER : Style.SECONDARY, true, () -> act.accept("tradeBan", d));
+        if (ui.over(x + w - 34, y + 1, 32, 13)) ui.tip(ban ? "Export banned" : "Exports allowed", ban ? "Caravans never carry this out of town. Click to allow its export again." : "Caravans may sell this. Click to ban its export.");
     }
 
     static int statusColor(String state) {

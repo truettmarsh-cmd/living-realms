@@ -21,7 +21,7 @@ import java.util.*;
 public final class Imm {
     // palette: deep slate with warm gold
     public static final int BG = 0xF0121519, PANEL = 0xFF171B21, CARD = 0xFF1E232B, CARD_HI = 0xFF262C36, BORDER = 0xFF2C333E,
-            LINE = 0xFF353D4A, TEXT = 0xFFE8E6E1, MUTED = 0xFF98A0AB, FAINT = 0xFF646C78, GOLD = 0xFFE8C15A, GOLD_DK = 0xFFB98E2E,
+            LINE = 0xFF353D4A, TEXT = 0xFFE8E6E1, MUTED = 0xFF98A0AB, FAINT = 0xFF7E8692, GOLD = 0xFFE8C15A, GOLD_DK = 0xFFB98E2E,
             GREEN = 0xFF6FCF7F, RED = 0xFFE56B6B, BLUE = 0xFF6AA8F0, ORANGE = 0xFFF0A050, PURPLE = 0xFFB48CF0;
 
     public enum Style { PRIMARY, SECONDARY, GHOST, DANGER, SUCCESS }
@@ -301,17 +301,22 @@ public final class Imm {
 
     /** Segmented control; returns the index clicked via action. */
     public void segments(String id, int x, int y, int w, int h, String[] labels, int selected, java.util.function.IntConsumer action) {
+        segments(id, x, y, w, h, labels, selected, true, action);
+    }
+
+    /** Segments that only show the choice when not enabled: no hover glow, no click. */
+    public void segments(String id, int x, int y, int w, int h, String[] labels, int selected, boolean enabled, java.util.function.IntConsumer action) {
         round(x, y, w, h, 5, 0xFF0F1216);
         int sw = w / labels.length;
         for (int i = 0; i < labels.length; i++) {
             int sx = x + i * sw;
-            boolean on = over(sx, y, sw, h);
+            boolean on = enabled && over(sx, y, sw, h);
             float hv = hover(id + i, on);
             if (i == selected) round(sx + 1, y + 1, sw - 2, h - 2, 4, 0xFF3A4250, 0xFF313845);
             else if (hv > 0) round(sx + 1, y + 1, sw - 2, h - 2, 4, (int) (hv * 0x20) << 24 | 0xFFFFFF);
             center(clip(labels[i], sw - 4), sx + sw / 2, y + (h - 8) / 2, i == selected ? GOLD : MUTED);
             final int idx = i;
-            area(sx, y, sw, h, () -> action.accept(idx));
+            if (enabled) area(sx, y, sw, h, () -> action.accept(idx));
         }
     }
 

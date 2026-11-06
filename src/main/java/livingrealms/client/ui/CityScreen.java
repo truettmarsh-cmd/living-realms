@@ -73,7 +73,7 @@ public class CityScreen extends Screen {
     private UUID selectedSoldier;
     private String soldierTab = "Skills";
     private final SoldierPanels panels = new SoldierPanels(ui, new SoldierPanels.Host() {
-        public boolean canCommand() { return mine(); }
+        public boolean canCommand() { return mine() && v().getBoolean("ruler"); }
         public void act(String action, CompoundTag data) { CityScreen.this.act(action, data); }
         public boolean hasResearch(String id) { return strings("research").contains(id); }
         public int emeralds() { return stock().getOrDefault(Items.EMERALD, 0); }
@@ -372,7 +372,7 @@ public class CityScreen extends Screen {
                 ? "Move the seat of your kingdom here. Old capital returns to City rank if needed."
                 : "Dispatch half the nearest eligible city's soldiers (2–12); at least 3 must be at home.",
                 v().getBoolean("ruler") ? "Unavailable during raids or within a day of moving it."
-                : "Defeat local defenders, then hold the center for 60 seconds. Both cities and armies must stay loaded.");
+                : "Defeat local defenders, then hold the centre for 60 seconds. Both cities and armies must stay loaded.");
         String raid = v().getString("raidStatus");
         CompoundTag vx = v().getCompound("vx");
         if (!v().getCompound("raid").isEmpty()) raid = ""; // the raid card below shows it with progress
@@ -464,7 +464,7 @@ public class CityScreen extends Screen {
         ui.card(tx, y, txw, 40);
         ui.text("Taxes", tx + 8, y + 6, MUTED);
         ui.segments("tax", tx + 6, y + 19, txw - 12, 15, livingrealms.settlement.Simulation.TAX_NAMES, v().getInt("tax"),
-                i -> { if (mine()) act("tax", tag("level", i)); });
+                mine(), i -> act("tax", tag("level", i)));
         if (ui.over(tx, y, txw, 40)) ui.tip("Taxes bring in emeralds per settler each day.", "None +6 mood · Low ±0 · Normal −8 · High −20 (needs Taxation)");
         // jobs
         int jy = y + 44, jh = rh - 44;
@@ -1108,9 +1108,9 @@ public class CityScreen extends Screen {
         if (catFilter.equals("ROAD")) {
             int mx = cx + lw + 6;
             ui.card(mx, top, cw - lw - 6, ch - 30);
-            ui.text("Roads connect your buildings. Builders lay them block by block,", mx + 10, top + 10, TEXT);
-            ui.text("following the ground, and bridge water with planks.", mx + 10, top + 21, TEXT);
-            if (mine()) roadPicker(mx + 10, top + 40, 140);
+            int ry = top + 10 + ui.wrap("Roads connect your buildings. Builders lay them block by block, following the ground, and bridge water with planks.",
+                    mx + 10, top + 10, cw - lw - 26, TEXT);
+            if (mine()) roadPicker(mx + 10, Math.max(top + 40, ry + 8), 140);
             return;
         }
         // style filter
@@ -1676,7 +1676,7 @@ public class CityScreen extends Screen {
     static boolean realms() { return v().getCompound("vx").contains("factions"); }
 
     static String[] milLabels() {
-        return realms() ? new String[]{"Garrison", "Recruit", "Smithy", "Kits", "Honours", "Realms"} : new String[]{"Garrison", "Recruit", "Blacksmith", "Kits", "Honours"};
+        return realms() ? new String[]{"Garrison", "Recruit", "Blacksmith", "Kits", "Honours", "Realms"} : new String[]{"Garrison", "Recruit", "Blacksmith", "Kits", "Honours"};
     }
 
     void milTabs() { milTabs(cx + cw - milTabsWidth(), cy + 2, milTabsWidth()); }
@@ -1790,7 +1790,7 @@ public class CityScreen extends Screen {
                 ui.bar(bx + 16, y + 3, 50, 5, hp, hp > 0.5 ? GREEN : hp > 0.25 ? GOLD : RED, hp > 0.5 ? 0xFF4FA860 : hp > 0.25 ? GOLD_DK : 0xFFB84A4A);
                 ui.text("Morale " + (int) s.getFloat("morale"), bx, y + 12, FAINT);
             }
-            ui.button("command" + id, rx, y + 4, 50, 14, "Command", Style.SECONDARY, seen, () -> recruitOp(id, "open"));
+            ui.button("command" + id, rx, y + 4, 50, 14, "Command", Style.SECONDARY, seen && v().getBoolean("ruler"), () -> recruitOp(id, "open"));
             rx -= 56;
             ui.button("inventory" + id, rx, y + 4, 54, 14, "Inventory", Style.GHOST, seen && mine(), () -> recruitOp(id, "inventory"));
             if (rx - 42 >= bx + 68) ui.button("skills" + id, rx - 42, y + 4, 40, 14, "Skills", Style.GHOST, true, () -> selectedSoldier = id);
@@ -1862,7 +1862,7 @@ public class CityScreen extends Screen {
         ui.button("backRoster", cx, top, 76, 16, "← Garrison", Style.GHOST, true, () -> selectedSoldier = null);
         ui.text(ui.clip(soldier.getString("name"), cw - 230), cx + 86, top + 4, soldier.getBoolean("royalGuard") ? GOLD : TEXT);
         ui.button("detailInv", cx + cw - 128, top, 60, 16, "Inventory", Style.SECONDARY, soldier.getBoolean("seen") && mine(), () -> recruitOp(id, "inventory"));
-        ui.button("detailCmd", cx + cw - 64, top, 60, 16, "Command", Style.PRIMARY, soldier.getBoolean("seen"), () -> recruitOp(id, "open"));
+        ui.button("detailCmd", cx + cw - 64, top, 60, 16, "Command", Style.PRIMARY, soldier.getBoolean("seen") && v().getBoolean("ruler"), () -> recruitOp(id, "open"));
         String[] tabs = SoldierPanels.tabs(soldier);
         int sel = Math.max(0, Arrays.asList(tabs).indexOf(soldierTab));
         ui.segments("soldierTabs", cx, top + 22, cw - 4, 16, tabs, sel, i -> soldierTab = tabs[i]);
@@ -1875,6 +1875,16 @@ public class CityScreen extends Screen {
         t.putUUID("e", entity);
         t.putString("op", op);
         Net.toServer("recruit", t);
+    }
+
+    /** Why this unit can't be trained here yet, or null. */
+    @javax.annotation.Nullable
+    static String trainLock(UnitType u, Set<String> done) {
+        if (u == UnitType.DRAGON_RIDER && !livingrealms.military.DragonRiders.installed()) return "Install Ice and Fire";
+        if (u.research != null && !done.contains(u.research)) return "Research " + researchName(u.research);
+        if (v().getInt("barracks") == 0) return "Build a Barracks";
+        if ((u == UnitType.HORSEMAN || u == UnitType.DRAGON_RIDER) && !v().getBoolean("stables")) return "Build Stables";
+        return null;
     }
 
     void recruit() {
@@ -1890,11 +1900,7 @@ public class CityScreen extends Screen {
             boolean sel = u == selUnit, on = ui.over(cx, y, lw, cardH);
             ui.card(cx, y, lw, cardH, sel ? 0xFF2E3542 : on ? CARD_HI : CARD, sel ? GOLD : BORDER);
             ui.item(u.icon, cx + 8, y + (cardH - 16) / 2);
-            String lock = null;
-            if (u.research != null && !done.contains(u.research)) lock = "Research " + researchName(u.research);
-            else if (v().getInt("barracks") == 0) lock = "Build a Barracks";
-            else if ((u == UnitType.HORSEMAN || u == UnitType.DRAGON_RIDER) && !v().getBoolean("stables")) lock = "Build Stables";
-            if (u == UnitType.DRAGON_RIDER && !livingrealms.military.DragonRiders.installed()) lock = "Install Ice and Fire";
+            String lock = trainLock(u, done);
             String costLine = u.emeralds + " emeralds · " + Arrays.stream(u.needs).map(p -> p == Piece.SWORD ? "a weapon" : "a " + p.label.toLowerCase(Locale.ROOT)).reduce((a, b) -> a + ", " + b).orElse("");
             // name and training time on top; what stops it, or what it costs, beneath
             String time = eta(u.trainDays) + " to train";
@@ -1913,15 +1919,19 @@ public class CityScreen extends Screen {
         ui.button("tq-", sx + 8, top + 22, 18, 16, "−", Style.SECONDARY, trainQty > 1, () -> trainQty--);
         ui.center(String.valueOf(trainQty), sx + 38, top + 26, TEXT);
         ui.button("tq+", sx + 50, top + 22, 18, 16, "+", Style.SECONDARY, trainQty < 10, () -> trainQty++);
-        ui.text(selUnit.emeralds * trainQty + " ◆", sx + 76, top + 26, stock.getOrDefault(Items.EMERALD, 0) >= selUnit.emeralds * trainQty ? GREEN : ORANGE);
-        if (mine()) ui.button("train", sx + 6, top + 46, sw - 12, 17, "Begin training", Style.PRIMARY, true,
+        ui.text(ui.clip(plural(selUnit.emeralds * trainQty, "emerald"), sw - 84), sx + 76, top + 26, stock.getOrDefault(Items.EMERALD, 0) >= selUnit.emeralds * trainQty ? GREEN : ORANGE);
+        String selLock = trainLock(selUnit, done);
+        if (mine()) ui.button("train", sx + 6, top + 46, sw - 12, 17, "Begin training", Style.PRIMARY, selLock == null,
                 () -> act("train", tag("unit", selUnit.name(), "qty", trainQty)));
+        if (mine() && selLock != null && ui.over(sx + 6, top + 46, sw - 12, 17)) ui.tip("Locked: " + selLock);
         // queue
         ListTag training = list("training");
         int qy = top + 76;
         ui.card(sx, qy, sw, ch - 76 - 30);
         ui.text("Training yard", sx + 8, qy + 7, MUTED);
-        int y = qy + 20;
+        int listH = ch - 76 - 30 - 22;
+        int off = ui.beginScroll("yard", sx + 2, qy + 18, sw - 4, listH, training.size() * 20 + 2);
+        int y = qy + 20 - off;
         for (int i = 0; i < training.size(); i++) {
             CompoundTag t = training.getCompound(i);
             UnitType u = UnitType.valueOf(t.getString("type"));
@@ -1932,8 +1942,8 @@ public class CityScreen extends Screen {
             final int idx = i;
             if (mine()) ui.button("ct" + i, sx + sw - 24, y + 2, 16, 13, "×", Style.GHOST, true, () -> act("cancelTraining", tag("index", idx)));
             y += 20;
-            if (y > qy + ch - 76 - 30 - 18) break;
         }
+        ui.endScroll();
         if (training.isEmpty()) ui.wrap("Recruits are drawn from your townsfolk and need their weapon in the armoury.", sx + 8, y, sw - 16, FAINT);
     }
 

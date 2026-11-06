@@ -79,55 +79,61 @@ public final class Actions {
         }
         ServerLevel level = player.server.getLevel(s.dim);
         if (level == null) return;
-        String err = switch (action) {
-            case "rename" -> { String n = d.getString("name").trim(); if (!n.isEmpty() && n.length() <= 32) { s.name = n; } yield null; }
-            case "plan" -> plan(level, s, d);
-            case "planMap" -> Planning.planMap(level, s, d.getString("type"), d.getInt("x"), d.getInt("z"), d.getInt("rot"));
-            case "autoBuild" -> { s.autoBuild = d.getBoolean("on"); yield null; }
-            case "autoWalls" -> { s.autoWalls = d.getBoolean("on"); s.dirty = true; yield null; }
-            case "style" -> style(level, s, d.getString("family"));
-            case "road" -> Planning.road(level, s, BlockPos.of(d.getLong("a")), BlockPos.of(d.getLong("b")), d.getInt("width"), d.getString("material"));
-            case "upgrade" -> withPlot(s, d, p -> p.deferred ? DEFERRED : Planning.upgrade(level, s, p));
-            case "repair" -> withPlot(s, d, p -> { if (p.deferred) return DEFERRED; Planning.repair(s, p); return null; });
-            case "demolish" -> withPlot(s, d, p -> { Planning.demolish(s, p); return null; });
-            case "priority" -> withPlot(s, d, p -> { p.priority = Math.max(-5, Math.min(20, p.priority + d.getInt("delta"))); return null; });
-            case "research" -> research(s, d.getString("id"));
-            case "cancelResearch" -> cancelResearch(s);
-            case "clearSkips" -> { s.researchSkip.clear(); yield null; }
-            case "tradeRoute", "tradeBan" -> { String e = Trade.handle(player, m, s, action, d); s.dirty = true; yield e; }
-            case "autoResearch" -> { s.autoResearch = d.getBoolean("on"); yield null; }
-            case "autoTier" -> { s.autoTier = d.getBoolean("on"); yield null; }
-            case "autoTrain" -> { s.autoTrain = d.getBoolean("on"); yield null; }
-            case "garrisonTarget" -> { s.garrisonTarget = Math.max(-1, Math.min(s.d.garrisonCap, d.getInt("value"))); yield null; }
-            case "tier" -> advance(s);
-            case "capital" -> player.getUUID().equals(s.owner) ? Kingdoms.designate(player.server, m, s) : "Only the ruler may move the capital";
-            case "tax" -> tax(s, d.getInt("level"));
-            case "order" -> order(s, d);
-            case "cancelOrder" -> cancelOrder(s, d.getInt("id"));
-            case "train" -> train(s, d);
-            case "cancelTraining" -> cancelTraining(s, d.getInt("index"));
-            case "stance" -> { s.stance = Stance.valueOf(d.getString("stance")); Simulation.applyStanceAll(level, s); yield null; }
-            case "kit" -> kit(s, d);
-            case "equipAll" -> equipAll(level, s);
-            case "autoEquip" -> { s.autoEquip = d.getBoolean("on"); yield null; }
-            case "alarm" -> { s.manualAlarm = d.getBoolean("on"); if (!s.manualAlarm) s.alarmUntil = Math.min(s.alarmUntil, level.getGameTime() + 20); Simulation.watch(level, s); yield null; }
-            case "withdraw" -> !player.hasPermissions(2) && !livingrealms.net.Net.near(player, s, 16) ? "You must be in " + s.name + " to take from its stockpile" : withdraw(player, s, d);
-            case "deposit" -> !player.hasPermissions(2) && !livingrealms.net.Net.near(player, s, 16) ? "You must be in " + s.name + " to put goods in its stockpile" : deposit(player, s, d.getString("item"));
-            case "royalGuard" -> royalGuard(player, level, s, d);
-            case "learnSoldierSkill" -> learnSoldierSkill(player, s, d);
-            case "drillSoldier" -> drillSoldier(player, s, d);
-            case "respecSoldier" -> respecSoldier(player, s, d);
-            case "chooseSpecial" -> chooseSpecial(player, s, d);
-            case "choosePath" -> choosePath(player, s, d);
-            case "learnPathSkill" -> learnPathSkill(player, s, d);
-            case "ascendHero" -> livingrealms.military.Heroes.ascend(player, s, d);
-            case "grantRequest", "orderRequest", "declineRequest" -> Merit.handle(player, s, action, d);
-            case "dismiss" -> dismissSoldier(player, level, s, d);
-            case "chronicleBook" -> livingrealms.chronicle.ChronicleBook.give(player, s);
-            case "quarantine" -> livingrealms.hardship.Hardships.quarantine(s, d.getBoolean("on"));
-            case "appointMayor", "appointCaptain", "holdElection", "freeCaptain" -> livingrealms.citizen.Citizens.handle(player, s, action, d);
-            default -> "Unknown action";
-        };
+        String err;
+        try {
+            err = switch (action) {
+                case "rename" -> { String n = d.getString("name").trim(); if (!n.isEmpty() && n.length() <= 32) { s.name = n; } yield null; }
+                case "plan" -> plan(level, s, d);
+                case "planMap" -> Planning.planMap(level, s, d.getString("type"), d.getInt("x"), d.getInt("z"), d.getInt("rot"));
+                case "autoBuild" -> { s.autoBuild = d.getBoolean("on"); yield null; }
+                case "autoWalls" -> { s.autoWalls = d.getBoolean("on"); s.dirty = true; yield null; }
+                case "style" -> style(level, s, d.getString("family"));
+                case "road" -> Planning.road(level, s, BlockPos.of(d.getLong("a")), BlockPos.of(d.getLong("b")), d.getInt("width"), d.getString("material"));
+                case "upgrade" -> withPlot(s, d, p -> p.deferred ? DEFERRED : Planning.upgrade(level, s, p));
+                case "repair" -> withPlot(s, d, p -> { if (p.deferred) return DEFERRED; Planning.repair(s, p); return null; });
+                case "demolish" -> withPlot(s, d, p -> { Planning.demolish(s, p); return null; });
+                case "priority" -> withPlot(s, d, p -> { p.priority = Math.max(-5, Math.min(20, p.priority + d.getInt("delta"))); return null; });
+                case "research" -> research(s, d.getString("id"));
+                case "cancelResearch" -> cancelResearch(s);
+                case "clearSkips" -> { s.researchSkip.clear(); yield null; }
+                case "tradeRoute", "tradeBan" -> { String e = Trade.handle(player, m, s, action, d); s.dirty = true; yield e; }
+                case "autoResearch" -> { s.autoResearch = d.getBoolean("on"); yield null; }
+                case "autoTier" -> { s.autoTier = d.getBoolean("on"); yield null; }
+                case "autoTrain" -> { s.autoTrain = d.getBoolean("on"); yield null; }
+                case "garrisonTarget" -> { s.garrisonTarget = Math.max(-1, Math.min(s.d.garrisonCap, d.getInt("value"))); yield null; }
+                case "tier" -> advance(s);
+                case "capital" -> player.getUUID().equals(s.owner) ? Kingdoms.designate(player.server, m, s) : "Only the ruler may move the capital";
+                case "tax" -> tax(s, d.getInt("level"));
+                case "order" -> order(s, d);
+                case "cancelOrder" -> cancelOrder(s, d.getInt("id"));
+                case "train" -> train(s, d);
+                case "cancelTraining" -> cancelTraining(s, d.getInt("index"));
+                case "stance" -> { s.stance = Stance.valueOf(d.getString("stance")); Simulation.applyStanceAll(level, s); yield null; }
+                case "kit" -> kit(s, d);
+                case "equipAll" -> equipAll(level, s);
+                case "autoEquip" -> { s.autoEquip = d.getBoolean("on"); yield null; }
+                case "alarm" -> { s.manualAlarm = d.getBoolean("on"); if (!s.manualAlarm) s.alarmUntil = Math.min(s.alarmUntil, level.getGameTime() + 20); Simulation.watch(level, s); yield null; }
+                case "withdraw" -> !player.hasPermissions(2) && !livingrealms.net.Net.near(player, s, 16) ? "You must be in " + s.name + " to take from its stockpile" : withdraw(player, s, d);
+                case "deposit" -> !player.hasPermissions(2) && !livingrealms.net.Net.near(player, s, 16) ? "You must be in " + s.name + " to put goods in its stockpile" : deposit(player, s, d.getString("item"));
+                case "royalGuard" -> royalGuard(player, level, s, d);
+                case "learnSoldierSkill" -> learnSoldierSkill(player, s, d);
+                case "drillSoldier" -> drillSoldier(player, s, d);
+                case "respecSoldier" -> respecSoldier(player, s, d);
+                case "chooseSpecial" -> chooseSpecial(player, s, d);
+                case "choosePath" -> choosePath(player, s, d);
+                case "learnPathSkill" -> learnPathSkill(player, s, d);
+                case "ascendHero" -> livingrealms.military.Heroes.ascend(player, s, d);
+                case "grantRequest", "orderRequest", "declineRequest" -> Merit.handle(player, s, action, d);
+                case "dismiss" -> dismissSoldier(player, level, s, d);
+                case "chronicleBook" -> livingrealms.chronicle.ChronicleBook.give(player, s);
+                case "quarantine" -> livingrealms.hardship.Hardships.quarantine(s, d.getBoolean("on"));
+                case "appointMayor", "appointCaptain", "holdElection", "freeCaptain" -> livingrealms.citizen.Citizens.handle(player, s, action, d);
+                default -> "Unknown action";
+            };
+        } catch (IllegalArgumentException bad) {
+            // a stance, unit, piece or skill name the server doesn't know (an out-of-date or modified client)
+            err = "Unknown choice";
+        }
         if (err != null) tell(player, err);
         Simulation.recompute(s);
         s.dirty = true;
@@ -484,6 +490,7 @@ public final class Actions {
 
     @Nullable
     static String dismissSoldier(ServerPlayer player, ServerLevel level, Settlement s, CompoundTag d) {
+        if (!player.getUUID().equals(s.owner)) return "Only this town's owner can dismiss its recruits";
         Settlement.Soldier so = soldier(s, d);
         if (so == null) return "No such recruit";
         Entity e = SoldierProgression.findEntity(player.server, so.entity);
